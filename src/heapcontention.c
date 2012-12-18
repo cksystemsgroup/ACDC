@@ -13,15 +13,17 @@ struct list {
 	char padding[56];
 };
 
-int number_of_runs = 10;
-int num_producers = 4;
-int num_consumers = 4;
+int number_of_runs = 200;
+int list_sz = 1000;
+int done = 0; //termination flag
+int num_producers = 6;
+int num_consumers = 2;
 
 struct list *consumer_lists;
 
-static int get_empty_consumer() {
+static int get_empty_consumer(long unsigned int *waitcounter) {
 	int i;
-	while (1) {
+	while (!done) {
 		for (i = 0; i < num_consumers; ++i) {
 			if (consumer_lists[i].start == NULL) {
 				if (__sync_bool_compare_and_swap(
@@ -34,6 +36,7 @@ static int get_empty_consumer() {
 				}
 			}			
 		}
+		(*waitcounter)++;
 	}
 }
 
@@ -69,21 +72,50 @@ static void destroy_list(struct lnode *start) {
 }
 
 void *producer(void *args) {
+	long id = (long)args;
+	int number_of_productions = 0;
+	long unsigned int waitcounter = 0;
 
-	while (1) {
-		int c = get_empty_consumer();
+	while (!done) {
+		int c = get_empty_consumer(&waitcounter);
+		printf("producer,%lu,waited,%lu\n", id, waitcounter);
+		waitcounter = 0;
+		//if we selected an consumer after "done"
+		//we do not add a new list
+		if (done) {
+			return;
+		}
 		//assert consumer_lists[c].start == 1
-		consumer_lists[c].start = create_list(1000);
+		consumer_lists[c].start = create_list(list_sz);
+
+		//the first producer reaching the threshold
+		//triggers benchmark termination
+		number_of_productions++;
+		if (number_of_productions > number_of_runs) {
+			done = 1;	
+		}
 	}
 }
 
 void *consumer(void *args) {
 	long id = (long)args;
+	long unsigned int waitcounter = 0;
 
-	while (1) {
+	while (!done) {
+		waitcounter++;
 		struct lnode *start = consumer_lists[id].start;
 		if (start == NULL || start == (void*)1) continue; //spin on empty list
 
+		destroy_list(start);
+		consumer_lists[id].start = NULL;
+		printf("consumer,%lu,waited,%lu\n", id, waitcounter);
+		waitcounter = 0;
+	}
+
+	//after the producers have terminated, we free everything
+	//that was produced after the consumer loop terminates
+	struct lnode *start = consumer_lists[id].start;
+	if (start != NULL && start != (void*)1) {
 		destroy_list(start);
 		consumer_lists[id].start = NULL;
 	}
@@ -125,6 +157,9 @@ int main(int argc, char **argv) {
       exit(1);    
     }
   }
+
+  free(producers);
+  free(consumers);
 
   return EXIT_SUCCESS;
 }
