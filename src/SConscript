@@ -6,6 +6,7 @@ Program('acdc', ['main.cc'])
 optimal = Environment(CPPFLAGS=['-ggdb', '-DOPTIMAL_MODE'], LIBS=['pthread'])
 glibc = Environment(CPPFLAGS=['-ggdb', '-DGLIBC_MODE'], LIBS=['pthread'])
 hoard = Environment(CPPFLAGS=['-ggdb', '-DHOARD_MODE'], LIBS=['pthread', 'hoard'], LIBPATH=['../allocators'])
+gperf = Environment(CPPFLAGS=['-ggdb', '-DGPERF_MODE'], LIBS=['pthread', 'tcmalloc'], LIBPATH=['../allocators'])
 
 optimal.Object('locality-optimal', ['locality.cc'])
 optimal.Object('false-sharing-optimal', ['false-sharing.c'])
@@ -18,7 +19,7 @@ hoard.Object('locality-hoard', ['locality.cc'])
 hoard.Object('false-sharing-hoard', ['false-sharing.c'])
 hoard.Object('heapcontention-hoard', ['heapcontention.c'])
 
-
+gperf.Object('heapcontention-gperf', ['heapcontention.c'])
 
 optimal.Program('locality-optimal', ['locality-optimal.o', 'custom-alloc.o'])
 optimal.Program('false-sharing-optimal', ['false-sharing-optimal.o', 'custom-alloc.o'])
@@ -30,6 +31,9 @@ glibc.Program('heapcontention-glibc', ['heapcontention-glibc.o'])
 hoard.Program('locality-hoard', ['locality-hoard.o'])
 hoard.Program('false-sharing-hoard', ['false-sharing-glibc.o'])
 hoard.Program('heapcontention-hoard', ['heapcontention-hoard.o'])
+
+gperf.Program('heapcontention-gperf', ['heapcontention-gperf.o'])
+
 
 # Test programs
 Program('test-custom-alloc', ['test-custom-alloc.cc', 'custom-alloc.o'])
