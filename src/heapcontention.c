@@ -13,11 +13,11 @@ struct list {
 	char padding[56];
 };
 
-int number_of_runs = 200;
+int number_of_runs = 10000;
 int list_sz = 1000;
 int done = 0; //termination flag
-int num_producers = 6;
-int num_consumers = 2;
+int num_producers = 4;
+int num_consumers = 4;
 
 struct list *consumer_lists;
 
@@ -49,13 +49,15 @@ static struct lnode *create_lnode(size_t payloadsz) {
 
 static struct lnode *create_list(unsigned int elements) {
 	struct lnode *l;
-	struct lnode *start; 
+	
+	struct lnode *start = create_lnode(16);
+	l = start;
+
 	int i;
-	for (i = 0; i < elements ; ++i) {
+	for (i = 1; i < elements ; ++i) {
 		//sz goes from 1<<4 to 1<<20 bytes
 		size_t sz = 1 << ((i%16)+4);
-		l = create_lnode(sz);
-		if (i == 0) start = l; //remember the start of the list
+		l->next = create_lnode(sz);
 		l = l->next;
 	}
 	return start;
@@ -114,11 +116,13 @@ void *consumer(void *args) {
 
 	//after the producers have terminated, we free everything
 	//that was produced after the consumer loop terminates
+	
 	struct lnode *start = consumer_lists[id].start;
 	if (start != NULL && start != (void*)1) {
 		destroy_list(start);
 		consumer_lists[id].start = NULL;
 	}
+	
 }
 
 
@@ -160,6 +164,7 @@ int main(int argc, char **argv) {
 
   free(producers);
   free(consumers);
+
 
   return EXIT_SUCCESS;
 }
