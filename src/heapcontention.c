@@ -3,7 +3,6 @@
 #include <pthread.h>
 #include "caches.h"
 
-
 struct lnode {
 	struct lnode *next;
 	void *object;
@@ -13,11 +12,13 @@ struct list {
 	char padding[56];
 };
 
-int number_of_runs = 10000;
+int debug = 0;
+int number_of_runs = 1000;
 int list_sz = 1000;
 int done = 0; //termination flag
 int num_producers = 4;
 int num_consumers = 4;
+int finished_producers = 0;
 
 struct list *consumer_lists;
 
@@ -31,7 +32,7 @@ static int get_empty_consumer(long unsigned int *waitcounter) {
 							NULL,
 							1)) {
 					//found an empty consumer
-					printf("empty consumer: %d\n", i);
+					if (debug) printf("empty consumer: %d\n", i);
 					return i;
 				}
 			}			
@@ -80,7 +81,7 @@ void *producer(void *args) {
 
 	while (!done) {
 		int c = get_empty_consumer(&waitcounter);
-		printf("producer,%lu,waited,%lu\n", id, waitcounter);
+		if (debug) printf("producer,%lu,waited,%lu\n", id, waitcounter);
 		waitcounter = 0;
 		//if we selected an consumer after "done"
 		//we do not add a new list
@@ -94,7 +95,8 @@ void *producer(void *args) {
 		//triggers benchmark termination
 		number_of_productions++;
 		if (number_of_productions > number_of_runs) {
-			done = 1;	
+			int finished_so_far = __sync_add_and_fetch(&finished_producers, 1);
+			if (finished_so_far = num_producers) done = 1;
 		}
 	}
 }
@@ -110,7 +112,7 @@ void *consumer(void *args) {
 
 		destroy_list(start);
 		consumer_lists[id].start = NULL;
-		printf("consumer,%lu,waited,%lu\n", id, waitcounter);
+		if (debug) printf("consumer,%lu,waited,%lu\n", id, waitcounter);
 		waitcounter = 0;
 	}
 
