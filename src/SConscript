@@ -1,7 +1,7 @@
 Object('custom-alloc.cc', CPPFLAGS=['-ggdb'], LIBS=['pthread'])
 
 #ACDC Tools
-Program('acdc', ['main.cc'])
+Program('acdc', ['main.c'])
 
 optimal = Environment(CPPFLAGS=['-ggdb', '-DOPTIMAL_MODE'], LIBS=['pthread'])
 glibc = Environment(CPPFLAGS=['-ggdb', '-DGLIBC_MODE'], LIBS=['pthread'])
