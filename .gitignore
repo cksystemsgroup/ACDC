@@ -1,0 +1,4 @@
+build/*
+*.swp
+allocators/gperftools-2.0*
+.sconsign.dblite
