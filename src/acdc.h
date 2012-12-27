@@ -4,7 +4,20 @@
 //global acdc options
 typedef struct acdc_options GOptions;
 struct global_options {
+  //benchmark options
+  int mode; //acdc, false-sharing, ...
   int num_threads;  //number of mutator threads
+  int benchmark_duration; //How long acdc will run
+  
+  //options for object creation
+  int max_lifetime;
+  int min_object_sc; //minimal sizeclass
+  int max_object_sc; //max sizeclass
+
+  //sharing options
+  int share_objects;
+  int share_ratio; // share_ratio% of all objects will be shared
+  int share_thread_ratio; //share_thread_ratio% of all threads will be involved
 
 };
 
@@ -31,5 +44,14 @@ struct mutator_context {
   MStat *stat;
   unsigned int time;
 };
+
+
+
+
+
+
+
+
+
 
 #endif

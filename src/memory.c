@@ -48,4 +48,8 @@ void access_object(Object *o) {
 }
 
 
+unsigned int get_sizeclass(size_t size) {
+	//TODO: implement
+	return 0;
+}
 

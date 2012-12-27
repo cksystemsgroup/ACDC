@@ -27,4 +27,8 @@ void *allocate(size_t size, MContext *mc);
 void deallocate(void *ptr, MContext *mc);
 
 
+
+unsigned int get_sizeclass(size_t size);
+
+
 #endif
