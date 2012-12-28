@@ -1,3 +1,6 @@
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "acdc.h"
 #include "memory.h"
 
@@ -6,7 +9,7 @@ void *allocate(size_t size, MContext *mc) {
 	//TODO: log allocator activity
 	
 	if (size < sizeof(Object)) {
-		printf("Error: min object size is %d. Requested: %d\n",
+		printf("Error: min object size is %lu. Requested: %lu\n",
 				sizeof(Object),
 				size);
 		exit(1);
@@ -49,7 +52,6 @@ void access_object(Object *o) {
 
 
 unsigned int get_sizeclass(size_t size) {
-	//TODO: implement
-	return 0;
+	return (unsigned int)log2((double)size);
 }
 

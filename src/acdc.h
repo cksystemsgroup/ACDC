@@ -1,6 +1,8 @@
 #ifndef ACDC_H
 #define ACDC_H
 
+#include <glib.h>
+
 //global acdc options
 typedef struct acdc_options GOptions;
 struct global_options {
@@ -8,6 +10,7 @@ struct global_options {
   int mode; //acdc, false-sharing, ...
   int num_threads;  //number of mutator threads
   int benchmark_duration; //How long acdc will run
+  int seed;
   
   //options for object creation
   int max_lifetime;
@@ -25,6 +28,7 @@ struct global_options {
 typedef struct mutator_options MOptions;
 struct mutator_options {
   int thread_id;
+  GRand *rand; //GLib's Mersenne Twister PRNG
 };
 
 //mutator measurement data
@@ -41,7 +45,7 @@ typedef struct mutator_context MContext;
 struct mutator_context {
   GOptions *gopts; //pointer to global options. same for all threads
   MOptions opt; //thread local options
-  MStat *stat;
+  MStat *stat; //mutator stats
   unsigned int time;
 };
 

@@ -1,8 +1,48 @@
+#Dependency check
+def CheckPKGConfig(context, version):
+	context.Message( 'checking for pkg-config...' )
+	ret = context.TryAction('pkg-config --atleast-pkgconfig-version=%s' % version)[0]
+	context.Result( ret )
+	return ret
+
+def CheckPKG(context, name):
+	context.Message( 'Checking for %s... ' % name )
+	ret = context.TryAction('pkg-config --exists \'%s\'' % name)[0]
+	context.Result( ret )
+	return ret
+
+
 Object('custom-alloc.cc', CPPFLAGS=['-ggdb'], LIBS=['pthread'])
 
-#ACDC Tools
-Program('acdc', ['main.c'])
 
+#ACDC Tools
+acdc_env = Environment()
+acdc_conf = Configure(acdc_env, custom_tests = { 'CheckPKGConfig' : CheckPKGConfig, 'CheckPKG' : CheckPKG })
+
+if not acdc_conf.CheckHeader('math.h'):
+	print "You need 'math.h'. Not Found!"
+	Exit(1)
+else:
+	acdc_conf.env.Append(LIBS=['m'])
+
+if not acdc_conf.CheckPKGConfig('0.26'):
+	print 'pkg-config >= 0.26 not found.'
+	Exit(1)
+
+if not acdc_conf.CheckPKG('glib-2.0 >= 2.32'):
+	print 'glib-2.0 >= 2.32 not found'
+	Exit(1)
+
+acdc_env = acdc_conf.Finish()
+
+acdc_env.ParseConfig('pkg-config --cflags --libs glib-2.0')
+#acdc_env.Append(LIBS=['glib-2.0'])
+acdc_env.Program('acdc', ['main.c', 'memory.c', 'acdc.c', 'distribution.c'])
+
+
+
+
+#stand alone programs
 optimal = Environment(CPPFLAGS=['-ggdb', '-DOPTIMAL_MODE'], LIBS=['pthread'])
 glibc = Environment(CPPFLAGS=['-ggdb', '-DGLIBC_MODE'], LIBS=['pthread'])
 hoard = Environment(CPPFLAGS=['-ggdb', '-DHOARD_MODE'], LIBS=['pthread', 'hoard'], LIBPATH=['../allocators'])
