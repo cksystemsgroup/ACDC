@@ -6,14 +6,13 @@
 
 
 
-
-unsigned int get_random_lifetime(MContext *mc, 
-                                 unsigned int min, 
-                                 unsigned int max);
-
-
+//TODO: method description
 GRand *init_rand(unsigned int seed);
 void free_rand(GRand *rand);
+void get_random_object_props(MContext *mc, 
+		size_t *size, 
+		unsigned int *lifetime, 
+		unsigned int *num_objects);
 
 
 #endif

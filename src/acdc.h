@@ -13,6 +13,7 @@ struct global_options {
   int seed;
   
   //options for object creation
+  int min_lifetime; //must be >= 1 and <= max_lifetime
   int max_lifetime;
   int min_object_sc; //minimal sizeclass
   int max_object_sc; //max sizeclass
