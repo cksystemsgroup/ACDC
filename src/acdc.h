@@ -4,7 +4,7 @@
 #include <glib.h>
 
 //global acdc options
-typedef struct acdc_options GOptions;
+typedef struct global_options GOptions;
 struct global_options {
   //benchmark options
   int mode; //acdc, false-sharing, ...
