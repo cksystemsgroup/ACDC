@@ -4,25 +4,31 @@
 #include <glib.h>
 
 //global acdc options
+typedef enum {
+  ACDC, //default mode
+  FALSESHARING
+} benchmark_mode_t;
 typedef struct global_options GOptions;
 struct global_options {
   //benchmark options
-  int mode; //acdc, false-sharing, ...
-  int num_threads;  //number of mutator threads
-  int benchmark_duration; //How long acdc will run
-  int seed;
+  benchmark_mode_t mode; //-m: acdc, false-sharing, ...
+  int num_threads;  //-n: number of mutator threads
+  int benchmark_duration; //-d: How long acdc will run
+  int seed; //-r:
   
   //options for object creation
-  int min_lifetime; //must be >= 1 and <= max_lifetime
-  int max_lifetime;
-  int min_object_sc; //minimal sizeclass
-  int max_object_sc; //max sizeclass
+  int min_lifetime; //-l: must be >= 1 and <= max_lifetime
+  int max_lifetime; //-L:
+  int min_object_sc; //-s: minimal sizeclass
+  int max_object_sc; //-S: max sizeclass
 
   //sharing options
-  int share_objects;
-  int share_ratio; // share_ratio% of all objects will be shared
-  int share_thread_ratio; //share_thread_ratio% of all threads will be involved
+  int share_objects; //-O:
+  int share_ratio; //-R: share_ratio% of all objects will be shared
+  int share_thread_ratio; //-T: share_thread_ratio% of all threads will be involved
 
+  //misc options
+  int verbosity; //-v
 };
 
 //thread local mutator options
@@ -52,6 +58,9 @@ struct mutator_context {
 
 
 
+
+
+void run_acdc(GOptions *gopts);
 
 
 
