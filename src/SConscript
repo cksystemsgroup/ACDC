@@ -19,6 +19,12 @@ Object('custom-alloc.cc', CPPFLAGS=['-ggdb'], LIBS=['pthread'])
 acdc_env = Environment()
 acdc_conf = Configure(acdc_env, custom_tests = { 'CheckPKGConfig' : CheckPKGConfig, 'CheckPKG' : CheckPKG })
 
+if not acdc_conf.CheckHeader('pthread.h'):
+	print "You need 'pthread.h'. Not Found!"
+	Exit(1)
+else:
+	acdc_conf.env.Append(LIBS=['pthread'])
+
 if not acdc_conf.CheckHeader('math.h'):
 	print "You need 'math.h'. Not Found!"
 	Exit(1)
@@ -36,7 +42,7 @@ if not acdc_conf.CheckPKG('glib-2.0 >= 2.32'):
 acdc_env = acdc_conf.Finish()
 
 acdc_env.ParseConfig('pkg-config --cflags --libs glib-2.0')
-#acdc_env.Append(LIBS=['glib-2.0'])
+#acdc_env.Append(LIBS=['pthread'])
 acdc_env.Program('acdc', ['main.c', 'memory.c', 'acdc.c', 'distribution.c'])
 
 
