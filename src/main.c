@@ -35,6 +35,7 @@ static void print_usage() {
 static void set_default_params(GOptions *gopts) {
 	gopts->mode = ACDC;
 	gopts->num_threads = 1;
+	gopts->time_threshold = 1<<20;
 	gopts->benchmark_duration = 100;
 	gopts->seed = 1;
 	gopts->min_lifetime = 1;
@@ -54,6 +55,7 @@ static void check_params(GOptions *gopts) {
 static void print_params(GOptions *gopts) {
 	printf("gopts->mode = %d\n", gopts->mode);
 	printf("gopts->num_threads = %d\n", gopts->num_threads);
+	printf("gopts->time_threshold = %d\n", gopts->time_threshold);
 	printf("gopts->benchmark_duration = %d\n", gopts->benchmark_duration);
 	printf("gopts->seed = %d\n", gopts->seed);
 	printf("gopts->min_lifetime = %d\n", gopts->min_lifetime);
@@ -80,6 +82,9 @@ int main(int argc, char **argv) {
 				break;
 			case 'n':
 				gopts->num_threads = atoi(optarg);
+				break;
+			case 't':
+				gopts->time_threshold = atoi(optarg);
 				break;
 			case 'd':
 				gopts->benchmark_duration = atoi(optarg);
