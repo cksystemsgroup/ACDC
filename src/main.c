@@ -41,7 +41,7 @@ static void set_default_params(GOptions *gopts) {
 	gopts->min_lifetime = 1;
 	gopts->max_lifetime = 20;
 	gopts->min_object_sc = 3;
-	gopts->max_object_sc = 20;
+	gopts->max_object_sc = 15;
 	gopts->share_objects = 0;
 	gopts->share_ratio = 0;
 	gopts->share_thread_ratio = 0;
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
 
 	GOptions *gopts = malloc(sizeof(GOptions));
 	set_default_params(gopts);
-	const char *optString = "m:n:d:r:l:L:s:S:OR:T:vh";
+	const char *optString = "m:n:t:d:r:l:L:s:S:OR:T:vh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
