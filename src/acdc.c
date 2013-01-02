@@ -70,9 +70,22 @@ void *acdc_thread(void *ptr) {
 		mc->stat->objects_allocated += num_objects;
 		mc->stat->bytes_allocated += num_objects * sz;
 
+
+		//allocate objects
+		//create data structures
+		//create trees and lists
+		//maybe baseline can be used here
+
+
+
+		//access (all) objects
+		//access objects that were allocated together
+
 		time_counter += num_objects * sz;
 		if (time_counter >= mc->gopts->time_threshold) {
 			print_mutator_stats(mc);
+
+			//proceed in time
 			mc->time++;
 			time_counter = 0;
 			runs++;
@@ -109,6 +122,6 @@ void run_acdc(GOptions *gopts) {
 
 
 
-	//aggreagate infor and free mutator context
+	//aggreagate info and free mutator context
 }
 
