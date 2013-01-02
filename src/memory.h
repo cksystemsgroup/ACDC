@@ -19,7 +19,6 @@ typedef struct mem_object Object;
 struct mem_object {
   u_int64_t rctm; //6bit rc, 58 bit thread map
   size_t size; //the allocated size of the object
-  char *payload; //mutable part of the object
 };
 
 
