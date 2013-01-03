@@ -118,6 +118,7 @@ void run_acdc(GOptions *gopts) {
 			exit(EXIT_FAILURE);
 		}
 		//TODO: do something with thread_status
+		
 	}
 
 

@@ -3,6 +3,8 @@
 
 #include <glib.h>
 
+#include "collections.h"
+
 //global acdc options
 typedef enum {
   ACDC, //default mode
@@ -54,8 +56,10 @@ struct mutator_context {
   GOptions *gopts; //pointer to global options. same for all threads
   MOptions opt; //thread local options
   MStat *stat; //mutator stats
+  CollectionPool *collection_pools; //one pool for each possible lifetime
   unsigned int time;
 };
+
 
 
 
