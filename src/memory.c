@@ -2,9 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "acdc.h"
-#include "memory.h"
 
-void *allocate(size_t size, MContext *mc) {
+Object *allocate(MContext *mc, size_t size) {
 	void *ptr;
 	//TODO: log allocator activity
 	
@@ -20,7 +19,6 @@ void *allocate(size_t size, MContext *mc) {
 	//set header information
 	Object *o = (Object*)ptr;
 	o->rctm = 0;
-	o->size = size;
 
 	//update mutator stats
 	mc->stat->bytes_allocated += size;
@@ -29,14 +27,13 @@ void *allocate(size_t size, MContext *mc) {
 	return ptr;
 }
 
-void deallocate(void *ptr, MContext *mc) {
-	Object *o = (Object*)ptr;
+void deallocate(MContext *mc, Object *o, size_t size) {
 
 	//update mutator stats
-	mc->stat->bytes_deallocated += o->size;
+	mc->stat->bytes_deallocated += size;
 	mc->stat->objects_deallocated++;
 
-	free(ptr);
+	free(o);
 }
 
 

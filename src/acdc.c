@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <glib.h>
 
 #include "acdc.h"
 #include "distribution.h"
@@ -24,6 +25,19 @@ MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 	mc->stat->bytes_deallocated = 0;
 	mc->stat->objects_allocated = 0;
 	mc->stat->objects_deallocated = 0;
+
+	int num_pools = gopts->max_lifetime - gopts->min_lifetime;
+	mc->collection_pools = malloc(sizeof(CollectionPool) * num_pools);
+		
+	//setup CollectionPools
+	int i;
+	for (i = 0; i < num_pools; ++i) {
+		//use int keys for the hash maps
+		mc->collection_pools[i].collections = 
+			g_hash_table_new(g_int_hash, g_int_equal);
+		mc->collection_pools[i].remaining_lifetime = 
+			gopts->min_lifetime = i;
+	}
 
 	return mc;
 }
@@ -65,7 +79,9 @@ void *acdc_thread(void *ptr) {
 		unsigned int lt;
 		unsigned int num_objects;
 		get_random_object_props(mc, &sz, &lt, &num_objects);
-		
+	
+		//allocate_objects(sz, lt, num_objects);	
+
 		//TODO temporary. move to allocation routine
 		mc->stat->objects_allocated += num_objects;
 		mc->stat->bytes_allocated += num_objects * sz;

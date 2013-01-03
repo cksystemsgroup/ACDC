@@ -1,9 +1,8 @@
 #ifndef ACDC_H
 #define ACDC_H
 
+#include <sys/types.h>
 #include <glib.h>
-
-#include "collections.h"
 
 //global acdc options
 typedef enum {
@@ -50,8 +49,55 @@ struct mutator_stat {
   unsigned long objects_deallocated;
 };
 
-//thread context specific data
+
+//memory object abstraction
+/*
+ * Some Makros to access the reference counter and the thread mask
+ * out of the combined rctm field. RCTM creates the combination
+ * of a RC and a TM
+ */
+#define RC(_rctm) (_rctm >> 58)
+#define TM(_rctm) ((_rctm << 6) >> 6)
+#define RCTM(_rc, _tm) ((_rc << 58) | _tm)
+
+
+//object header for every allocated object
+//the min. size for an object must be sizeof(Object)
+typedef struct mem_object Object;
+struct mem_object {
+  u_int64_t rctm; //6bit rc, 58 bit thread map
+  size_t size; //the allocated size of the object
+};
+
+
+
+
+//Collection stuff
+//object pool where threads keep refs to the memory chunks
+typedef struct object_collection OCollection;
+struct object_collection {
+  size_t object_size;
+  //pointer to start of collection
+  Object *start;
+  //iteration function
+};
+
+typedef struct collection_pool CollectionPool;
+struct collection_pool {
+  unsigned int remaining_lifetime;
+  GHashTable *collections; //hash table with one collection per size
+};
+
+typedef enum {LIST, TREE} collection_t;
+
+
+
 typedef struct mutator_context MContext;
+
+OCollection *allocate_collection(MContext *mc, collection_t, size_t sz, 
+                                 unsigned long nelem);
+
+//thread context specific data
 struct mutator_context {
   GOptions *gopts; //pointer to global options. same for all threads
   MOptions opt; //thread local options
@@ -61,14 +107,13 @@ struct mutator_context {
 };
 
 
-
-
-
-
 void run_acdc(GOptions *gopts);
 
 
 
+Object *allocate(MContext *mc, size_t size);
+void deallocate(MContext *mc, Object *o, size_t size);
+unsigned int get_sizeclass(size_t size);
 
 
 
