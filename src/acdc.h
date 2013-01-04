@@ -82,6 +82,7 @@ typedef enum {LIST, TREE} collection_t;
 typedef struct object_collection OCollection;
 struct object_collection {
   size_t object_size;
+  size_t num_objects;
   unsigned int id; // in case we have more collections of the same size
   collection_t type;
   //pointer to start of collection
@@ -101,6 +102,7 @@ typedef struct mutator_context MContext;
 
 OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 		unsigned long nelem);
+void deallocate_collection(MContext *mc, OCollection *oc); 
 
 //thread context specific data
 struct mutator_context {

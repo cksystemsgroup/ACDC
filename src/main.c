@@ -35,13 +35,13 @@ static void print_usage() {
 static void set_default_params(GOptions *gopts) {
 	gopts->mode = ACDC;
 	gopts->num_threads = 1;
-	gopts->time_threshold = 1<<20;
+	gopts->time_threshold = 1<<18;
 	gopts->benchmark_duration = 100;
 	gopts->seed = 1;
 	gopts->min_lifetime = 1;
 	gopts->max_lifetime = 20;
-	gopts->min_object_sc = 3;
-	gopts->max_object_sc = 15;
+	gopts->min_object_sc = 4;
+	gopts->max_object_sc = 10;
 	gopts->share_objects = 0;
 	gopts->share_ratio = 0;
 	gopts->share_thread_ratio = 0;

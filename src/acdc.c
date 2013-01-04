@@ -54,7 +54,7 @@ MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 					object_collection_equal);
 
 		mc->collection_pools[i].remaining_lifetime = 
-			gopts->min_lifetime = i;
+			gopts->min_lifetime + i;
 	}
 
 	return mc;
@@ -81,7 +81,32 @@ void print_mutator_stats(MContext *mc) {
 
 }
 
+void delete_collection(gpointer key, gpointer value, gpointer user_data) {
 
+	OCollection *oc = (OCollection*)value;
+	MContext *mc = (MContext*)user_data;
+	
+	//printf("%p %p \n", key, value);
+	printf("deallocate %u elements of size %u\n", oc->num_objects, 
+			oc->object_size);
+
+	//deallocate collection
+	deallocate_collection(mc, oc);
+}
+
+void delete_expired_objects(MContext *mc) {
+
+	int delete_index = (mc->time) % mc->gopts->max_lifetime;
+
+	printf("DEBUG: will remove from pool %d\n", delete_index);
+
+	CollectionPool *cp = &(mc->collection_pools[delete_index]);
+
+	g_hash_table_foreach(cp->collections, delete_collection, mc);
+
+	//delete items in hashmap
+	g_hash_table_remove_all(cp->collections);
+}
 
 
 void *acdc_thread(void *ptr) {
@@ -102,23 +127,22 @@ void *acdc_thread(void *ptr) {
 		//allocate objects
 		//create data structures
 		
+		//create trees and lists
+		printf("allocate list of %u elements of sz %lu lt %u\n", 
+				num_objects, sz, lt);
+
 		OCollection *c = allocate_collection(mc, LIST, sz, num_objects);
 
-
-
-		//create trees and lists
-		//maybe baseline can be used here
 		
 		//get CollectionPool for lt
 		unsigned int insert_index = (mc->time + lt) % 
 			mc->gopts->max_lifetime;
 
 		CollectionPool *cp = &(mc->collection_pools[insert_index]);
-		cp->remaining_lifetime = lt;
+		cp->remaining_lifetime = lt; //FIXME: is this necessary?
 
 		while (g_hash_table_contains(cp->collections,
 					(gconstpointer)c)) {
-
 
 			printf("a collection for size %lu objects with "
 					"id %u already exists\n",
@@ -128,22 +152,27 @@ void *acdc_thread(void *ptr) {
 			
 		}
 		//add collection with proper id to hash map
+		//g_hash_table_insert(cp->collections, (gpointer)c, (gpointer)c);
 		g_hash_table_add(cp->collections, (gpointer)c);
 		
 
 
 
-		//access (all) objects
+		//TODO: access (all) objects
 		//access objects that were allocated together
+
 
 		time_counter += num_objects * sz;
 		if (time_counter >= mc->gopts->time_threshold) {
+			
 			print_mutator_stats(mc);
 
 			//proceed in time
 			mc->time++;
 			time_counter = 0;
 			runs++;
+
+			delete_expired_objects(mc);
 		}
 	}
 
