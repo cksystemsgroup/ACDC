@@ -8,6 +8,10 @@
 #include "memory.h"
 
 
+guint object_collection_hash(gconstpointer key) {
+
+	return 0;
+}
 
 MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 	
@@ -26,7 +30,7 @@ MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 	mc->stat->objects_allocated = 0;
 	mc->stat->objects_deallocated = 0;
 
-	int num_pools = gopts->max_lifetime - gopts->min_lifetime;
+	int num_pools = gopts->max_lifetime;
 	mc->collection_pools = malloc(sizeof(CollectionPool) * num_pools);
 		
 	//setup CollectionPools
@@ -80,17 +84,24 @@ void *acdc_thread(void *ptr) {
 		unsigned int num_objects;
 		get_random_object_props(mc, &sz, &lt, &num_objects);
 	
-		//allocate_objects(sz, lt, num_objects);	
-
-		//TODO temporary. move to allocation routine
-		mc->stat->objects_allocated += num_objects;
-		mc->stat->bytes_allocated += num_objects * sz;
-
 
 		//allocate objects
 		//create data structures
+		
+		OCollection *c = allocate_collection(mc, LIST, sz, num_objects);
+
+
+
 		//create trees and lists
 		//maybe baseline can be used here
+		
+		//get CollectionPool for lt
+		unsigned int insert_index = (mc->time + lt) % 
+			mc->gopts->max_lifetime;
+
+		CollectionPool *cp = &(mc->collection_pools[insert_index]);
+		cp->remaining_lifetime = lt;
+		
 
 
 

@@ -43,7 +43,8 @@ acdc_env = acdc_conf.Finish()
 
 acdc_env.ParseConfig('pkg-config --cflags --libs glib-2.0')
 #acdc_env.Append(LIBS=['pthread'])
-acdc_env.Program('acdc', ['main.c', 'memory.c', 'acdc.c', 'distribution.c'])
+#acdc_env.Append(CPPFLAGS=['-fms-extensions'])
+acdc_env.Program('acdc', ['main.c', 'memory.c', 'acdc.c', 'distribution.c', 'collections.c'])
 
 
 

@@ -66,36 +66,41 @@ struct mutator_stat {
 typedef struct mem_object Object;
 struct mem_object {
   u_int64_t rctm; //6bit rc, 58 bit thread map
-  size_t size; //the allocated size of the object
+};
+typedef struct mem_object_lnode LObject;
+struct mem_object_lnode {
+  Object o;
+  LObject *next;
 };
 
 
 
 
 //Collection stuff
+typedef enum {LIST, TREE} collection_t;
 //object pool where threads keep refs to the memory chunks
 typedef struct object_collection OCollection;
 struct object_collection {
   size_t object_size;
+  unsigned int id; // in case we have more collections of the same size
+  collection_t type;
   //pointer to start of collection
   Object *start;
-  //iteration function
 };
 
 typedef struct collection_pool CollectionPool;
 struct collection_pool {
   unsigned int remaining_lifetime;
-  GHashTable *collections; //hash table with one collection per size
+  GHashTable *collections; //hash table with one OCollection per size and id
 };
 
-typedef enum {LIST, TREE} collection_t;
 
 
 
 typedef struct mutator_context MContext;
 
-OCollection *allocate_collection(MContext *mc, collection_t, size_t sz, 
-                                 unsigned long nelem);
+OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
+		unsigned long nelem);
 
 //thread context specific data
 struct mutator_context {
