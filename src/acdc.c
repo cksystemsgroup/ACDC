@@ -10,7 +10,19 @@
 
 guint object_collection_hash(gconstpointer key) {
 
-	return 0;
+	OCollection *oc = (OCollection*)key;
+	unsigned long combined_key = oc->object_size << 32;
+	combined_key |= oc->id;
+	return g_int64_hash((gconstpointer)&combined_key);
+}
+
+gboolean object_collection_equal(gconstpointer a, gconstpointer b) {
+
+	OCollection *ac = (OCollection*)a;
+	OCollection *bc = (OCollection*)b;
+
+	return (ac->object_size == bc->object_size &&
+			ac->id == bc->id);
 }
 
 MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
@@ -38,7 +50,9 @@ MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 	for (i = 0; i < num_pools; ++i) {
 		//use int keys for the hash maps
 		mc->collection_pools[i].collections = 
-			g_hash_table_new(g_int_hash, g_int_equal);
+			g_hash_table_new(object_collection_hash, 
+					object_collection_equal);
+
 		mc->collection_pools[i].remaining_lifetime = 
 			gopts->min_lifetime = i;
 	}
@@ -101,6 +115,20 @@ void *acdc_thread(void *ptr) {
 
 		CollectionPool *cp = &(mc->collection_pools[insert_index]);
 		cp->remaining_lifetime = lt;
+
+		while (g_hash_table_contains(cp->collections,
+					(gconstpointer)c)) {
+
+
+			printf("a collection for size %lu objects with "
+					"id %u already exists\n",
+					c->object_size,
+					c->id);
+			c->id++;
+			
+		}
+		//add collection with proper id to hash map
+		g_hash_table_add(cp->collections, (gpointer)c);
 		
 
 

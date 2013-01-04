@@ -23,7 +23,7 @@ static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem) 
 
 
 	OCollection *list = malloc(sizeof(OCollection));
-
+	list->id = 0;
 	list->object_size = sz;
 
 	//TODO: check for shared setting
@@ -36,6 +36,7 @@ static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem) 
 		tmp = tmp->next;
 	}
 	tmp->next = NULL;
+	return list;
 }
 
 
