@@ -37,12 +37,11 @@ void deallocate(MContext *mc, Object *o, size_t size) {
 }
 
 
-void access_object(Object *o, size_t size) {
+void access_object(Object *o, size_t size, size_t offset) {
 	int i;
-	//payload size can be calculated from object and header size
-	size_t pl_sz = size - sizeof(Object);
+	size_t pl_sz = size - offset;
 	//payload starts after header
-	char *payload = (char*)o + sizeof(Object);
+	char *payload = (char*)o + offset;
 	
 	for (i = 1; i < pl_sz; ++i) {
 		payload[i] = payload[i-1] + 1;

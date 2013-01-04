@@ -87,8 +87,8 @@ void delete_collection(gpointer key, gpointer value, gpointer user_data) {
 	MContext *mc = (MContext*)user_data;
 	
 	//printf("%p %p \n", key, value);
-	printf("deallocate %u elements of size %u\n", oc->num_objects, 
-			oc->object_size);
+	//printf("deallocate %u elements of size %u\n", oc->num_objects, 
+	//		oc->object_size);
 
 	//deallocate collection
 	deallocate_collection(mc, oc);
@@ -106,6 +106,29 @@ void delete_expired_objects(MContext *mc) {
 
 	//delete items in hashmap
 	g_hash_table_remove_all(cp->collections);
+}
+
+
+static void access_collection(gpointer key, gpointer value, gpointer user_data) {
+
+	OCollection *oc = (OCollection*)value;
+	MContext *mc = (MContext*)user_data;
+
+	traverse_collection(mc, oc);
+
+}
+
+
+void access_live_objects(MContext *mc) {
+
+	int i, idx;
+	for (i = mc->time; i < mc->time + mc->gopts->max_lifetime; ++i) {
+		idx = i % mc->gopts->max_lifetime;
+		printf("access objects from pool %d\n", idx);
+		
+		CollectionPool *cp = &(mc->collection_pools[idx]);
+		g_hash_table_foreach(cp->collections, access_collection, mc);
+	}
 }
 
 
@@ -160,6 +183,7 @@ void *acdc_thread(void *ptr) {
 
 		//TODO: access (all) objects
 		//access objects that were allocated together
+		access_live_objects(mc);
 
 
 		time_counter += num_objects * sz;

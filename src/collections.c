@@ -6,11 +6,19 @@
 
 //TODO: tree
 
-void traverse_list(void) {
+void traverse_list(MContext *mc, OCollection *oc) {
 	//remember that the first word in payload is the next pointer
 	//do not alter!
 	//
 	//access object
+	
+	LObject *list = (LObject*)oc->start;
+	
+	while (list != NULL) {
+		printf("access object\n");
+		access_object((Object*)list, oc->object_size, sizeof(LObject));
+		list = list->next;	
+	}
 }
 
 
@@ -75,6 +83,19 @@ void deallocate_collection(MContext *mc, OCollection *oc) {
 	switch (oc->type) {
 		case LIST:
 			deallocate_list(mc, oc);
+			return;
+		case TREE:
+			return;
+		default:
+			printf("Collection Type not supported\n");
+			exit(EXIT_FAILURE);
+	}
+}
+void traverse_collection(MContext *mc, OCollection *oc) {
+
+	switch (oc->type) {
+		case LIST:
+			traverse_list(mc, oc);
 			return;
 		case TREE:
 			return;

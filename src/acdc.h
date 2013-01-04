@@ -103,6 +103,7 @@ typedef struct mutator_context MContext;
 OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 		unsigned long nelem);
 void deallocate_collection(MContext *mc, OCollection *oc); 
+void traverse_collection(MContext *mc, OCollection *oc);
 
 //thread context specific data
 struct mutator_context {
@@ -120,6 +121,7 @@ void run_acdc(GOptions *gopts);
 
 Object *allocate(MContext *mc, size_t size);
 void deallocate(MContext *mc, Object *o, size_t size);
+void access_object(Object *o, size_t size, size_t offset);
 unsigned int get_sizeclass(size_t size);
 
 
