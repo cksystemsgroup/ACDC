@@ -15,12 +15,40 @@ void traverse_list(MContext *mc, OCollection *oc) {
 	LObject *list = (LObject*)oc->start;
 	
 	while (list != NULL) {
-		printf("access object\n");
+		//printf("access object\n");
 		access_object((Object*)list, oc->object_size, sizeof(LObject));
 		list = list->next;	
 	}
 }
 
+
+static OCollection *allocate_optimal_list(MContext *mc, size_t sz, 
+		unsigned long nelem) {
+
+
+	if (sz < sizeof(LObject)) {
+		printf("Unable to allocate list. Config error. Min. object size too small.\n");
+		exit(EXIT_FAILURE);
+	}
+	OCollection *list = malloc(sizeof(OCollection));
+	list->id = 0;
+	list->object_size = sz;
+	list->num_objects = nelem;
+	list->type = OPTIMAL_LIST;
+
+	//allocate whole memory at once
+	list->start = allocate(mc, sz * nelem);
+	LObject *tmp = (LObject*)list->start;
+
+	//create pointers in contiguous memory
+	int i;
+	for (i = 1; i < nelem; ++i) {
+		tmp->next = (LObject*)((char*)tmp + sz);
+		tmp = tmp->next;
+	}
+	tmp->next = NULL;
+	return list;
+}
 
 static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem) {
 
@@ -50,7 +78,10 @@ static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem) 
 	tmp->next = NULL;
 	return list;
 }
-
+static void deallocate_optimal_list(MContext *mc, OCollection *oc) {
+	deallocate(mc, oc->start, oc->object_size * oc->num_objects);
+	free(oc);
+}
 static void deallocate_list(MContext *mc, OCollection *oc) {
 	LObject *l = (LObject*)(oc->start);
 	while (l != NULL) {
@@ -69,6 +100,9 @@ OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 		case LIST:
 			return allocate_list(mc, sz, nelem);
 			break;
+		case OPTIMAL_LIST:
+			return allocate_optimal_list(mc, sz, nelem);
+			break;
 		case TREE:
 			return NULL;
 			break;
@@ -84,6 +118,9 @@ void deallocate_collection(MContext *mc, OCollection *oc) {
 		case LIST:
 			deallocate_list(mc, oc);
 			return;
+		case OPTIMAL_LIST:
+			deallocate_optimal_list(mc, oc);
+			return;
 		case TREE:
 			return;
 		default:
@@ -95,6 +132,9 @@ void traverse_collection(MContext *mc, OCollection *oc) {
 
 	switch (oc->type) {
 		case LIST:
+			traverse_list(mc, oc);
+			return;
+		case OPTIMAL_LIST:
 			traverse_list(mc, oc);
 			return;
 		case TREE:

@@ -98,7 +98,7 @@ void delete_expired_objects(MContext *mc) {
 
 	int delete_index = (mc->time) % mc->gopts->max_lifetime;
 
-	printf("DEBUG: will remove from pool %d\n", delete_index);
+	//printf("DEBUG: will remove from pool %d\n", delete_index);
 
 	CollectionPool *cp = &(mc->collection_pools[delete_index]);
 
@@ -124,7 +124,7 @@ void access_live_objects(MContext *mc) {
 	int i, idx;
 	for (i = mc->time; i < mc->time + mc->gopts->max_lifetime; ++i) {
 		idx = i % mc->gopts->max_lifetime;
-		printf("access objects from pool %d\n", idx);
+		//printf("access objects from pool %d\n", idx);
 		
 		CollectionPool *cp = &(mc->collection_pools[idx]);
 		g_hash_table_foreach(cp->collections, access_collection, mc);
@@ -151,10 +151,14 @@ void *acdc_thread(void *ptr) {
 		//create data structures
 		
 		//create trees and lists
-		printf("allocate list of %u elements of sz %lu lt %u\n", 
-				num_objects, sz, lt);
+		//printf("allocate list of %u elements of sz %lu lt %u\n", 
+		//		num_objects, sz, lt);
 
-		OCollection *c = allocate_collection(mc, LIST, sz, num_objects);
+		collection_t tp = LIST;
+#ifdef OPTIMAL_MODE
+		if (tp == LIST) tp = OPTIMAL_LIST;
+#endif
+		OCollection *c = allocate_collection(mc, tp, sz, num_objects);
 
 		
 		//get CollectionPool for lt
@@ -167,10 +171,10 @@ void *acdc_thread(void *ptr) {
 		while (g_hash_table_contains(cp->collections,
 					(gconstpointer)c)) {
 
-			printf("a collection for size %lu objects with "
-					"id %u already exists\n",
-					c->object_size,
-					c->id);
+			//printf("a collection for size %lu objects with "
+			//		"id %u already exists\n",
+			//		c->object_size,
+			//		c->id);
 			c->id++;
 			
 		}
@@ -190,6 +194,8 @@ void *acdc_thread(void *ptr) {
 		if (time_counter >= mc->gopts->time_threshold) {
 			
 			print_mutator_stats(mc);
+		
+			//access_live_objects(mc);
 
 			//proceed in time
 			mc->time++;

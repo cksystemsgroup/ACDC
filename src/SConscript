@@ -47,13 +47,17 @@ acdc_env.Append(CPPFLAGS=['-g'])
 #acdc_env.Program('acdc', ['main.c', 'memory.c', 'acdc.c', 'distribution.c', 'collections.c'])
 
 
-for config in ['glibc', 'hoard', 'tcmalloc']:
+for config in ['optimal', 'glibc', 'hoard', 'tcmalloc', 'jemalloc']:
 	e = acdc_env.Clone()
 
+	if config == 'optimal':
+		e.Append(CPPFLAGS=['-DOPTIMAL_MODE'])
 	if config == 'hoard':
 		e.Append(LIBS=['hoard'], LIBPATH=['../allocators'])
 	if config == 'tcmalloc':
 		e.Append(LIBS=['tcmalloc'], LIBPATH=['../allocators'])
+	if config == 'jemalloc':
+		e.Append(LIBS=['jemalloc'], LIBPATH=['../allocators'])
 
 	object_list = []
 	for obj in ['main', 'memory', 'acdc', 'distribution', 'collections']:

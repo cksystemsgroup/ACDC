@@ -77,7 +77,7 @@ struct mem_object_lnode {
 
 
 //Collection stuff
-typedef enum {LIST, TREE} collection_t;
+typedef enum {LIST, TREE, OPTIMAL_LIST} collection_t;
 //object pool where threads keep refs to the memory chunks
 typedef struct object_collection OCollection;
 struct object_collection {
