@@ -19,10 +19,13 @@ static unsigned int get_random_lifetime(MContext *mc) {
 			mc->gopts->max_lifetime + 1);
 }
 static unsigned int get_random_size(MContext *mc) {
+	unsigned int sc = g_rand_int_range(mc->opt.rand,
+			mc->gopts->min_object_sc,
+			mc->gopts->max_object_sc + 1);
 
 	return g_rand_int_range(mc->opt.rand,
-			1 << mc->gopts->min_object_sc,
-			1 << (mc->gopts->max_object_sc + 1));
+			1 << sc,
+			1 << (sc + 1));
 }
 
 void get_random_object_props(MContext *mc, 
