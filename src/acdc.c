@@ -41,6 +41,8 @@ MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 	mc->stat->bytes_deallocated = 0;
 	mc->stat->objects_allocated = 0;
 	mc->stat->objects_deallocated = 0;
+	mc->stat->lt_histogram = calloc(gopts->max_lifetime, sizeof(unsigned long));
+	mc->stat->sz_histogram = calloc(gopts->max_object_sc, sizeof(unsigned long));
 
 	int num_pools = gopts->max_lifetime;
 	mc->collection_pools = malloc(sizeof(CollectionPool) * num_pools);
@@ -63,6 +65,8 @@ MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 void destroy_mutator_context(MContext *mc) {
 
 	free_rand(mc->opt.rand);
+	free(mc->stat->lt_histogram);
+	free(mc->stat->sz_histogram);
 	free(mc->stat);
 	free(mc);
 }
@@ -145,7 +149,9 @@ void *acdc_thread(void *ptr) {
 		unsigned int lt;
 		unsigned int num_objects;
 		get_random_object_props(mc, &sz, &lt, &num_objects);
-	
+
+		mc->stat->lt_histogram[lt] += num_objects;
+		mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
 
 		//allocate objects
 		//create data structures
@@ -215,7 +221,7 @@ void run_acdc(GOptions *gopts) {
 
 	int i, r;
 	pthread_t *threads = malloc(sizeof(pthread_t) * gopts->num_threads);
-	MContext *thread_results = malloc(sizeof(MContext*) * gopts->num_threads);
+	MContext **thread_results = malloc(sizeof(MContext*) * gopts->num_threads);
 	for (i = 0; i < gopts->num_threads; ++i) {
 		MContext *mc = create_mutator_context(gopts, i);
 		r = pthread_create(&threads[i], NULL, acdc_thread, (void*)mc);
@@ -231,12 +237,47 @@ void run_acdc(GOptions *gopts) {
 			printf("Unable to join acdc_thread: %d\n", r);
 			exit(EXIT_FAILURE);
 		}
-		//TODO: do something with thread_status
-		
 	}
 
 
 
-	//aggreagate info and free mutator context
+	//aggreagate info in thread 0's MContext
+	int j, k;
+	for (i = 1; i < gopts->num_threads; ++i) {
+		MContext *res = thread_results[i];
+		thread_results[0]->stat->bytes_allocated += 
+			res->stat->bytes_allocated;
+		thread_results[0]->stat->bytes_deallocated += 
+			res->stat->bytes_deallocated;
+		thread_results[0]->stat->objects_allocated += 
+			res->stat->objects_allocated;
+		thread_results[0]->stat->objects_deallocated += 
+			res->stat->objects_deallocated;
+		for (j = 0; j < gopts->max_lifetime; ++j) {
+			thread_results[0]->stat->lt_histogram[j] +=
+				res->stat->lt_histogram[j];
+		}
+		for (j = 0; j < gopts->max_object_sc; ++j) {
+			thread_results[0]->stat->sz_histogram[j] +=
+				res->stat->sz_histogram[j];
+		}
+	}
+
+
+	for (j = 0; j < gopts->max_lifetime; ++j) {
+		printf("LT_HISTO:\t%d\t%lu\n", 
+				j, 
+				thread_results[0]->stat->lt_histogram[j]
+				);
+	}
+	for (j = 0; j < gopts->max_object_sc; ++j) {
+		printf("SZ_HISTO:\t%d\t%lu\n", 
+				j, 
+				thread_results[0]->stat->sz_histogram[j]
+				);
+	}
+	
+	
+	//free mutator context
 }
 

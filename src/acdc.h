@@ -47,6 +47,8 @@ struct mutator_stat {
   unsigned long bytes_deallocated;
   unsigned long objects_allocated;
   unsigned long objects_deallocated;
+  unsigned long *lt_histogram;
+  unsigned long *sz_histogram;
 };
 
 

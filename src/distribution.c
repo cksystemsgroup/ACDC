@@ -39,9 +39,11 @@ void get_random_object_props(MContext *mc,
 
 	unsigned int effect_of_sizeclass = (mc->gopts->max_object_sc - sc) + 1;
 	effect_of_sizeclass *= effect_of_sizeclass; //quadratic impact
+	effect_of_sizeclass *= effect_of_sizeclass; //cubic impact
 
 	unsigned int effect_of_lifetime = (mc->gopts->max_lifetime - lt) + 1;
 	effect_of_lifetime *= effect_of_lifetime; //quadratic impact
+	effect_of_lifetime *= effect_of_lifetime; //cubic impact
 
 	//output parameters
 	*size = sz;
