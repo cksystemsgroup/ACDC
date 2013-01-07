@@ -26,6 +26,9 @@ static OCollection *allocate_optimal_list(MContext *mc, size_t sz,
 		unsigned long nelem) {
 
 
+	//TODO: align objects
+
+
 	if (sz < sizeof(LObject)) {
 		printf("Unable to allocate list. Config error. Min. object size too small.\n");
 		exit(EXIT_FAILURE);

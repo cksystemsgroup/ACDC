@@ -4,6 +4,7 @@
 #include <glib.h>
 
 #include "acdc.h"
+#include "arch.h"
 #include "distribution.h"
 #include "memory.h"
 
@@ -37,6 +38,10 @@ MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 	mc->opt.thread_id = thread_id;
 
 	mc->stat = malloc(sizeof(MStat));
+	mc->stat->running_time = 0;
+	mc->stat->allocation_time = 0;
+	mc->stat->deallocation_time = 0;
+	mc->stat->access_time = 0;
 	mc->stat->bytes_allocated = 0;
 	mc->stat->bytes_deallocated = 0;
 	mc->stat->objects_allocated = 0;
@@ -141,8 +146,13 @@ void *acdc_thread(void *ptr) {
 
 	unsigned long time_counter = 0;
 	int runs = 0;
+	unsigned long long allocation_start, allocation_end;
+	unsigned long long deallocation_start, deallocation_end;
+	unsigned long long access_start, access_end;
 
 	printf("running thread %d\n", mc->opt.thread_id);
+
+	mc->stat->running_time = rdtsc();
 
 	while (runs < mc->gopts->benchmark_duration) {
 		size_t sz = 0;
@@ -164,7 +174,10 @@ void *acdc_thread(void *ptr) {
 #ifdef OPTIMAL_MODE
 		if (tp == LIST) tp = OPTIMAL_LIST;
 #endif
+		allocation_start = rdtsc();
 		OCollection *c = allocate_collection(mc, tp, sz, num_objects);
+		allocation_end = rdtsc();
+		mc->stat->allocation_time += allocation_end - allocation_start;
 
 		
 		//get CollectionPool for lt
@@ -193,7 +206,11 @@ void *acdc_thread(void *ptr) {
 
 		//TODO: access (all) objects
 		//access objects that were allocated together
+		access_start = rdtsc();
 		access_live_objects(mc);
+		access_end = rdtsc();
+
+		mc->stat->access_time += access_end - access_start;
 
 
 		time_counter += num_objects * sz;
@@ -207,10 +224,16 @@ void *acdc_thread(void *ptr) {
 			mc->time++;
 			time_counter = 0;
 			runs++;
-
+			deallocation_start = rdtsc();
 			delete_expired_objects(mc);
+			deallocation_end = rdtsc();
+
+			mc->stat->deallocation_time += 
+				deallocation_end - deallocation_start;
 		}
 	}
+
+	mc->stat->running_time = rdtsc() - mc->stat->running_time;
 
 
 	return (void*)mc;
@@ -245,6 +268,15 @@ void run_acdc(GOptions *gopts) {
 	int j, k;
 	for (i = 1; i < gopts->num_threads; ++i) {
 		MContext *res = thread_results[i];
+
+		thread_results[0]->stat->running_time +=
+			res->stat->running_time;
+		thread_results[0]->stat->allocation_time +=
+			res->stat->allocation_time;
+		thread_results[0]->stat->deallocation_time +=
+			res->stat->deallocation_time;
+		thread_results[0]->stat->access_time +=
+			res->stat->access_time;
 		thread_results[0]->stat->bytes_allocated += 
 			res->stat->bytes_allocated;
 		thread_results[0]->stat->bytes_deallocated += 
@@ -276,8 +308,20 @@ void run_acdc(GOptions *gopts) {
 				thread_results[0]->stat->sz_histogram[j]
 				);
 	}
-	
-	
-	//free mutator context
+
+	printf("RUNTIME \t%llu \t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%%\n", 
+			thread_results[0]->stat->running_time, 
+			100.0,
+			thread_results[0]->stat->allocation_time,
+			((double)thread_results[0]->stat->allocation_time /
+			 (double)thread_results[0]->stat->running_time)*100.0,
+			thread_results[0]->stat->deallocation_time,
+			((double)thread_results[0]->stat->deallocation_time /
+			 (double)thread_results[0]->stat->running_time)*100.0,
+			thread_results[0]->stat->access_time,
+			((double)thread_results[0]->stat->access_time /
+			 (double)thread_results[0]->stat->running_time)*100.0
+			);
+		//free mutator context
 }
 

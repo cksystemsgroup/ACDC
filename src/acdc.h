@@ -43,6 +43,10 @@ struct mutator_options {
 //mutator measurement data
 typedef struct mutator_stat MStat;
 struct mutator_stat {
+  unsigned long long running_time;
+  unsigned long long allocation_time;
+  unsigned long long deallocation_time;
+  unsigned long long access_time;
   unsigned long bytes_allocated;
   unsigned long bytes_deallocated;
   unsigned long objects_allocated;
