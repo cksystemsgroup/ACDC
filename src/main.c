@@ -5,30 +5,22 @@
 #include "acdc.h"
 #include "memory.h"
 
-/*
-struct global_options {
-  //benchmark options
-  int mode; //-m: acdc, false-sharing, ...
-  int num_threads;  //-n: number of mutator threads
-  int benchmark_duration; //-d: How long acdc will run
-  int seed; //-r:
-  
-  //options for object creation
-  int min_lifetime; //-l: must be >= 1 and <= max_lifetime
-  int max_lifetime; //-L:
-  int min_object_sc; //-s: minimal sizeclass
-  int max_object_sc; //-S: max sizeclass
-
-  //sharing options
-  int share_objects; //-O
-  int share_ratio; //-R: share_ratio% of all objects will be shared
-  int share_thread_ratio; //-T: share_thread_ratio% of all threads will be involved
-
-};
-*/
 
 static void print_usage() {
-	printf("TODO: help message\n");
+	printf("ACDC Benchmark usage:\n"
+			"\n"
+			"-m mode\n"
+			"-n number of threads\n"
+			"-d benchmark duration\n"
+			"-t time threshold\n"
+			"-r seed value\n"
+			"-l min. object lifetime\n"
+			"-L max. object lifetime\n"
+			"-s min. sizeclass (1<<x)\n"
+			"-S max. sizeclass (1<<x)\n"
+			"-O share objects\n"
+			"-R share ratio\n"
+			"-T share thread ratio\n");
 	exit(EXIT_FAILURE);
 }
 
