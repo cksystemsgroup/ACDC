@@ -44,9 +44,35 @@ acdc_env = acdc_conf.Finish()
 acdc_env.ParseConfig('pkg-config --cflags --libs glib-2.0')
 #acdc_env.Append(LIBS=['pthread'])
 acdc_env.Append(CPPFLAGS=['-g'])
-acdc_env.Program('acdc', ['main.c', 'memory.c', 'acdc.c', 'distribution.c', 'collections.c'])
+#acdc_env.Program('acdc', ['main.c', 'memory.c', 'acdc.c', 'distribution.c', 'collections.c'])
 
 
+for config in ['glibc', 'hoard', 'tcmalloc']:
+	e = acdc_env.Clone()
+
+	if config == 'hoard':
+		e.Append(LIBS=['hoard'], LIBPATH=['../allocators'])
+	if config == 'tcmalloc':
+		e.Append(LIBS=['tcmalloc'], LIBPATH=['../allocators'])
+
+	object_list = []
+	for obj in ['main', 'memory', 'acdc', 'distribution', 'collections']:
+		e.Object(obj+"-"+config, obj+".c")
+		object_list.append(obj+"-"+config+".o")
+
+	e.Program("acdc-"+config, object_list)
+
+#acdc_glibc = acdc_env.Clone()
+#acdc_glibc.Object('main-glibc', 'main.c')
+#acdc_glibc.Object('memory-glibc', 'memory.c')
+#acdc_glibc.Object('acdc-glibc', 'acdc.c')
+#acdc_glibc.Object('distribution-glibc', 'distribution.c')
+#acdc_glibc.Object('collections-glibc', 'collections.c')
+#acdc_glibc.Program('acdc-glibc', ['main-glibc.o', 'memory-glibc.o', 'acdc-glibc.o', 'distribution-glibc.o', 'collections-glibc.o' ] )
+
+#acdc_hoard = acdc_env.Clone()
+#acdc_hoard.Append(LIBS=['hoard'], LIBPATH=['../allocators'])
+#acdc_hoard.Program('acdc-hoard', [ acdc_hoard.Object('main.c'), acdc_hoard.Object('memory.c'), acdc_hoard.Object('acdc.c'), acdc_hoard.Object('distribution.c'), acdc_hoard.Object('collections.c')] )
 
 
 #stand alone programs
