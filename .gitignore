@@ -1,6 +1,7 @@
 build/*
 *.swp
 allocators/gperftools-2.0*
+allocators/jemalloc-3.2.0*
 .sconsign.dblite
 .sconf_temp
 config.log
