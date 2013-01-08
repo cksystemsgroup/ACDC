@@ -31,6 +31,15 @@ void setup() {
 }
 
 
+void test_allocate_btree(void) {
+
+
+	OCollection *oc = allocate_btree(mc, 34, 50);
+	deallocate_btree(mc, oc);
+
+
+}
+
 void test_allocate_aligned(void) {
 
 	
@@ -68,6 +77,8 @@ int main (int argc, char **argv) {
 
 
 	test_allocate_aligned();
+
+	test_allocate_btree();
 
 	return EXIT_SUCCESS;
 }

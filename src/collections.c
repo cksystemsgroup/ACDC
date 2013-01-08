@@ -4,7 +4,14 @@
 #include "acdc.h"
 #include "caches.h"
 
-//TODO: tree
+OCollection *new_collection(MContext *mc, collection_t t, 
+		size_t sz, unsigned long nelem) {
+	OCollection *c = malloc(sizeof(OCollection));
+	c->id = 0;
+	c->object_size = sz;
+	c->num_objects = nelem;
+	c->type = t;
+}
 
 void traverse_list(MContext *mc, OCollection *oc) {
 	//remember that the first word in payload is the next pointer
@@ -41,20 +48,12 @@ size_t get_optimal_list_sz(size_t sz, unsigned long nelem, size_t alignment) {
 OCollection *allocate_optimal_list(MContext *mc, size_t sz, 
 		unsigned long nelem) {
 
-
-	//TODO: align objects
-
-
 	if (sz < sizeof(LObject)) {
 		printf("Unable to allocate list. Config error. Min. object size too small.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	OCollection *list = malloc(sizeof(OCollection));
-	list->id = 0;
-	list->object_size = sz;
-	list->num_objects = nelem;
-	list->type = OPTIMAL_LIST;
+	OCollection *list = new_collection(mc, OPTIMAL_LIST, sz, nelem);
 
 	size_t aligned_size = get_optimal_list_sz(sz, nelem, L1_LINE_SZ);
 
@@ -92,13 +91,8 @@ static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem) 
 		printf("Unable to allocate list. Config error. Min. object size too small.\n");
 		exit(EXIT_FAILURE);
 	}
-
-
-	OCollection *list = malloc(sizeof(OCollection));
-	list->id = 0;
-	list->object_size = sz;
-	list->num_objects = nelem;
-	list->type = LIST;
+	
+	OCollection *list = new_collection(mc, LIST, sz, nelem);
 
 	//TODO: check for shared setting
 	list->start = allocate(mc, sz);
@@ -112,12 +106,14 @@ static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem) 
 	tmp->next = NULL;
 	return list;
 }
+
 static void deallocate_optimal_list(MContext *mc, OCollection *oc) {
 	int objects_per_cache_line = L1_LINE_SZ / oc->object_size;
 	deallocate_aligned(mc, oc->start, objects_per_cache_line * L1_LINE_SZ,
 			L1_LINE_SZ);
 	free(oc);
 }
+
 static void deallocate_list(MContext *mc, OCollection *oc) {
 	LObject *l = (LObject*)(oc->start);
 	while (l != NULL) {
@@ -129,6 +125,57 @@ static void deallocate_list(MContext *mc, OCollection *oc) {
 	free(oc);
 }
 
+BTObject *build_tree_recursion(MContext *mc, size_t sz, unsigned long nelem) {
+	
+	if (nelem == 0) return NULL;
+	
+	BTObject *t = (BTObject*)allocate(mc, sz);
+	
+	if (nelem == 1) {
+		// no more children
+		t->left = NULL;
+		t->right = NULL;
+	} else {
+		int half = nelem / 2;
+		t->left = build_tree_recursion(mc, sz, half);
+		t->right = build_tree_recursion(mc, sz, nelem - half);
+	}
+	
+	return t;
+}
+
+OCollection *allocate_btree(MContext *mc, size_t sz, unsigned long nelem) {
+	if (sz < sizeof(BTObject)) {
+		printf("Unable to allocate btree. Config error. Min. object size too small.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	OCollection *btree = new_collection(mc, BTREE, sz, nelem);
+
+	btree->start = (Object*)build_tree_recursion(mc, sz, nelem);
+
+	return btree;
+}
+
+void deallocate_subtree_recursion(MContext *mc, BTObject *t, size_t node_sz) {
+	if (t == NULL) return;
+	deallocate_subtree_recursion(mc, t->left, node_sz);
+	deallocate_subtree_recursion(mc, t->right, node_sz);
+	deallocate(mc, (Object*)t, node_sz);
+}
+
+void deallocate_btree(MContext *mc, OCollection *oc) {
+	deallocate_subtree_recursion(mc, (BTObject*)oc->start, oc->object_size);
+	free(oc);
+}
+
+
+void traverse_btree_preorder(MContext *mc, OCollection *oc) {
+
+}
+
+
+
 OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz, 
 		unsigned long nelem) {
 
@@ -139,8 +186,8 @@ OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 		case OPTIMAL_LIST:
 			return allocate_optimal_list(mc, sz, nelem);
 			break;
-		case TREE:
-			return NULL;
+		case BTREE:
+			return allocate_btree(mc, sz, nelem);
 			break;
 		default:
 			printf("Collection Type not supported\n");
@@ -157,7 +204,8 @@ void deallocate_collection(MContext *mc, OCollection *oc) {
 		case OPTIMAL_LIST:
 			deallocate_optimal_list(mc, oc);
 			return;
-		case TREE:
+		case BTREE:
+			deallocate_btree(mc, oc);
 			return;
 		default:
 			printf("Collection Type not supported\n");
@@ -173,7 +221,7 @@ void traverse_collection(MContext *mc, OCollection *oc) {
 		case OPTIMAL_LIST:
 			traverse_list(mc, oc);
 			return;
-		case TREE:
+		case BTREE:
 			return;
 		default:
 			printf("Collection Type not supported\n");

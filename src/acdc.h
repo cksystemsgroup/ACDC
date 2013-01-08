@@ -78,12 +78,17 @@ struct mem_object_lnode {
   Object o;
   LObject *next;
 };
-
+typedef struct mem_object_btnode BTObject;
+struct mem_object_btnode {
+  Object o;
+  BTObject *left;
+  BTObject *right;
+};
 
 
 
 //Collection stuff
-typedef enum {LIST, TREE, OPTIMAL_LIST} collection_t;
+typedef enum {LIST, BTREE, OPTIMAL_LIST, OPTIMAL_BTREE} collection_t;
 //object pool where threads keep refs to the memory chunks
 typedef struct object_collection OCollection;
 struct object_collection {
