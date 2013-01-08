@@ -5,7 +5,6 @@
 
 #include "acdc.h"
 #include "arch.h"
-#include "distribution.h"
 #include "memory.h"
 
 
@@ -161,12 +160,11 @@ void *acdc_thread(void *ptr) {
 		size_t sz = 0;
 		unsigned int lt;
 		unsigned int num_objects;
-		get_random_object_props(mc, &sz, &lt, &num_objects);
+		collection_t tp;
+		get_random_object_props(mc, &sz, &lt, &num_objects, &tp);
 
 
-		collection_t tp = LIST;
-		//collection_t tp = BTREE;
-
+		//TODO: move to get_random_object...
 		//check if collections can be built with sz
 		if (tp == BTREE && sz < sizeof(BTObject))
 			sz = sizeof(BTObject);
@@ -174,7 +172,6 @@ void *acdc_thread(void *ptr) {
 			sz = sizeof(LObject);
 
 		
-
 		mc->stat->lt_histogram[lt] += num_objects;
 		mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
 
@@ -214,9 +211,6 @@ void *acdc_thread(void *ptr) {
 		//add collection with proper id to hash map
 		//g_hash_table_insert(cp->collections, (gpointer)c, (gpointer)c);
 		g_hash_table_add(cp->collections, (gpointer)c);
-		
-
-
 
 		//access (all) objects
 		//access objects that were allocated together
@@ -225,7 +219,6 @@ void *acdc_thread(void *ptr) {
 		access_end = rdtsc();
 
 		mc->stat->access_time += access_end - access_start;
-
 
 		time_counter += num_objects * sz;
 		if (time_counter >= mc->gopts->time_threshold) {

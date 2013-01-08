@@ -46,6 +46,12 @@ static void set_default_params(GOptions *gopts) {
 
 static void check_params(GOptions *gopts) {
 	//TODO; exit on wrong parameter settings
+	
+	if (gopts->list_ratio + gopts->btree_ratio != 100) {
+		printf("If using -b and -q, their arguments must add"
+				" up to 100%\n");
+		exit(EXIT_FAILURE);
+	}
 }
 
 

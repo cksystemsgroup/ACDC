@@ -1,6 +1,6 @@
 #include <glib.h>
 
-#include "distribution.h"
+#include "acdc.h"
 #include "memory.h"
 
 
@@ -28,10 +28,29 @@ static unsigned int get_random_size(MContext *mc) {
 			1 << (sc + 1));
 }
 
+static collection_t get_random_collection_type(MContext *mc) {
+
+	unsigned int r = g_rand_int_range(mc->opt.rand, 0, 100);
+
+	if (r >= 0 && r < mc->gopts->list_ratio) {
+		printf("LIST\n");
+		return LIST;
+	}
+	if (r >= mc->gopts->list_ratio && 
+			r < (mc->gopts->list_ratio + mc->gopts->btree_ratio)) {
+		printf("BTREE\n");
+		return BTREE;
+	}
+	
+	//default. never reached
+	return LIST;
+}
+
 void get_random_object_props(MContext *mc, 
 		size_t *size, 
 		unsigned int *lifetime, 
-		unsigned int *num_objects) {
+		unsigned int *num_objects,
+		collection_t *type) {
 
 	unsigned int lt = get_random_lifetime(mc);
 	unsigned int sz = get_random_size(mc);
@@ -49,6 +68,7 @@ void get_random_object_props(MContext *mc,
 	*size = sz;
 	*lifetime = lt;
 	*num_objects = effect_of_sizeclass * effect_of_lifetime;
+	*type = get_random_collection_type(mc);
 }
 
 

@@ -139,7 +139,14 @@ void deallocate_aligned(MContext *mc, Object *o, size_t size, size_t alignment);
 void access_object(Object *o, size_t size, size_t offset);
 unsigned int get_sizeclass(size_t size);
 
-
+GRand *init_rand(unsigned int seed);
+void free_rand(GRand *rand);
+void get_random_object_props(MContext *mc, 
+		size_t *size, 
+		unsigned int *lifetime, 
+		unsigned int *num_objects,
+    collection_t *type
+    );
 
 
 #endif
