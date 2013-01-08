@@ -170,8 +170,15 @@ void deallocate_btree(MContext *mc, OCollection *oc) {
 }
 
 
-void traverse_btree_preorder(MContext *mc, OCollection *oc) {
+void btree_preorder_recursion(MContext *mc, BTObject *t, size_t sz) {
+	if (t == NULL) return;
+	access_object((Object*)t, sz, sizeof(BTObject));
+	btree_preorder_recursion(mc, t->left, sz);
+	btree_preorder_recursion(mc, t->right, sz);
+}
 
+void traverse_btree_preorder(MContext *mc, OCollection *oc) {
+	btree_preorder_recursion(mc, (BTObject*)oc->start, oc->object_size);
 }
 
 
@@ -222,6 +229,7 @@ void traverse_collection(MContext *mc, OCollection *oc) {
 			traverse_list(mc, oc);
 			return;
 		case BTREE:
+			traverse_btree_preorder(mc, oc);
 			return;
 		default:
 			printf("Collection Type not supported\n");

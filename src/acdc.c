@@ -155,10 +155,25 @@ void *acdc_thread(void *ptr) {
 	mc->stat->running_time = rdtsc();
 
 	while (runs < mc->gopts->benchmark_duration) {
+
+		//TODO: select collection
+
 		size_t sz = 0;
 		unsigned int lt;
 		unsigned int num_objects;
 		get_random_object_props(mc, &sz, &lt, &num_objects);
+
+
+		collection_t tp = LIST;
+		//collection_t tp = BTREE;
+
+		//check if collections can be built with sz
+		if (tp == BTREE && sz < sizeof(BTObject))
+			sz = sizeof(BTObject);
+		if (tp == LIST && sz < sizeof(LObject))
+			sz = sizeof(LObject);
+
+		
 
 		mc->stat->lt_histogram[lt] += num_objects;
 		mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
@@ -170,7 +185,6 @@ void *acdc_thread(void *ptr) {
 		//printf("allocate list of %u elements of sz %lu lt %u\n", 
 		//		num_objects, sz, lt);
 
-		collection_t tp = LIST;
 #ifdef OPTIMAL_MODE
 		if (tp == LIST) tp = OPTIMAL_LIST;
 #endif

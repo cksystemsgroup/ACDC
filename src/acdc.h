@@ -23,6 +23,8 @@ struct global_options {
   int max_lifetime; //-L:
   int min_object_sc; //-s: minimal sizeclass
   int max_object_sc; //-S: max sizeclass
+  int list_ratio; //-q:
+  int btree_ratio; //-b:
 
   //sharing options
   int share_objects; //-O:
