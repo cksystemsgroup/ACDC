@@ -204,7 +204,7 @@ void *acdc_thread(void *ptr) {
 
 
 
-		//TODO: access (all) objects
+		//access (all) objects
 		//access objects that were allocated together
 		access_start = rdtsc();
 		access_live_objects(mc);

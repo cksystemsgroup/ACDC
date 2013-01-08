@@ -113,4 +113,5 @@ gperf.Program('heapcontention-gperf', ['heapcontention-gperf.o'])
 
 
 # Test programs
-Program('test-custom-alloc', ['test-custom-alloc.cc', 'custom-alloc.o'])
+test_env = acdc_env.Clone()
+test_env.Program('test-1', ['test-1.c', 'collections.c', 'memory.c', 'acdc.c', 'distribution.c'])

@@ -2,13 +2,13 @@
 #include <stdio.h>
 
 #include "acdc.h"
-
+#include "caches.h"
 
 //TODO: tree
 
 void traverse_list(MContext *mc, OCollection *oc) {
 	//remember that the first word in payload is the next pointer
-	//do not alter!
+	//do not alter! cast Objects to LObjects
 	//
 	//access object
 	
@@ -22,7 +22,23 @@ void traverse_list(MContext *mc, OCollection *oc) {
 }
 
 
-static OCollection *allocate_optimal_list(MContext *mc, size_t sz, 
+size_t get_optimal_list_sz(size_t sz, unsigned long nelem, size_t alignment) {
+	int objects_per_line = L1_LINE_SZ / sz;
+	int lines_required = 0;
+	if (objects_per_line > 0) {
+		//allocate one extra cache line in case nelem % objects_per_line != 0
+		lines_required = (nelem / objects_per_line);
+		if (nelem % objects_per_line != 0) lines_required++;
+	} else {
+		//object is larger than a cache line
+		int lines_per_object = sz / L1_LINE_SZ;
+		if (sz % L1_LINE_SZ != 0) lines_per_object++;
+		lines_required = nelem * lines_per_object;
+	}
+	return lines_required * L1_LINE_SZ;
+}
+
+OCollection *allocate_optimal_list(MContext *mc, size_t sz, 
 		unsigned long nelem) {
 
 
@@ -33,23 +49,38 @@ static OCollection *allocate_optimal_list(MContext *mc, size_t sz,
 		printf("Unable to allocate list. Config error. Min. object size too small.\n");
 		exit(EXIT_FAILURE);
 	}
+
 	OCollection *list = malloc(sizeof(OCollection));
 	list->id = 0;
 	list->object_size = sz;
 	list->num_objects = nelem;
 	list->type = OPTIMAL_LIST;
 
+	size_t aligned_size = get_optimal_list_sz(sz, nelem, L1_LINE_SZ);
+
 	//allocate whole memory at once
-	list->start = allocate(mc, sz * nelem);
+	//reserve one extra cache line for alignment
+	list->start = allocate_aligned(mc, aligned_size, L1_LINE_SZ);
+
+
 	LObject *tmp = (LObject*)list->start;
 
-	//create pointers in contiguous memory
+
 	int i;
 	for (i = 1; i < nelem; ++i) {
-		tmp->next = (LObject*)((char*)tmp + sz);
+		LObject *next = (LObject*)((long)tmp + sz);
+		long bytes_available = L1_LINE_SZ - ((L1_LINE_SZ - 1) & (long)next);
+		if (bytes_available >= sz) {
+			tmp->next = next;
+		} else {
+			//start new cache line
+			tmp->next = (LObject*)((long)next + bytes_available);
+		}
 		tmp = tmp->next;
 	}
-	tmp->next = NULL;
+	tmp->next = 0;
+
+
 	return list;
 }
 
@@ -82,7 +113,9 @@ static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem) 
 	return list;
 }
 static void deallocate_optimal_list(MContext *mc, OCollection *oc) {
-	deallocate(mc, oc->start, oc->object_size * oc->num_objects);
+	int objects_per_cache_line = L1_LINE_SZ / oc->object_size;
+	deallocate_aligned(mc, oc->start, objects_per_cache_line * L1_LINE_SZ,
+			L1_LINE_SZ);
 	free(oc);
 }
 static void deallocate_list(MContext *mc, OCollection *oc) {

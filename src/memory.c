@@ -5,7 +5,6 @@
 
 Object *allocate(MContext *mc, size_t size) {
 	void *ptr;
-	//TODO: log allocator activity
 	
 	if (size < sizeof(Object)) {
 		printf("Error: min object size is %lu. Requested: %lu\n",
@@ -25,6 +24,22 @@ Object *allocate(MContext *mc, size_t size) {
 	mc->stat->objects_allocated++;
 
 	return o;
+}
+
+Object *allocate_aligned(MContext *mc, size_t size, size_t alignment) {
+
+	Object *o = allocate(mc, size + alignment + sizeof(Object*));
+	Object *aligned_o = (Object*)(((long)o + alignment + sizeof(Object*)) &
+		~(alignment-1));
+
+	((void**)aligned_o)[-1] = o;
+
+	return aligned_o;
+}
+
+void deallocate_aligned(MContext *mc, Object *o, size_t size, size_t alignment) {
+
+	deallocate(mc, ((void**)o)[-1], size + alignment + sizeof(Object*));
 }
 
 void deallocate(MContext *mc, Object *o, size_t size) {
