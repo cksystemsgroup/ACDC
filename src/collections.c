@@ -45,6 +45,32 @@ size_t get_optimal_list_sz(size_t sz, unsigned long nelem, size_t alignment) {
 	return lines_required * L1_LINE_SZ;
 }
 
+OCollection *allocate_optimal_list_unaligned(MContext *mc, size_t sz, 
+		unsigned long nelem) {
+
+
+	OCollection *list = new_collection(mc, OPTIMAL_LIST, sz, nelem);
+
+	//allocate whole memory at once
+	list->start = allocate(mc, sz * nelem);
+	LObject *tmp = (LObject*)list->start;
+	
+	//create pointers in contiguous memory
+	int i;
+	for (i = 1; i < nelem; ++i) {
+		tmp->next = (LObject*)((char*)tmp + sz);
+		tmp = tmp->next;
+	}
+	tmp->next = NULL;
+	return list;
+}
+
+
+static void deallocate_optimal_list_unaligned(MContext *mc, OCollection *oc) {
+	deallocate(mc, oc->start, oc->object_size * oc->num_objects);
+	free(oc);
+}
+
 OCollection *allocate_optimal_list(MContext *mc, size_t sz, 
 		unsigned long nelem) {
 
@@ -191,7 +217,7 @@ OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 			return allocate_list(mc, sz, nelem);
 			break;
 		case OPTIMAL_LIST:
-			return allocate_optimal_list(mc, sz, nelem);
+			return allocate_optimal_list_unaligned(mc, sz, nelem);
 			break;
 		case BTREE:
 			return allocate_btree(mc, sz, nelem);
@@ -209,7 +235,7 @@ void deallocate_collection(MContext *mc, OCollection *oc) {
 			deallocate_list(mc, oc);
 			return;
 		case OPTIMAL_LIST:
-			deallocate_optimal_list(mc, oc);
+			deallocate_optimal_list_unaligned(mc, oc);
 			return;
 		case BTREE:
 			deallocate_btree(mc, oc);

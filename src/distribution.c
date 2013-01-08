@@ -33,12 +33,10 @@ static collection_t get_random_collection_type(MContext *mc) {
 	unsigned int r = g_rand_int_range(mc->opt.rand, 0, 100);
 
 	if (r >= 0 && r < mc->gopts->list_ratio) {
-		printf("LIST\n");
 		return LIST;
 	}
 	if (r >= mc->gopts->list_ratio && 
 			r < (mc->gopts->list_ratio + mc->gopts->btree_ratio)) {
-		printf("BTREE\n");
 		return BTREE;
 	}
 	
