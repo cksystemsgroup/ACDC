@@ -34,8 +34,8 @@ void setup() {
 void test_allocate_btree(void) {
 
 
-	OCollection *oc = allocate_optimal_btree(mc, 34, 10);
-	deallocate_optimal_btree(mc, oc);
+	OCollection *oc = allocate_btree(mc, 34, 10);
+	deallocate_btree(mc, oc);
 
 }
 

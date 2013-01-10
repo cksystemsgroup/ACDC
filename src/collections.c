@@ -202,15 +202,11 @@ BTObject *build_tree_recursion(MContext *mc, size_t sz, unsigned long nelem) {
 	
 	BTObject *t = (BTObject*)allocate(mc, sz);
 	
-	if (nelem == 1) {
-		// no more children
-		t->left = NULL;
-		t->right = NULL;
-	} else {
-		int half = nelem / 2;
-		t->left = build_tree_recursion(mc, sz, half);
-		t->right = build_tree_recursion(mc, sz, nelem - half);
-	}
+	--nelem;
+
+	int half = nelem / 2;
+	t->left = build_tree_recursion(mc, sz, half);
+	t->right = build_tree_recursion(mc, sz, nelem - half);
 	
 	return t;
 }
