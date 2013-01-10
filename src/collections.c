@@ -151,6 +151,51 @@ static void deallocate_list(MContext *mc, OCollection *oc) {
 	free(oc);
 }
 
+
+
+
+void deallocate_optimal_btree(MContext *mc, OCollection *oc) {
+	deallocate(mc, (Object*)(oc->start), oc->object_size * oc->num_objects);
+	free(oc);
+}
+
+OCollection *allocate_optimal_btree(MContext *mc, size_t sz, unsigned long nelem) {
+	if (sz < sizeof(BTObject)) {
+		printf("Unable to allocate btree. Config error. "
+				"Min.object size too small.\n");
+		exit(EXIT_FAILURE);
+	}
+
+	OCollection *oc = new_collection(mc, OPTIMAL_BTREE, sz, nelem);
+	oc->start = allocate(mc, sz * nelem);
+
+	char *arr = (char*)(oc->start);
+
+	int i;
+	int j;
+	for (i = 0; i < nelem; ++i) {
+		BTObject *n = (BTObject*)(arr + i * sz);
+		int left_child = 2 * i + 1;
+		int right_child = 2 * i + 2;
+		if (left_child > nelem - 1) {
+			n->left = NULL;
+			j = i;
+		} else {
+			n->left = (BTObject*)(arr + left_child * sz);
+			j = i;
+		}
+		if (right_child > nelem - 1) {
+			n->right = NULL;
+			j = i;
+		} else {
+			n->right = (BTObject*)(arr + right_child * sz);
+			j = i;
+		}
+	}
+	
+	return oc;
+}
+
 BTObject *build_tree_recursion(MContext *mc, size_t sz, unsigned long nelem) {
 	
 	if (nelem == 0) return NULL;
@@ -172,7 +217,8 @@ BTObject *build_tree_recursion(MContext *mc, size_t sz, unsigned long nelem) {
 
 OCollection *allocate_btree(MContext *mc, size_t sz, unsigned long nelem) {
 	if (sz < sizeof(BTObject)) {
-		printf("Unable to allocate btree. Config error. Min. object size too small.\n");
+		printf("Unable to allocate btree. Config error. "
+				"Min.object size too small.\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -215,13 +261,12 @@ OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 	switch (ctype) {
 		case LIST:
 			return allocate_list(mc, sz, nelem);
-			break;
 		case OPTIMAL_LIST:
 			return allocate_optimal_list_unaligned(mc, sz, nelem);
-			break;
 		case BTREE:
 			return allocate_btree(mc, sz, nelem);
-			break;
+		case OPTIMAL_BTREE:
+			return allocate_optimal_btree(mc, sz, nelem);
 		default:
 			printf("Collection Type not supported\n");
 			exit(EXIT_FAILURE);
@@ -240,6 +285,9 @@ void deallocate_collection(MContext *mc, OCollection *oc) {
 		case BTREE:
 			deallocate_btree(mc, oc);
 			return;
+		case OPTIMAL_BTREE:
+			deallocate_optimal_btree(mc, oc);
+			return;
 		default:
 			printf("Collection Type not supported\n");
 			exit(EXIT_FAILURE);
@@ -255,6 +303,9 @@ void traverse_collection(MContext *mc, OCollection *oc) {
 			traverse_list(mc, oc);
 			return;
 		case BTREE:
+			traverse_btree_preorder(mc, oc);
+			return;
+		case OPTIMAL_BTREE:
 			traverse_btree_preorder(mc, oc);
 			return;
 		default:
