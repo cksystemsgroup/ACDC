@@ -5,7 +5,6 @@
 #include "acdc.h"
 #include "memory.h"
 
-
 static void print_usage() {
 	printf("ACDC Benchmark usage:\n"
 			"\n"
@@ -40,16 +39,19 @@ static void set_default_params(GOptions *gopts) {
 	gopts->share_objects = 0;
 	gopts->share_ratio = 0;
 	gopts->share_thread_ratio = 0;
-	gopts->list_ratio = 50;
-	gopts->btree_ratio = 50;
+	gopts->list_ratio = 0;
+	gopts->btree_ratio = 0;
+	gopts->false_sharing_ratio = 100;
 }
 
 static void check_params(GOptions *gopts) {
 	//TODO; exit on wrong parameter settings
 	
-	if (gopts->list_ratio + gopts->btree_ratio != 100) {
-		printf("If using -b and -q, their arguments must add"
-				" up to 100%\n");
+	if (gopts->list_ratio + 
+			gopts->btree_ratio +
+			gopts->false_sharing_ratio != 100) {
+		printf("If using -b, -f and -q, their arguments must add"
+				" up to 100%%\n");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -67,6 +69,7 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->max_object_sc = %d\n", gopts->max_object_sc);
 	printf("gopts->list_ratio = %d\n", gopts->list_ratio);
 	printf("gopts->btree_ratio = %d\n", gopts->btree_ratio);
+	printf("gopts->false_sharing_ratio = %d\n", gopts->false_sharing_ratio);
 	printf("gopts->share_objects = %d\n", gopts->share_objects);
 	printf("gopts->share_ratio = %d\n", gopts->share_ratio);
 	printf("gopts->share_thread_ratio = %d\n", gopts->share_thread_ratio);
@@ -74,10 +77,12 @@ static void print_params(GOptions *gopts) {
 
 int main(int argc, char **argv) {
 
+	//initial_break = sbrk(0);
+
 
 	GOptions *gopts = malloc(sizeof(GOptions));
 	set_default_params(gopts);
-	const char *optString = "m:n:t:d:r:l:L:s:S:OR:T:b:q:vh";
+	const char *optString = "m:n:t:d:r:l:L:s:S:OR:T:b:q:f:vh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
@@ -123,6 +128,9 @@ int main(int argc, char **argv) {
 				break;
 			case 'q':
 				gopts->list_ratio = atoi(optarg);
+				break;
+			case 'f':
+				gopts->false_sharing_ratio = atoi(optarg);
 				break;
 			case 'v':
 				gopts->verbosity++;

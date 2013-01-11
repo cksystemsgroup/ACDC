@@ -25,6 +25,7 @@ struct global_options {
   int max_object_sc; //-S: max sizeclass
   int list_ratio; //-q:
   int btree_ratio; //-b:
+  int false_sharing_ratio; //-f
 
   //sharing options
   int share_objects; //-O:

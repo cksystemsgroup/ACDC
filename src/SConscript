@@ -39,6 +39,7 @@ if not acdc_conf.CheckPKG('glib-2.0 >= 2.32'):
 	print 'glib-2.0 >= 2.32 not found'
 	Exit(1)
 
+
 acdc_env = acdc_conf.Finish()
 
 acdc_env.ParseConfig('pkg-config --cflags --libs glib-2.0')
@@ -55,7 +56,10 @@ for config in ['optimal', 'glibc', 'hoard', 'tcmalloc', 'jemalloc']:
 	if config == 'hoard':
 		e.Append(LIBS=['hoard'], LIBPATH=['../allocators'])
 	if config == 'tcmalloc':
-		e.Append(LIBS=['tcmalloc'], LIBPATH=['../allocators'])
+		#if not e.CheckLib('tcmalloc_minimal'):
+		#	print 'tcmalloc_minimal not found'
+		#	Exit(1)
+		e.Append(LIBS=['tcmalloc_minimal'], LIBPATH=['/usr/lib'])
 	if config == 'jemalloc':
 		e.Append(LIBS=['jemalloc'], LIBPATH=['../allocators'])
 

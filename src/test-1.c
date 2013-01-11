@@ -48,8 +48,6 @@ void test_allocate_aligned(void) {
 
 	deallocate_aligned(mc, o, 34, 64);
 
-	allocate_optimal_list(mc, 34, 4);
-
 
 
 }

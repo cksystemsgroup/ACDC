@@ -71,7 +71,7 @@ static void deallocate_optimal_list_unaligned(MContext *mc, OCollection *oc) {
 	free(oc);
 }
 
-OCollection *allocate_optimal_list(MContext *mc, size_t sz, 
+OCollection *allocate_optimal_list_aligned(MContext *mc, size_t sz, 
 		unsigned long nelem) {
 
 	if (sz < sizeof(LObject)) {
@@ -133,7 +133,7 @@ static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem) 
 	return list;
 }
 
-static void deallocate_optimal_list(MContext *mc, OCollection *oc) {
+static void deallocate_optimal_list_aligned(MContext *mc, OCollection *oc) {
 	int objects_per_cache_line = L1_LINE_SZ / oc->object_size;
 	deallocate_aligned(mc, oc->start, objects_per_cache_line * L1_LINE_SZ,
 			L1_LINE_SZ);

@@ -45,8 +45,10 @@ MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 	mc->stat->bytes_deallocated = 0;
 	mc->stat->objects_allocated = 0;
 	mc->stat->objects_deallocated = 0;
-	mc->stat->lt_histogram = calloc(gopts->max_lifetime, sizeof(unsigned long));
-	mc->stat->sz_histogram = calloc(gopts->max_object_sc, sizeof(unsigned long));
+	mc->stat->lt_histogram = calloc(gopts->max_lifetime + 1, 
+			sizeof(unsigned long));
+	mc->stat->sz_histogram = calloc(gopts->max_object_sc + 1, 
+			sizeof(unsigned long));
 
 	int num_pools = gopts->max_lifetime;
 	mc->collection_pools = malloc(sizeof(CollectionPool) * num_pools);
@@ -75,16 +77,21 @@ void destroy_mutator_context(MContext *mc) {
 	free(mc);
 }
 
+
 void print_mutator_stats(MContext *mc) {
+
+	//void *program_break = sbrk(0);
+	long heapsz = 0;//(long)program_break - (long)initial_break;
 	
 
-	printf("STATS\t%u\t%u\t%lu\t%lu\t%lu\t%lu\n",
+	printf("STATS\t%3u\t%4u\t%12lu\t%12lu\t%12lu\t%12lu\t%ld\n",
 			mc->opt.thread_id,
 			mc->time,
 			mc->stat->bytes_allocated,
 			mc->stat->bytes_deallocated,
 			mc->stat->objects_allocated,
-			mc->stat->objects_deallocated
+			mc->stat->objects_deallocated,
+			heapsz
 			);
 
 }
@@ -304,13 +311,13 @@ void run_acdc(GOptions *gopts) {
 	}
 
 
-	for (j = 0; j < gopts->max_lifetime; ++j) {
+	for (j = 0; j <= gopts->max_lifetime; ++j) {
 		printf("LT_HISTO:\t%d\t%lu\n", 
 				j, 
 				thread_results[0]->stat->lt_histogram[j]
 				);
 	}
-	for (j = 0; j < gopts->max_object_sc; ++j) {
+	for (j = 0; j <= gopts->max_object_sc; ++j) {
 		printf("SZ_HISTO:\t%d\t%lu\n", 
 				j, 
 				thread_results[0]->stat->sz_histogram[j]

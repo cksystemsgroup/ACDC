@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include "acdc.h"
 
-Object *allocate(MContext *mc, size_t size) {
-	void *ptr;
-	
-	if (size < sizeof(Object)) {
-		printf("Error: min object size is %lu. Requested: %lu\n",
+	Object *allocate(MContext *mc, size_t size) {
+		void *ptr;
+		
+		if (size < sizeof(Object)) {
+			printf("Error: min object size is %lu. Requested: %lu\n",
 				sizeof(Object),
 				size);
 		exit(1);
@@ -59,7 +59,7 @@ void access_object(Object *o, size_t size, size_t offset) {
 	char *payload = (char*)o + offset;
 	
 	for (i = 1; i < pl_sz; ++i) {
-		payload[i] = payload[i-1] + 1;
+		//payload[i] = payload[i-1] + 1;
 	}
 }
 
