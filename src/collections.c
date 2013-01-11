@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <pthread.h>
 
 #include "acdc.h"
 #include "caches.h"
+#include "false-sharing.h"
 
 OCollection *new_collection(MContext *mc, collection_t t, 
 		size_t sz, unsigned long nelem) {
@@ -11,6 +13,18 @@ OCollection *new_collection(MContext *mc, collection_t t,
 	c->object_size = sz;
 	c->num_objects = nelem;
 	c->type = t;
+}
+
+void share_collection(OCollection *oc, u_int64_t rctm) {
+
+	oc->shared_object.rctm = rctm;
+
+	u_int64_t tm = TM(rctm);
+	int num_threads = __builtin_popcountl(tm);
+
+	printf("setup a barrier for %d threads\n", __builtin_popcountl(tm));
+
+	int r = pthread_barrier_init(&oc->barrier, NULL, num_threads);
 }
 
 void traverse_list(MContext *mc, OCollection *oc) {
@@ -263,6 +277,8 @@ OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 			return allocate_btree(mc, sz, nelem);
 		case OPTIMAL_BTREE:
 			return allocate_optimal_btree(mc, sz, nelem);
+		case FALSE_SHARING:
+			return allocate_fs_pool(mc, sz, nelem);
 		default:
 			printf("Collection Type not supported\n");
 			exit(EXIT_FAILURE);
@@ -284,6 +300,9 @@ void deallocate_collection(MContext *mc, OCollection *oc) {
 		case OPTIMAL_BTREE:
 			deallocate_optimal_btree(mc, oc);
 			return;
+		case FALSE_SHARING:
+			deallocate_fs_pool(mc, oc);
+			return;
 		default:
 			printf("Collection Type not supported\n");
 			exit(EXIT_FAILURE);
@@ -303,6 +322,9 @@ void traverse_collection(MContext *mc, OCollection *oc) {
 			return;
 		case OPTIMAL_BTREE:
 			traverse_btree_preorder(mc, oc);
+			return;
+		case FALSE_SHARING:
+			traverse_fs_pool(mc, oc);
 			return;
 		default:
 			printf("Collection Type not supported\n");

@@ -24,9 +24,9 @@ void set_default_params(GOptions *gopts) {
 
 void setup() {
 
-	gopts = malloc(sizeof(GOptions));
+	gopts = (GOptions*)malloc(sizeof(GOptions));
 	set_default_params(gopts);
-	mc = create_mutator_context(gopts);
+	mc = (MContext*)create_mutator_context(gopts);
 
 }
 

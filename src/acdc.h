@@ -1,13 +1,13 @@
 #ifndef ACDC_H
 #define ACDC_H
 
+#include <pthread.h>
 #include <sys/types.h>
 #include <glib.h>
 
 //global acdc options
 typedef enum {
   ACDC, //default mode
-  FALSESHARING
 } benchmark_mode_t;
 typedef struct global_options GOptions;
 struct global_options {
@@ -72,18 +72,20 @@ struct mutator_stat {
 
 //object header for every allocated object
 //the min. size for an object must be sizeof(Object)
-typedef struct mem_object Object;
-struct mem_object {
+//typedef struct mem_object Object;
+typedef void Object;
+typedef struct shared_mem_object SharedObject;
+struct shared_mem_object {
   u_int64_t rctm; //6bit rc, 58 bit thread map
 };
 typedef struct mem_object_lnode LObject;
 struct mem_object_lnode {
-  Object o;
+  //Object o;
   LObject *next;
 };
 typedef struct mem_object_btnode BTObject;
 struct mem_object_btnode {
-  Object o;
+  //Object o;
   BTObject *left;
   BTObject *right;
 };
@@ -91,7 +93,15 @@ struct mem_object_btnode {
 
 
 //Collection stuff
-typedef enum {LIST, BTREE, OPTIMAL_LIST, OPTIMAL_BTREE} collection_t;
+typedef enum {
+  LIST,
+  BTREE,
+  FALSE_SHARING,
+  OPTIMAL_LIST, 
+  OPTIMAL_BTREE,
+  OPTIMAL_FALSE_SHARING
+} collection_t;
+
 //object pool where threads keep refs to the memory chunks
 typedef struct object_collection OCollection;
 struct object_collection {
@@ -99,6 +109,11 @@ struct object_collection {
   size_t num_objects;
   unsigned int id; // in case we have more collections of the same size
   collection_t type;
+
+  //sharing and synchronization
+  SharedObject shared_object;
+  pthread_barrier_t barrier;
+  
   //pointer to start of collection
   Object *start;
 };
@@ -118,6 +133,10 @@ OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 		unsigned long nelem);
 void deallocate_collection(MContext *mc, OCollection *oc); 
 void traverse_collection(MContext *mc, OCollection *oc);
+
+
+OCollection *new_collection(MContext *mc, collection_t t, size_t sz, 
+                            unsigned long nelem);
 
 //thread context specific data
 struct mutator_context {

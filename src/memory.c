@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "acdc.h"
 
-	Object *allocate(MContext *mc, size_t size) {
+Object *allocate(MContext *mc, size_t size) {
 		void *ptr;
 		
 		if (size < sizeof(Object)) {
@@ -17,7 +17,7 @@
 	
 	//set header information
 	Object *o = (Object*)ptr;
-	o->rctm = 0;
+	//o->rctm = 0;
 
 	//update mutator stats
 	mc->stat->bytes_allocated += size;

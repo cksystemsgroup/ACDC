@@ -20,8 +20,9 @@ static void print_usage() {
 			"-O share objects\n"
 			"-R share ratio\n"
 			"-T share thread ratio\n"
-			"-b %% ratio of btrees\n"
-			"-q %% ratio of linked lists (queues)\n"
+			"-b %% ratio of btree collections\n"
+			"-q %% ratio of linked-list collections\n"
+			"-f %% ratio of false-sharing collections\n"
 			);
 	exit(EXIT_FAILURE);
 }

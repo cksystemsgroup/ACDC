@@ -12,10 +12,8 @@ def CheckPKG(context, name):
 	return ret
 
 
-Object('custom-alloc.cc', CPPFLAGS=['-ggdb'], LIBS=['pthread'])
 
-
-#ACDC Tools
+#ACDC
 acdc_env = Environment()
 acdc_conf = Configure(acdc_env, custom_tests = { 'CheckPKGConfig' : CheckPKGConfig, 'CheckPKG' : CheckPKG })
 
@@ -64,7 +62,7 @@ for config in ['optimal', 'glibc', 'hoard', 'tcmalloc', 'jemalloc']:
 		e.Append(LIBS=['jemalloc'], LIBPATH=['../allocators'])
 
 	object_list = []
-	for obj in ['main', 'memory', 'acdc', 'distribution', 'collections']:
+	for obj in ['main', 'memory', 'acdc', 'distribution', 'collections', 'false-sharing']:
 		e.Object(obj+"-"+config, obj+".c")
 		object_list.append(obj+"-"+config+".o")
 
@@ -73,4 +71,4 @@ for config in ['optimal', 'glibc', 'hoard', 'tcmalloc', 'jemalloc']:
 
 # Test programs
 test_env = acdc_env.Clone()
-test_env.Program('test-1', ['test-1.c', 'collections.c', 'memory.c', 'acdc.c', 'distribution.c'])
+test_env.Program('test-1', ['test-1.c', 'collections.c', 'memory.c', 'acdc.c', 'distribution.c', 'false-sharing.c'])

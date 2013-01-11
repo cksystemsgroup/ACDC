@@ -192,6 +192,7 @@ void *acdc_thread(void *ptr) {
 #ifdef OPTIMAL_MODE
 		if (tp == LIST) tp = OPTIMAL_LIST;
 		if (tp == BTREE) tp = OPTIMAL_BTREE;
+		if (tp == FALSE_SHARING) tp = OPTIMAL_FALSE_SHARING;
 #endif
 		allocation_start = rdtsc();
 		OCollection *c = allocate_collection(mc, tp, sz, num_objects);
