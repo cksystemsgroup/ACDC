@@ -25,6 +25,10 @@ void share_collection(OCollection *oc, u_int64_t rctm) {
 	printf("setup a barrier for %d threads\n", __builtin_popcountl(tm));
 
 	int r = pthread_barrier_init(&oc->barrier, NULL, num_threads);
+	if (r) {
+		printf("Unable to init barrier: %d\n", r);
+		exit(1);
+	}
 }
 
 void traverse_list(MContext *mc, OCollection *oc) {
