@@ -1,4 +1,4 @@
-#Dependency check
+#Dependency check methods
 def CheckPKGConfig(context, version):
 	context.Message( 'checking for pkg-config...' )
 	ret = context.TryAction('pkg-config --atleast-pkgconfig-version=%s' % version)[0]
@@ -69,51 +69,6 @@ for config in ['optimal', 'glibc', 'hoard', 'tcmalloc', 'jemalloc']:
 		object_list.append(obj+"-"+config+".o")
 
 	e.Program("acdc-"+config, object_list)
-
-#acdc_glibc = acdc_env.Clone()
-#acdc_glibc.Object('main-glibc', 'main.c')
-#acdc_glibc.Object('memory-glibc', 'memory.c')
-#acdc_glibc.Object('acdc-glibc', 'acdc.c')
-#acdc_glibc.Object('distribution-glibc', 'distribution.c')
-#acdc_glibc.Object('collections-glibc', 'collections.c')
-#acdc_glibc.Program('acdc-glibc', ['main-glibc.o', 'memory-glibc.o', 'acdc-glibc.o', 'distribution-glibc.o', 'collections-glibc.o' ] )
-
-#acdc_hoard = acdc_env.Clone()
-#acdc_hoard.Append(LIBS=['hoard'], LIBPATH=['../allocators'])
-#acdc_hoard.Program('acdc-hoard', [ acdc_hoard.Object('main.c'), acdc_hoard.Object('memory.c'), acdc_hoard.Object('acdc.c'), acdc_hoard.Object('distribution.c'), acdc_hoard.Object('collections.c')] )
-
-
-#stand alone programs
-optimal = Environment(CPPFLAGS=['-ggdb', '-DOPTIMAL_MODE'], LIBS=['pthread'])
-glibc = Environment(CPPFLAGS=['-ggdb', '-DGLIBC_MODE'], LIBS=['pthread'])
-hoard = Environment(CPPFLAGS=['-ggdb', '-DHOARD_MODE'], LIBS=['pthread', 'hoard'], LIBPATH=['../allocators'])
-gperf = Environment(CPPFLAGS=['-ggdb', '-DGPERF_MODE'], LIBS=['pthread', 'tcmalloc'], LIBPATH=['../allocators'])
-
-optimal.Object('locality-optimal', ['locality.cc'])
-optimal.Object('false-sharing-optimal', ['false-sharing.c'])
-
-glibc.Object('locality-glibc', ['locality.cc'])
-glibc.Object('false-sharing-glibc', ['false-sharing.c'])
-glibc.Object('heapcontention-glibc', ['heapcontention.c'])
-
-hoard.Object('locality-hoard', ['locality.cc'])
-hoard.Object('false-sharing-hoard', ['false-sharing.c'])
-hoard.Object('heapcontention-hoard', ['heapcontention.c'])
-
-gperf.Object('heapcontention-gperf', ['heapcontention.c'])
-
-optimal.Program('locality-optimal', ['locality-optimal.o', 'custom-alloc.o'])
-optimal.Program('false-sharing-optimal', ['false-sharing-optimal.o', 'custom-alloc.o'])
-
-glibc.Program('locality-glibc', ['locality-glibc.o'])
-glibc.Program('false-sharing-glibc', ['false-sharing-glibc.o'])
-glibc.Program('heapcontention-glibc', ['heapcontention-glibc.o'])
-
-hoard.Program('locality-hoard', ['locality-hoard.o'])
-hoard.Program('false-sharing-hoard', ['false-sharing-glibc.o'])
-hoard.Program('heapcontention-hoard', ['heapcontention-hoard.o'])
-
-gperf.Program('heapcontention-gperf', ['heapcontention-gperf.o'])
 
 
 # Test programs
