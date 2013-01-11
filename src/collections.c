@@ -38,7 +38,7 @@ void traverse_list(MContext *mc, OCollection *oc) {
 	while (list != NULL) {
 		//printf("access object\n");
 		access_object((Object*)list, oc->object_size, sizeof(LObject));
-		list = list->next;	
+		list = list->next;
 	}
 }
 
