@@ -323,12 +323,13 @@ void *acdc_thread(void *ptr) {
 
 		mc->stat->access_time += access_end - access_start;
 
-		//access shared objects
-		access_shared_objects(mc);
 
 		time_counter += num_objects * sz;
 		if (time_counter >= mc->gopts->time_threshold) {
 			
+			//access shared objects
+			access_shared_objects(mc);
+
 			print_mutator_stats(mc);
 		
 			//proceed in time

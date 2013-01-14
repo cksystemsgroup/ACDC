@@ -64,14 +64,15 @@ void traverse_fs_pool(MContext *mc, OCollection *oc) {
 
 	if (tm & my_bit) {
 		//wait at barrier for others
-		int r = pthread_barrier_wait(&oc->barrier);
+		/*int r = pthread_barrier_wait(&oc->barrier);
 		if (!(r == 0 || r == PTHREAD_BARRIER_SERIAL_THREAD)) {
 			printf("unable to wait at barrier: %d\n", r);
-		}
+		}*/
 
 		//TODO: access my elements
 
 		//wait some time
+		/*
 		long long foo = rdtsc();
 		long bar = 0;
 		while (foo + 1000000000 > rdtsc()) {
@@ -81,6 +82,7 @@ void traverse_fs_pool(MContext *mc, OCollection *oc) {
 			}
 		}
 		printf("\n");
+		*/
 
 	} //else I don't have access to this collection
 
