@@ -1,4 +1,5 @@
 #include <glib.h>
+#include <stdio.h>
 
 #include "acdc.h"
 #include "memory.h"
@@ -28,6 +29,13 @@ static unsigned int get_random_size(MContext *mc) {
 			1 << (sc + 1));
 }
 
+static unsigned int get_random_thread(MContext *mc) {
+
+	return g_rand_int_range(mc->opt.rand,
+			0,
+			mc->gopts->num_threads);
+}
+
 static collection_t get_random_collection_type(MContext *mc) {
 
 	unsigned int r = g_rand_int_range(mc->opt.rand, 0, 100);
@@ -48,11 +56,45 @@ static collection_t get_random_collection_type(MContext *mc) {
 	return LIST;
 }
 
+static u_int64_t get_random_thread_selection(MContext *mc) {
+
+	u_int64_t my_thread_bit = 1 << mc->opt.thread_id;
+
+	if (mc->gopts->share_objects == 0 || 
+			mc->gopts->share_thread_ratio == 0) {
+		//only this thread is interested
+		return RCTM(0, my_thread_bit);
+	}
+
+	//threads except me, times share ratio
+	int number_of_other_threads = 
+		(mc->gopts->num_threads - 1) / (100 / mc->gopts->share_thread_ratio);
+
+	printf("%d will share with %d threads\n", mc->opt.thread_id, 
+			number_of_other_threads);
+
+	//get number_of_other_threads random thread id's (except mine)
+	//and set their bits in tm
+	int i = 0;
+	u_int64_t tm = my_thread_bit;
+	while (i < number_of_other_threads) {
+		int tid = get_random_thread(mc);
+		if (tid != mc->gopts->num_threads) {
+			printf("adding thread %d\n", tid);
+			++i;
+			tm |= 1 << tid;
+		}
+	}
+
+	return RCTM(0, tm);
+}
+
 void get_random_object_props(MContext *mc, 
 		size_t *size, 
 		unsigned int *lifetime, 
 		unsigned int *num_objects,
-		collection_t *type) {
+		collection_t *type,
+		u_int64_t *rctm) {
 
 	unsigned int lt = get_random_lifetime(mc);
 	unsigned int sz = get_random_size(mc);
@@ -71,6 +113,7 @@ void get_random_object_props(MContext *mc,
 	*lifetime = lt;
 	*num_objects = effect_of_sizeclass * effect_of_lifetime;
 	*type = get_random_collection_type(mc);
+	*rctm = get_random_thread_selection(mc);
 }
 
 

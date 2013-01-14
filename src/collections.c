@@ -13,6 +13,8 @@ OCollection *new_collection(MContext *mc, collection_t t,
 	c->object_size = sz;
 	c->num_objects = nelem;
 	c->type = t;
+	u_int64_t tm = 1 << mc->opt.thread_id;
+	c->shared_object.rctm = RCTM(0, tm);
 }
 
 void share_collection(OCollection *oc, u_int64_t rctm) {
@@ -28,6 +30,14 @@ void share_collection(OCollection *oc, u_int64_t rctm) {
 	if (r) {
 		printf("Unable to init barrier: %d\n", r);
 		exit(1);
+	}
+}
+
+int collection_is_shared(MContext *mc, OCollection *oc) {
+	if (TM(oc->shared_object.rctm) != (1 << mc->opt.thread_id)) {
+		return 1;
+	} else {
+		return 0;
 	}
 }
 

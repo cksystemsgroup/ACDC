@@ -37,9 +37,9 @@ static void set_default_params(GOptions *gopts) {
 	gopts->max_lifetime = 10;
 	gopts->min_object_sc = 4;
 	gopts->max_object_sc = 8;
-	gopts->share_objects = 0;
+	gopts->share_objects = 1;
 	gopts->share_ratio = 0;
-	gopts->share_thread_ratio = 0;
+	gopts->share_thread_ratio = 100;
 	gopts->list_ratio = 0;
 	gopts->btree_ratio = 0;
 	gopts->false_sharing_ratio = 100;

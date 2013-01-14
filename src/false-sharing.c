@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "acdc.h"
+#include "arch.h"
 #include "false-sharing.h"
 
 
@@ -20,7 +21,7 @@ OCollection *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem) {
 	return oc;
 }
 
-void deallocate_fs_pool(MContext *mc, OCollection *oc){
+void deallocate_fs_pool(MContext *mc, OCollection *oc) {
 	int i;
 	for (i = 0; i < oc->num_objects; ++i) {
 		 deallocate(mc, ((SharedObject**)oc->start)[i], oc->object_size);
@@ -55,7 +56,7 @@ void assign_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rctm) {
 
 }
 
-void traverse_fs_pool(MContext *mc, OCollection *oc){
+void traverse_fs_pool(MContext *mc, OCollection *oc) {
 
 	//check if thread bit is set in rctm
 	u_int64_t tm = TM(oc->shared_object.rctm);
@@ -69,7 +70,19 @@ void traverse_fs_pool(MContext *mc, OCollection *oc){
 		}
 
 		//TODO: access my elements
-	}
+
+		//wait some time
+		long long foo = rdtsc();
+		long bar = 0;
+		while (foo + 1000000000 > rdtsc()) {
+			bar++;
+			if (bar % 1000000 == 0) {
+				printf(".");
+			}
+		}
+		printf("\n");
+
+	} //else I don't have access to this collection
 
 }
 

@@ -133,10 +133,13 @@ OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 		unsigned long nelem);
 void deallocate_collection(MContext *mc, OCollection *oc); 
 void traverse_collection(MContext *mc, OCollection *oc);
+int collection_is_shared(MContext *mc, OCollection *oc);
 
 
 OCollection *new_collection(MContext *mc, collection_t t, size_t sz, 
                             unsigned long nelem);
+
+void share_collection(OCollection *oc, u_int64_t rctm);
 
 //thread context specific data
 struct mutator_context {
@@ -165,7 +168,8 @@ void get_random_object_props(MContext *mc,
 		size_t *size, 
 		unsigned int *lifetime, 
 		unsigned int *num_objects,
-    collection_t *type
+    collection_t *type,
+    u_int64_t *rctm
     );
 
 
