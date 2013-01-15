@@ -305,6 +305,8 @@ void *acdc_thread(void *ptr) {
 			sz = sizeof(BTObject);
 		if (tp == LIST && sz < sizeof(LObject))
 			sz = sizeof(LObject);
+		if (tp == FALSE_SHARING && sz < sizeof(SharedObject))
+			sz = sizeof(SharedObject);
 
 		
 		mc->stat->lt_histogram[lt] += num_objects;
@@ -430,7 +432,7 @@ void run_acdc(GOptions *gopts) {
 
 
 	//aggreagate info in thread 0's MContext
-	int j, k;
+	int j;
 	for (i = 1; i < gopts->num_threads; ++i) {
 		MContext *res = thread_results[i];
 

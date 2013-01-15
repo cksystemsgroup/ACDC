@@ -65,9 +65,9 @@ struct mutator_stat {
  * out of the combined rctm field. RCTM creates the combination
  * of a RC and a TM
  */
-#define RC(_rctm) (_rctm >> 58)
-#define TM(_rctm) ((_rctm << 6) >> 6)
-#define RCTM(_rc, _tm) ((_rc << 58) | _tm)
+#define RC(_rctm) ((u_int64_t)_rctm >> 58)
+#define TM(_rctm) (((u_int64_t)_rctm << 6) >> 6)
+#define RCTM(_rc, _tm) (((u_int64_t)_rc << 58) | _tm)
 
 
 //object header for every allocated object

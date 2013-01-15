@@ -15,6 +15,7 @@ OCollection *new_collection(MContext *mc, collection_t t,
 	c->type = t;
 	u_int64_t tm = 1 << mc->opt.thread_id;
 	c->shared_object.rctm = RCTM(0, tm);
+	return c;
 }
 
 void share_collection(OCollection *oc, u_int64_t rctm) {
@@ -98,7 +99,7 @@ static void deallocate_optimal_list_unaligned(MContext *mc, OCollection *oc) {
 	deallocate(mc, oc->start, oc->object_size * oc->num_objects);
 	free(oc);
 }
-
+/*
 OCollection *allocate_optimal_list_aligned(MContext *mc, size_t sz, 
 		unsigned long nelem) {
 
@@ -136,6 +137,7 @@ OCollection *allocate_optimal_list_aligned(MContext *mc, size_t sz,
 
 	return list;
 }
+*/
 
 static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem) {
 
@@ -161,12 +163,14 @@ static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem) 
 	return list;
 }
 
+/*
 static void deallocate_optimal_list_aligned(MContext *mc, OCollection *oc) {
 	int objects_per_cache_line = L1_LINE_SZ / oc->object_size;
 	deallocate_aligned(mc, oc->start, objects_per_cache_line * L1_LINE_SZ,
 			L1_LINE_SZ);
 	free(oc);
 }
+*/
 
 static void deallocate_list(MContext *mc, OCollection *oc) {
 	LObject *l = (LObject*)(oc->start);
@@ -200,24 +204,19 @@ OCollection *allocate_optimal_btree(MContext *mc, size_t sz, unsigned long nelem
 	char *arr = (char*)(oc->start);
 
 	int i;
-	int j;
 	for (i = 0; i < nelem; ++i) {
 		BTObject *n = (BTObject*)(arr + i * sz);
 		int left_child = 2 * i + 1;
 		int right_child = 2 * i + 2;
 		if (left_child > nelem - 1) {
 			n->left = NULL;
-			j = i;
 		} else {
 			n->left = (BTObject*)(arr + left_child * sz);
-			j = i;
 		}
 		if (right_child > nelem - 1) {
 			n->right = NULL;
-			j = i;
 		} else {
 			n->right = (BTObject*)(arr + right_child * sz);
-			j = i;
 		}
 	}
 	
@@ -297,8 +296,12 @@ OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 			oc = allocate_fs_pool(mc, sz, nelem);
 			assign_fs_pool_objects(mc, oc, rctm);
 			return oc;
+		case OPTIMAL_FALSE_SHARING:
+			oc = allocate_optimal_fs_pool(mc, sz, nelem);
+			assign_optimal_fs_pool_objects(mc, oc, rctm);
+			return oc;
 		default:
-			printf("Collection Type not supported\n");
+			printf("Allocate: Collection Type not supported\n");
 			exit(EXIT_FAILURE);
 	}
 }
@@ -321,8 +324,11 @@ void deallocate_collection(MContext *mc, OCollection *oc) {
 		case FALSE_SHARING:
 			deallocate_fs_pool(mc, oc);
 			return;
+		case OPTIMAL_FALSE_SHARING:
+			deallocate_optimal_fs_pool(mc, oc);
+			return;
 		default:
-			printf("Collection Type not supported\n");
+			printf("Deallocate: Collection Type not supported\n");
 			exit(EXIT_FAILURE);
 	}
 }
@@ -344,8 +350,11 @@ void traverse_collection(MContext *mc, OCollection *oc) {
 		case FALSE_SHARING:
 			traverse_fs_pool(mc, oc);
 			return;
+		case OPTIMAL_FALSE_SHARING:
+			traverse_optimal_fs_pool(mc, oc);
+			return;
 		default:
-			printf("Collection Type not supported\n");
+			printf("Traverse: Collection Type not supported\n");
 			exit(EXIT_FAILURE);
 	}
 }

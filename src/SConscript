@@ -42,7 +42,7 @@ acdc_env = acdc_conf.Finish()
 
 acdc_env.ParseConfig('pkg-config --cflags --libs glib-2.0')
 #acdc_env.Append(LIBS=['pthread'])
-acdc_env.Append(CPPFLAGS=['-g'])
+acdc_env.Append(CPPFLAGS=['-O3', '-Wall', '-Werror'])
 #acdc_env.Program('acdc', ['main.c', 'memory.c', 'acdc.c', 'distribution.c', 'collections.c'])
 
 
@@ -70,5 +70,5 @@ for config in ['optimal', 'glibc', 'hoard', 'tcmalloc', 'jemalloc']:
 
 
 # Test programs
-test_env = acdc_env.Clone()
-test_env.Program('test-1', ['test-1.c', 'collections.c', 'memory.c', 'acdc.c', 'distribution.c', 'false-sharing.c'])
+#test_env = acdc_env.Clone()
+#test_env.Program('test-1', ['test-1.c', 'collections.c', 'memory.c', 'acdc.c', 'distribution.c', 'false-sharing.c'])

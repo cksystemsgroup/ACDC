@@ -59,7 +59,7 @@ void access_object(Object *o, size_t size, size_t offset) {
 	char *payload = (char*)o + offset;
 	
 	for (i = 1; i < pl_sz; ++i) {
-		//payload[i] = payload[i-1] + 1;
+		payload[i] = payload[i-1] + 1;
 	}
 }
 
