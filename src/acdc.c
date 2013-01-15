@@ -136,6 +136,7 @@ void delete_expired_objects(MContext *mc) {
 }
 
 
+
 static void access_collection(gpointer key, gpointer value, gpointer user_data) {
 
 	OCollection *oc = (OCollection*)value;
@@ -162,24 +163,26 @@ void access_live_objects(MContext *mc) {
 
 volatile int hash_table_size;
 volatile OCollection *current_collection;
+volatile int current_thread_time;
 pthread_barrier_t sync_barrier;
 void access_shared_objects(MContext *mc) {
 
-	int i, j, idx, time;
+	int i, j, idx;
 	GHashTableIter iter;
 	CollectionPool *scp;
 	
-	printf("%d ENTERS\n", mc->opt.thread_id);
+	//printf("%d ENTERS\n", mc->opt.thread_id);
 
 	//thread 0 is the time master
 	if (mc->opt.thread_id == 0) {
-		time = mc->time;
+		current_thread_time = mc->time;
 	}
 		
 	//same loop for all threads. wait at barrier to ensure time is set
-	printf("%d waits at first barr\n", mc->opt.thread_id);
+	//printf("%d waits at first barr\n", mc->opt.thread_id);
 	pthread_barrier_wait(&sync_barrier);
-	for (i = time; i < time + mc->gopts->max_lifetime; ++i) {
+	for (i = current_thread_time; 
+			i < current_thread_time + mc->gopts->max_lifetime; ++i) {
 		if (mc->opt.thread_id == 0) {
 
 			idx = i % mc->gopts->max_lifetime;
@@ -190,12 +193,12 @@ void access_shared_objects(MContext *mc) {
 			g_hash_table_iter_init(&iter, scp->collections);
 			//iterate over all collections
 
-			printf("%d selects hash map with sz %d from %d\n", 
-					mc->opt.thread_id,
-					hash_table_size, i);
+			//printf("%d selects hash map with sz %d from %d\n", 
+			//		mc->opt.thread_id,
+			//		hash_table_size, i);
 		}
 
-		printf("%d waits at second barr\n", mc->opt.thread_id);
+		//printf("%d waits at second barr\n", mc->opt.thread_id);
 		pthread_barrier_wait(&sync_barrier);
 
 		for (j = 0; j < hash_table_size; ++j) {
@@ -204,18 +207,50 @@ void access_shared_objects(MContext *mc) {
 				gpointer key, value;
 				g_hash_table_iter_next(&iter, &key, &value);
 				current_collection = (OCollection*)value;
-				printf("%d selects OCollection\n", mc->opt.thread_id);
+				//printf("%d selects OCollection\n", mc->opt.thread_id);
 			}
 
-			printf("%d waits at third barr\n", mc->opt.thread_id);
+			//printf("%d waits at third barr\n", mc->opt.thread_id);
 			pthread_barrier_wait(&sync_barrier);
 			traverse_collection(mc, current_collection);
 		}
 
 		
-		printf("%d waits at 4th barr\n", mc->opt.thread_id);
+		//printf("%d waits at 4th barr\n", mc->opt.thread_id);
 		pthread_barrier_wait(&sync_barrier);
 	}
+}
+
+volatile int delete_thread_id;
+void delete_expired_shared_objects(MContext *mc) {
+	//thread 0 selects the thread to delete shared objects
+	if (mc->opt.thread_id == 0) {
+		delete_thread_id = get_random_thread(mc);
+		//printf("thread %d will deallocate this time\n", delete_thread_id);
+	}
+	pthread_barrier_wait(&sync_barrier);
+	if (mc->opt.thread_id != delete_thread_id) return;
+
+
+	long long deallocation_start = rdtsc();
+
+
+	int delete_index = (mc->time) % mc->gopts->max_lifetime;
+
+	//printf("DEBUG: will remove from pool %d\n", delete_index);
+
+	CollectionPool *cp = &(shared_collection_pools[delete_index]);
+
+	g_hash_table_foreach(cp->collections, delete_collection, mc);
+
+	//delete items in hashmap
+	g_hash_table_remove_all(cp->collections);
+			
+	long long deallocation_end = rdtsc();
+		
+	mc->stat->deallocation_time += 
+				deallocation_end - deallocation_start;
+
 }
 
 
@@ -342,6 +377,10 @@ void *acdc_thread(void *ptr) {
 
 			mc->stat->deallocation_time += 
 				deallocation_end - deallocation_start;
+
+
+			delete_expired_shared_objects(mc);
+			pthread_barrier_wait(&sync_barrier);
 		}
 	}
 

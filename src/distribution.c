@@ -29,7 +29,7 @@ static unsigned int get_random_size(MContext *mc) {
 			1 << (sc + 1));
 }
 
-static unsigned int get_random_thread(MContext *mc) {
+unsigned int get_random_thread(MContext *mc) {
 
 	return g_rand_int_range(mc->opt.rand,
 			0,
@@ -70,8 +70,8 @@ static u_int64_t get_random_thread_selection(MContext *mc) {
 	int number_of_other_threads = 
 		(mc->gopts->num_threads - 1) / (100 / mc->gopts->share_thread_ratio);
 
-	printf("%d will share with %d threads\n", mc->opt.thread_id, 
-			number_of_other_threads);
+	//printf("%d will share with %d threads\n", mc->opt.thread_id, 
+	//		number_of_other_threads);
 
 	//get number_of_other_threads random thread id's (except mine)
 	//and set their bits in tm
@@ -80,7 +80,7 @@ static u_int64_t get_random_thread_selection(MContext *mc) {
 	while (i < number_of_other_threads) {
 		int tid = get_random_thread(mc);
 		if (tid != mc->gopts->num_threads) {
-			printf("adding thread %d\n", tid);
+			//printf("adding thread %d\n", tid);
 			++i;
 			tm |= 1 << tid;
 		}

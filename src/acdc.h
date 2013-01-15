@@ -172,5 +172,7 @@ void get_random_object_props(MContext *mc,
     u_int64_t *rctm
     );
 
+unsigned int get_random_thread(MContext *mc);
+
 
 #endif

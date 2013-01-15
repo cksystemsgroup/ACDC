@@ -24,7 +24,7 @@ void share_collection(OCollection *oc, u_int64_t rctm) {
 	u_int64_t tm = TM(rctm);
 	int num_threads = __builtin_popcountl(tm);
 
-	printf("setup a barrier for %d threads\n", __builtin_popcountl(tm));
+	//printf("setup a barrier for %d threads\n", __builtin_popcountl(tm));
 
 	int r = pthread_barrier_init(&oc->barrier, NULL, num_threads);
 	if (r) {

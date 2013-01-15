@@ -50,7 +50,7 @@ void assign_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rctm) {
 		
 		//first object belongs to first thread, second to second...
 		// nth object to n%num_threads
-		printf("this object goes to thread: %d\n", thread_ids[i % num_threads]);
+		//printf("this object goes to thread: %d\n", thread_ids[i % num_threads]);
 		o->rctm = 1 << ( thread_ids[i % num_threads]  );	
 	}
 
