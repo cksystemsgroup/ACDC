@@ -130,7 +130,7 @@ struct collection_pool {
 typedef struct mutator_context MContext;
 
 OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
-		unsigned long nelem);
+		unsigned long nelem, u_int64_t rctm);
 void deallocate_collection(MContext *mc, OCollection *oc); 
 void traverse_collection(MContext *mc, OCollection *oc);
 int collection_is_shared(MContext *mc, OCollection *oc);

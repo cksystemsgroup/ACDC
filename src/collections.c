@@ -280,7 +280,9 @@ void traverse_btree_preorder(MContext *mc, OCollection *oc) {
 
 
 OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz, 
-		unsigned long nelem) {
+		unsigned long nelem, u_int64_t rctm) {
+
+	OCollection *oc;
 
 	switch (ctype) {
 		case LIST:
@@ -292,7 +294,9 @@ OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 		case OPTIMAL_BTREE:
 			return allocate_optimal_btree(mc, sz, nelem);
 		case FALSE_SHARING:
-			return allocate_fs_pool(mc, sz, nelem);
+			oc = allocate_fs_pool(mc, sz, nelem);
+			assign_fs_pool_objects(mc, oc, rctm);
+			return oc;
 		default:
 			printf("Collection Type not supported\n");
 			exit(EXIT_FAILURE);

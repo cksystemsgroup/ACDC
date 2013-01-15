@@ -50,7 +50,7 @@ void assign_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rctm) {
 		
 		//first object belongs to first thread, second to second...
 		// nth object to n%num_threads
-		//printf("this object goes to thread: %d\n", thread_ids[i % num_threads]);
+		printf("this object goes to thread: %d\n", thread_ids[i % num_threads]);
 		o->rctm = 1 << ( thread_ids[i % num_threads]  );	
 	}
 
@@ -64,25 +64,22 @@ void traverse_fs_pool(MContext *mc, OCollection *oc) {
 
 	if (tm & my_bit) {
 		//wait at barrier for others
+		//TODO: in case we want to use this barrier, we have
+		//to re-init it properly
 		/*int r = pthread_barrier_wait(&oc->barrier);
 		if (!(r == 0 || r == PTHREAD_BARRIER_SERIAL_THREAD)) {
 			printf("unable to wait at barrier: %d\n", r);
 		}*/
 
-		//TODO: access my elements
+		int i;
+		for (i = 0; i < oc->num_objects; ++i) {
+			//check out what are my objects
 
-		//wait some time
-		/*
-		long long foo = rdtsc();
-		long bar = 0;
-		while (foo + 1000000000 > rdtsc()) {
-			bar++;
-			if (bar % 1000000 == 0) {
-				printf(".");
-			}
+		
 		}
-		printf("\n");
-		*/
+
+
+
 
 	} //else I don't have access to this collection
 

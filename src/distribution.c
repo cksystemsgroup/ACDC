@@ -70,8 +70,8 @@ static u_int64_t get_random_thread_selection(MContext *mc) {
 	int number_of_other_threads = 
 		(mc->gopts->num_threads - 1) / (100 / mc->gopts->share_thread_ratio);
 
-	//printf("%d will share with %d threads\n", mc->opt.thread_id, 
-	//		number_of_other_threads);
+	printf("%d will share with %d threads\n", mc->opt.thread_id, 
+			number_of_other_threads);
 
 	//get number_of_other_threads random thread id's (except mine)
 	//and set their bits in tm
@@ -79,8 +79,9 @@ static u_int64_t get_random_thread_selection(MContext *mc) {
 	u_int64_t tm = my_thread_bit;
 	while (i < number_of_other_threads) {
 		int tid = get_random_thread(mc);
-		if (tid != mc->gopts->num_threads) {
-			//printf("adding thread %d\n", tid);
+		//check if we already haven't added this thread
+		if (!(tm & (1 << tid))) {
+			printf("adding thread %d\n", tid);
 			++i;
 			tm |= 1 << tid;
 		}

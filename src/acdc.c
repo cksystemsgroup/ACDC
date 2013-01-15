@@ -320,7 +320,7 @@ void *acdc_thread(void *ptr) {
 		if (tp == FALSE_SHARING) tp = OPTIMAL_FALSE_SHARING;
 #endif
 		allocation_start = rdtsc();
-		OCollection *c = allocate_collection(mc, tp, sz, num_objects);
+		OCollection *c = allocate_collection(mc, tp, sz, num_objects, rctm);
 		allocation_end = rdtsc();
 		mc->stat->allocation_time += allocation_end - allocation_start;
 
