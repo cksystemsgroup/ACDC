@@ -40,7 +40,7 @@ void assign_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rctm) {
 	int i, j;
 	for (i = 0, j = 0; i < sizeof(u_int64_t); ++i) {
 		if ( (1 << i) & tm ) {
-			printf("Bit %d is set\n", i);
+			//printf("Bit %d is set\n", i);
 			thread_ids[j++] = i;
 		}
 	}
@@ -50,7 +50,7 @@ void assign_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rctm) {
 		
 		//first object belongs to first thread, second to second...
 		// nth object to n%num_threads
-		printf("this object goes to thread: %d\n", thread_ids[i % num_threads]);
+		//printf("this object goes to thread: %d\n", thread_ids[i % num_threads]);
 		o->rctm = 1 << ( thread_ids[i % num_threads]  );	
 	}
 
@@ -74,13 +74,11 @@ void traverse_fs_pool(MContext *mc, OCollection *oc) {
 		int i;
 		for (i = 0; i < oc->num_objects; ++i) {
 			//check out what are my objects
-
-		
+			SharedObject *so = ((SharedObject**)oc->start)[i];
+			if (TM(so->rctm) & my_bit) {
+				access_object(so, oc->object_size, sizeof(SharedObject));
+			}
 		}
-
-
-
-
 	} //else I don't have access to this collection
 
 }

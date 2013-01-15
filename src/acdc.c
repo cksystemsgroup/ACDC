@@ -212,7 +212,10 @@ void access_shared_objects(MContext *mc) {
 
 			//printf("%d waits at third barr\n", mc->opt.thread_id);
 			pthread_barrier_wait(&sync_barrier);
-			traverse_collection(mc, current_collection);
+			long long access_start = rdtsc();
+			traverse_collection(mc, (OCollection*)current_collection);
+			long long access_end = rdtsc();
+			mc->stat->access_time += access_end - access_start;
 		}
 
 		
