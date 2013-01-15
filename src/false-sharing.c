@@ -7,9 +7,15 @@
 #include "false-sharing.h"
 
 
-OCollection *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem) {
+OCollection *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem, 
+		u_int64_t rctm) {
 	
-	OCollection *oc = new_collection(mc, FALSE_SHARING, sz, nelem);
+
+	int num_threads = __builtin_popcountl(TM(rctm));
+	//make sure that nelem is a multiple of num_threads
+	nelem += num_threads - (nelem % num_threads);
+
+	OCollection *oc = new_collection(mc, FALSE_SHARING, sz, nelem, rctm);
 
 	//we store all objects on an array. one after the other
 	oc->start = calloc(nelem, sizeof(SharedObject*));
@@ -22,9 +28,14 @@ OCollection *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem) {
 	return oc;
 }
 
-OCollection *allocate_optimal_fs_pool(MContext *mc, size_t sz, unsigned long nelem) {
-
-	OCollection *oc = new_collection(mc, OPTIMAL_FALSE_SHARING, sz, nelem);
+OCollection *allocate_optimal_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
+		u_int64_t rctm) {
+	
+	int num_threads = __builtin_popcountl(TM(rctm));
+	//make sure that nelem is a multiple of num_threads
+	nelem += num_threads - (nelem % num_threads);
+	
+	OCollection *oc = new_collection(mc, OPTIMAL_FALSE_SHARING, sz, nelem, rctm);
 
 	int cache_lines_per_element = (sz / L1_LINE_SZ) + 1;
 
@@ -40,6 +51,7 @@ void deallocate_fs_pool(MContext *mc, OCollection *oc) {
 		 deallocate(mc, ((SharedObject**)oc->start)[i], oc->object_size);
 	}
 	free(oc->start);
+	pthread_barrier_destroy(&oc->barrier);
 	free(oc);
 }
 
@@ -59,6 +71,10 @@ void assign_optimal_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rct
 
 	//check which threads should participate
 	u_int64_t tm = TM(rctm);
+	if (oc->shared_object.rctm != rctm) {
+		printf("used assign after share?\n");
+		exit(EXIT_FAILURE);
+	}
 	int num_threads = __builtin_popcountl(tm);
 	int *thread_ids = calloc(num_threads, sizeof(int));
 
@@ -91,6 +107,10 @@ void assign_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rctm) {
 
 	//check which threads should participate
 	u_int64_t tm = TM(rctm);
+	if (oc->shared_object.rctm != rctm) {
+		printf("used assign after share?\n");
+		exit(EXIT_FAILURE);
+	}
 	int num_threads = __builtin_popcountl(tm);
 	int *thread_ids = calloc(num_threads, sizeof(int));
 
@@ -138,6 +158,8 @@ void traverse_optimal_fs_pool(MContext *mc, OCollection *oc) {
 				cache_lines_per_element * L1_LINE_SZ * i;
 			SharedObject *so = (SharedObject*)next;
 			if (TM(so->rctm) & my_bit) {
+				//found my element. wait for neighbours
+				pthread_barrier_wait(&oc->barrier);
 				access_object(so, oc->object_size, sizeof(SharedObject));
 			}
 		}

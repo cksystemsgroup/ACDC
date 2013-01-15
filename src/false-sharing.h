@@ -3,8 +3,10 @@
 
 #include "acdc.h"
 
-OCollection *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem);
-OCollection *allocate_optimal_fs_pool(MContext *mc, size_t sz, unsigned long nelem);
+OCollection *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
+                              u_int64_t rctm);
+OCollection *allocate_optimal_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
+                                      u_int64_t rctm);
 void deallocate_fs_pool(MContext *mc, OCollection *oc);
 void deallocate_optimal_fs_pool(MContext *mc, OCollection *oc);
 void traverse_fs_pool(MContext *mc, OCollection *oc);

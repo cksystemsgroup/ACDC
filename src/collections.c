@@ -7,17 +7,22 @@
 #include "false-sharing.h"
 
 OCollection *new_collection(MContext *mc, collection_t t, 
-		size_t sz, unsigned long nelem) {
+		size_t sz, unsigned long nelem, u_int64_t rctm) {
 	OCollection *c = malloc(sizeof(OCollection));
 	c->id = 0;
 	c->object_size = sz;
 	c->num_objects = nelem;
 	c->type = t;
-	u_int64_t tm = 1 << mc->opt.thread_id;
-	c->shared_object.rctm = RCTM(0, tm);
+	c->shared_object.rctm = rctm;
+	int num_threads = __builtin_popcountl(TM(rctm));
+	int r = pthread_barrier_init(&c->barrier, NULL, num_threads);
+	if (r) {
+		printf("Unable to init barrier: %d\n", r);
+		exit(1);
+	}
 	return c;
 }
-
+/*
 void share_collection(OCollection *oc, u_int64_t rctm) {
 
 	oc->shared_object.rctm = rctm;
@@ -33,7 +38,7 @@ void share_collection(OCollection *oc, u_int64_t rctm) {
 		exit(1);
 	}
 }
-
+*/
 int collection_is_shared(MContext *mc, OCollection *oc) {
 	if (TM(oc->shared_object.rctm) != (1 << mc->opt.thread_id)) {
 		return 1;
@@ -75,10 +80,10 @@ size_t get_optimal_list_sz(size_t sz, unsigned long nelem, size_t alignment) {
 }
 
 OCollection *allocate_optimal_list_unaligned(MContext *mc, size_t sz, 
-		unsigned long nelem) {
+		unsigned long nelem, u_int64_t rctm) {
 
 
-	OCollection *list = new_collection(mc, OPTIMAL_LIST, sz, nelem);
+	OCollection *list = new_collection(mc, OPTIMAL_LIST, sz, nelem, rctm);
 
 	//allocate whole memory at once
 	list->start = allocate(mc, sz * nelem);
@@ -139,7 +144,7 @@ OCollection *allocate_optimal_list_aligned(MContext *mc, size_t sz,
 }
 */
 
-static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem) {
+static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem, u_int64_t rctm) {
 
 	//check of size is sufficient for building a list
 	//i.e., to contain an Object and an pointer to the next Object
@@ -148,7 +153,7 @@ static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem) 
 		exit(EXIT_FAILURE);
 	}
 	
-	OCollection *list = new_collection(mc, LIST, sz, nelem);
+	OCollection *list = new_collection(mc, LIST, sz, nelem, rctm);
 
 	//TODO: check for shared setting
 	list->start = allocate(mc, sz);
@@ -191,14 +196,14 @@ void deallocate_optimal_btree(MContext *mc, OCollection *oc) {
 	free(oc);
 }
 
-OCollection *allocate_optimal_btree(MContext *mc, size_t sz, unsigned long nelem) {
+OCollection *allocate_optimal_btree(MContext *mc, size_t sz, unsigned long nelem, u_int64_t rctm) {
 	if (sz < sizeof(BTObject)) {
 		printf("Unable to allocate btree. Config error. "
 				"Min.object size too small.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	OCollection *oc = new_collection(mc, OPTIMAL_BTREE, sz, nelem);
+	OCollection *oc = new_collection(mc, OPTIMAL_BTREE, sz, nelem, rctm);
 	oc->start = allocate(mc, sz * nelem);
 
 	char *arr = (char*)(oc->start);
@@ -238,14 +243,14 @@ BTObject *build_tree_recursion(MContext *mc, size_t sz, unsigned long nelem) {
 	return t;
 }
 
-OCollection *allocate_btree(MContext *mc, size_t sz, unsigned long nelem) {
+OCollection *allocate_btree(MContext *mc, size_t sz, unsigned long nelem, u_int64_t rctm) {
 	if (sz < sizeof(BTObject)) {
 		printf("Unable to allocate btree. Config error. "
 				"Min.object size too small.\n");
 		exit(EXIT_FAILURE);
 	}
 
-	OCollection *btree = new_collection(mc, BTREE, sz, nelem);
+	OCollection *btree = new_collection(mc, BTREE, sz, nelem, rctm);
 
 	btree->start = (Object*)build_tree_recursion(mc, sz, nelem);
 
@@ -285,19 +290,19 @@ OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 
 	switch (ctype) {
 		case LIST:
-			return allocate_list(mc, sz, nelem);
+			return allocate_list(mc, sz, nelem, rctm);
 		case OPTIMAL_LIST:
-			return allocate_optimal_list_unaligned(mc, sz, nelem);
+			return allocate_optimal_list_unaligned(mc, sz, nelem, rctm);
 		case BTREE:
-			return allocate_btree(mc, sz, nelem);
+			return allocate_btree(mc, sz, nelem, rctm);
 		case OPTIMAL_BTREE:
-			return allocate_optimal_btree(mc, sz, nelem);
+			return allocate_optimal_btree(mc, sz, nelem, rctm);
 		case FALSE_SHARING:
-			oc = allocate_fs_pool(mc, sz, nelem);
+			oc = allocate_fs_pool(mc, sz, nelem, rctm);
 			assign_fs_pool_objects(mc, oc, rctm);
 			return oc;
 		case OPTIMAL_FALSE_SHARING:
-			oc = allocate_optimal_fs_pool(mc, sz, nelem);
+			oc = allocate_optimal_fs_pool(mc, sz, nelem, rctm);
 			assign_optimal_fs_pool_objects(mc, oc, rctm);
 			return oc;
 		default:

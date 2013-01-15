@@ -137,7 +137,7 @@ int collection_is_shared(MContext *mc, OCollection *oc);
 
 
 OCollection *new_collection(MContext *mc, collection_t t, size_t sz, 
-                            unsigned long nelem);
+                            unsigned long nelem, u_int64_t rctm);
 
 void share_collection(OCollection *oc, u_int64_t rctm);
 

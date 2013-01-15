@@ -331,10 +331,10 @@ void *acdc_thread(void *ptr) {
 
 		//in case of sharing, prepare collection and distribute references
 		//if (TM(rctm) != (1 << mc->opt.thread_id) ) {
-		if (tp == FALSE_SHARING || tp == OPTIMAL_FALSE_SHARING ) {
+		/*if (tp == FALSE_SHARING || tp == OPTIMAL_FALSE_SHARING ) {
 			//TODO: find a better name for that function
 			share_collection(c, rctm);
-		}
+		}*/
 		
 		//local references
 		//get CollectionPool for lt
