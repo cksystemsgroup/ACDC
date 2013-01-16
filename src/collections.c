@@ -8,6 +8,7 @@
 
 OCollection *new_collection(MContext *mc, collection_t t, 
 		size_t sz, unsigned long nelem, u_int64_t rctm) {
+
 	OCollection *c = malloc(sizeof(OCollection));
 	c->id = 0;
 	c->object_size = sz;
@@ -20,6 +21,8 @@ OCollection *new_collection(MContext *mc, collection_t t,
 		printf("Unable to init barrier: %d\n", r);
 		exit(1);
 	}
+	//printf("setup a barrier for %d threads\n", __builtin_popcountl(TM(rctm)));
+	
 	return c;
 }
 /*
@@ -39,13 +42,15 @@ void share_collection(OCollection *oc, u_int64_t rctm) {
 	}
 }
 */
+//TODO: make popcount portable
 int collection_is_shared(MContext *mc, OCollection *oc) {
-	if (TM(oc->shared_object.rctm) != (1 << mc->opt.thread_id)) {
+	if ( __builtin_popcountl(oc->shared_object.rctm) > 1 ) {
 		return 1;
 	} else {
 		return 0;
 	}
 }
+
 
 void traverse_list(MContext *mc, OCollection *oc) {
 	//remember that the first word in payload is the next pointer

@@ -2,6 +2,10 @@ build/*
 *.swp
 allocators/gperftools-2.0*
 allocators/jemalloc-3.2.0*
+allocators/libtbb*
+allocators/tbb*
 .sconsign.dblite
 .sconf_temp
 config.log
+run.sh
+results.txt

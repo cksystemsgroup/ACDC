@@ -212,10 +212,10 @@ void access_shared_objects(MContext *mc) {
 
 			//printf("%d waits at third barr\n", mc->opt.thread_id);
 			pthread_barrier_wait(&sync_barrier);
-			long long access_start = rdtsc();
+			//long long access_start = rdtsc();
 			traverse_collection(mc, (OCollection*)current_collection);
-			long long access_end = rdtsc();
-			mc->stat->access_time += access_end - access_start;
+			//long long access_end = rdtsc();
+			//mc->stat->access_time += access_end - access_start;
 		}
 
 		
@@ -288,8 +288,6 @@ void *acdc_thread(void *ptr) {
 	mc->stat->running_time = rdtsc();
 
 	while (runs < mc->gopts->benchmark_duration) {
-
-		//TODO: select collection
 
 		size_t sz = 0;
 		unsigned int lt;
