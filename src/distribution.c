@@ -63,7 +63,7 @@ static u_int64_t get_random_thread_selection(MContext *mc) {
 	if (mc->gopts->share_objects == 0 || 
 			mc->gopts->share_thread_ratio == 0) {
 		//only this thread is interested
-		return RCTM(0, my_thread_bit);
+		return my_thread_bit;
 	}
 
 	//threads except me, times share ratio
@@ -87,7 +87,7 @@ static u_int64_t get_random_thread_selection(MContext *mc) {
 		}
 	}
 
-	return RCTM(0, tm);
+	return tm;
 }
 
 void get_random_object_props(MContext *mc, 

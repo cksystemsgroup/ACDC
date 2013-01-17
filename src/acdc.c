@@ -2,15 +2,22 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <glib.h>
+#include <assert.h>
 
 #include "acdc.h"
 #include "arch.h"
 #include "memory.h"
 
-CollectionPool *shared_collection_pools;
-pthread_mutex_t scp_lock = PTHREAD_MUTEX_INITIALIZER;
-//OCollection *current_shared_collection = NULL;
+CollectionPool *distribution_pools; // one CP per lifetime
+pthread_mutex_t distribution_pools_lock = PTHREAD_MUTEX_INITIALIZER;
 
+
+inline void set_bit(u_int64_t *word, int bitpos) {
+	*word |= (1 << bitpos);
+}
+inline void unset_bit(u_int64_t *word, int bitpos) {
+	*word &= ~(1 << bitpos);
+}
 
 
 guint object_collection_hash(gconstpointer key) {
@@ -30,17 +37,18 @@ gboolean object_collection_equal(gconstpointer a, gconstpointer b) {
 			ac->id == bc->id);
 }
 
-CollectionPool *create_collection_pools(int max_lifetime) {
+CollectionPool *create_collection_pools(int num_pools) {
 
-	CollectionPool *collection_pools = calloc(max_lifetime, sizeof(CollectionPool));
+	CollectionPool *collection_pools = calloc(num_pools, sizeof(CollectionPool));
 		
 	//setup CollectionPools
 	int i;
-	for (i = 0; i < max_lifetime; ++i) {
+	for (i = 0; i < num_pools; ++i) {
 		//use int keys for the hash maps
 		collection_pools[i].collections = 
 			g_hash_table_new(object_collection_hash, 
 					object_collection_equal);
+
 
 		//collection_pools[i].remaining_lifetime = 
 		//	gopts->min_lifetime + i;
@@ -117,8 +125,33 @@ void delete_collection(gpointer key, gpointer value, gpointer user_data) {
 	//printf("deallocate %u elements of size %u\n", oc->num_objects, 
 	//		oc->object_size);
 
-	//deallocate collection
-	deallocate_collection(mc, oc);
+	//fast path for unshared objects
+	if ( __builtin_popcountl(oc->sharing_map) == 1) {
+		deallocate_collection(mc, oc);
+		return;
+	}
+
+	//shared Collections
+	//unset reference bit and check if we can deallocate the collection
+	while (1) {
+		u_int64_t old_rm = oc->reference_map;
+		//unset my bit
+		u_int64_t new_rm = old_rm;
+		unset_bit(&new_rm, mc->opt.thread_id);
+
+		if (__sync_bool_compare_and_swap(
+					&oc->reference_map, old_rm, new_rm)) {
+			//worked
+			if (oc->reference_map == 0) {
+				deallocate_collection(mc, oc);
+			} else {
+				//someone else will deallocate
+			}
+			break;
+		} else {
+			//some other thread changed the reference mask
+		}
+	}
 }
 
 void delete_expired_objects(MContext *mc) {
@@ -161,103 +194,6 @@ void access_live_objects(MContext *mc) {
 }
 
 
-volatile int hash_table_size;
-volatile OCollection *current_collection;
-volatile int current_thread_time;
-pthread_barrier_t sync_barrier;
-void access_shared_objects(MContext *mc) {
-
-	int i, j, idx;
-	GHashTableIter iter;
-	CollectionPool *scp;
-	
-	//printf("%d ENTERS\n", mc->opt.thread_id);
-
-	//thread 0 is the time master
-	if (mc->opt.thread_id == 0) {
-		current_thread_time = mc->time;
-	}
-		
-	//same loop for all threads. wait at barrier to ensure time is set
-	//printf("%d waits at first barr\n", mc->opt.thread_id);
-	pthread_barrier_wait(&sync_barrier);
-	for (i = current_thread_time; 
-			i < current_thread_time + mc->gopts->max_lifetime; ++i) {
-		if (mc->opt.thread_id == 0) {
-
-			idx = i % mc->gopts->max_lifetime;
-			//printf("access objects from pool %d\n", idx);
-			scp = &(shared_collection_pools[idx]);
-
-			hash_table_size = g_hash_table_size(scp->collections);
-			g_hash_table_iter_init(&iter, scp->collections);
-			//iterate over all collections
-
-			//printf("%d selects hash map with sz %d from %d\n", 
-			//		mc->opt.thread_id,
-			//		hash_table_size, i);
-		}
-
-		//printf("%d waits at second barr\n", mc->opt.thread_id);
-		pthread_barrier_wait(&sync_barrier);
-
-		for (j = 0; j < hash_table_size; ++j) {
-
-			if (mc->opt.thread_id == 0) {
-				gpointer key, value;
-				g_hash_table_iter_next(&iter, &key, &value);
-				current_collection = (OCollection*)value;
-				//printf("%d selects OCollection\n", mc->opt.thread_id);
-			}
-
-			//printf("%d waits at third barr\n", mc->opt.thread_id);
-			pthread_barrier_wait(&sync_barrier);
-			//long long access_start = rdtsc();
-			traverse_collection(mc, (OCollection*)current_collection);
-			//long long access_end = rdtsc();
-			//mc->stat->access_time += access_end - access_start;
-		}
-
-		
-		//printf("%d waits at 4th barr\n", mc->opt.thread_id);
-		pthread_barrier_wait(&sync_barrier);
-	}
-}
-
-volatile int delete_thread_id;
-void delete_expired_shared_objects(MContext *mc) {
-	//thread 0 selects the thread to delete shared objects
-	if (mc->opt.thread_id == 0) {
-		delete_thread_id = get_random_thread(mc);
-		//printf("thread %d will deallocate this time\n", delete_thread_id);
-	}
-	pthread_barrier_wait(&sync_barrier);
-	if (mc->opt.thread_id != delete_thread_id) return;
-
-
-	long long deallocation_start = rdtsc();
-
-
-	int delete_index = (mc->time) % mc->gopts->max_lifetime;
-
-	//printf("DEBUG: will remove from pool %d\n", delete_index);
-
-	CollectionPool *cp = &(shared_collection_pools[delete_index]);
-
-	g_hash_table_foreach(cp->collections, delete_collection, mc);
-
-	//delete items in hashmap
-	g_hash_table_remove_all(cp->collections);
-			
-	long long deallocation_end = rdtsc();
-		
-	mc->stat->deallocation_time += 
-				deallocation_end - deallocation_start;
-
-}
-
-
-
 void add_collection_to_pool(OCollection *oc, CollectionPool *cp) {
 	while (g_hash_table_contains(cp->collections,
 				(gconstpointer)oc)) {
@@ -272,6 +208,75 @@ void add_collection_to_pool(OCollection *oc, CollectionPool *cp) {
 	//add collection with proper id to hash map
 	//g_hash_table_insert(cp->collections, (gpointer)c, (gpointer)c);
 	g_hash_table_add(cp->collections, (gpointer)oc);
+}
+
+
+void add_to_distribution_pool(MContext *mc, OCollection *oc, int lt) {
+	
+	CollectionPool *cp = &distribution_pools[lt];
+
+	pthread_mutex_lock(&distribution_pools_lock);
+	add_collection_to_pool(oc, cp);
+	pthread_mutex_unlock(&distribution_pools_lock);
+}
+
+struct gfdc_args {
+	MContext *mc;
+	int lt;
+	GHashTable *survivors;
+};
+gboolean get_from_distribution_collection(gpointer key, gpointer value, gpointer user_data) {
+
+	OCollection *oc = (OCollection*)value;
+	struct gfdc_args *args = (struct gfdc_args*)user_data;
+
+	u_int64_t my_bit = 1 << args->mc->opt.thread_id;
+
+	//check if I should get this OCollection
+	if (!(oc->sharing_map & my_bit)) return FALSE; //my bit is not set. i'm not involved
+
+	if (oc->reference_map & my_bit) return FALSE; //i already have a reference
+	
+	//set my bit in reference mask
+	set_bit(&oc->reference_map, args->mc->opt.thread_id);
+	
+	//insert in thread local CollectionPool for this lifetime
+	unsigned int insert_index = (args->mc->time + args->lt) % 
+			args->mc->gopts->max_lifetime;
+
+	CollectionPool *target_pool = &args->mc->collection_pools[insert_index];
+	add_collection_to_pool(oc, target_pool);
+
+	// can we remove this OCollection from hash map?
+	// check if all necessary bits are set
+	if (__builtin_popcountl(oc->reference_map) ==
+			__builtin_popcountl(oc->sharing_map)) return TRUE;
+       	
+	//others have to get a reference to oc first.
+	//do not delete yet
+	return FALSE;
+}
+
+void get_from_distribution_pool(MContext *mc) {
+
+	struct gfdc_args args;
+	args.mc = mc;
+	//args.survivors = g_hash_table_new(object_collection_hash, 
+	//				object_collection_equal);
+
+	
+	pthread_mutex_lock(&distribution_pools_lock);
+
+	int lt;
+	for (lt = 0; lt <= mc->gopts->max_lifetime; ++lt) {
+		CollectionPool *cp = &distribution_pools[lt];
+		args.lt = lt;
+		g_hash_table_foreach_remove(cp->collections, 
+				get_from_distribution_collection, (gpointer)&args);
+		//printf("removed %d of %d collections\n", removed, total);
+	}
+	
+	pthread_mutex_unlock(&distribution_pools_lock);
 }
 
 void *acdc_thread(void *ptr) {
@@ -306,6 +311,9 @@ void *acdc_thread(void *ptr) {
 		if (tp == FALSE_SHARING && sz < sizeof(SharedObject))
 			sz = sizeof(SharedObject);
 
+		// for small false sharing we only use num_threads objects
+		if (tp == FALSE_SHARING) 
+			num_objects = __builtin_popcountl(rctm);
 		
 		mc->stat->lt_histogram[lt] += num_objects;
 		mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
@@ -323,9 +331,11 @@ void *acdc_thread(void *ptr) {
 		if (tp == FALSE_SHARING) tp = OPTIMAL_FALSE_SHARING;
 #endif
 		allocation_start = rdtsc();
-		OCollection *c = allocate_collection(mc, tp, sz, num_objects, rctm);
+		OCollection *oc = allocate_collection(mc, tp, sz, num_objects, rctm);
 		allocation_end = rdtsc();
 		mc->stat->allocation_time += allocation_end - allocation_start;
+
+		assert(oc->reference_map == 0);
 
 		//in case of sharing, prepare collection and distribute references
 		//if (TM(rctm) != (1 << mc->opt.thread_id) ) {
@@ -340,17 +350,18 @@ void *acdc_thread(void *ptr) {
 			mc->gopts->max_lifetime;
 
 		CollectionPool *cp;
-	       	if (collection_is_shared(mc, c)) {
-			cp = &(shared_collection_pools[insert_index]);
-
-			pthread_mutex_lock(&scp_lock);
-			add_collection_to_pool(c, cp);
-			pthread_mutex_unlock(&scp_lock);
-
+	       	if (collection_is_shared(mc, oc)) {
+			//put it in a datastructure of all threads
+			add_to_distribution_pool(mc, oc, lt);
 		} else {
+			assert(0);
 			cp = &(mc->collection_pools[insert_index]);
-			add_collection_to_pool(c, cp);
+			add_collection_to_pool(oc, cp);
 		}
+
+		assert(oc->reference_map == 0);
+		get_from_distribution_pool(mc);
+		assert(oc->reference_map != 0);
 
 
 		//access (all) objects
@@ -366,7 +377,7 @@ void *acdc_thread(void *ptr) {
 		if (time_counter >= mc->gopts->time_threshold) {
 			
 			//access shared objects
-			access_shared_objects(mc);
+			//access_shared_objects(mc);
 
 			print_mutator_stats(mc);
 		
@@ -382,8 +393,8 @@ void *acdc_thread(void *ptr) {
 				deallocation_end - deallocation_start;
 
 
-			delete_expired_shared_objects(mc);
-			pthread_barrier_wait(&sync_barrier);
+			//delete_expired_shared_objects(mc);
+			//pthread_barrier_wait(&sync_barrier);
 		}
 	}
 
@@ -401,14 +412,17 @@ void run_acdc(GOptions *gopts) {
 	MContext **thread_results = malloc(sizeof(MContext*) * gopts->num_threads);
 
 
-	shared_collection_pools = create_collection_pools(gopts->max_lifetime);
+	distribution_pools = create_collection_pools(gopts->max_lifetime + 1);
 
+	
+
+/*
 	r = pthread_barrier_init(&sync_barrier, NULL, gopts->num_threads);
 	if (r) {
 		printf("Unable to create barrier: %d\n", r);
 		exit(EXIT_FAILURE);
 	}
-
+*/
 
 	for (i = 0; i < gopts->num_threads; ++i) {
 		MContext *mc = create_mutator_context(gopts, i);

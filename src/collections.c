@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <assert.h>
 
 #include "acdc.h"
 #include "caches.h"
@@ -14,13 +15,14 @@ OCollection *new_collection(MContext *mc, collection_t t,
 	c->object_size = sz;
 	c->num_objects = nelem;
 	c->type = t;
-	c->shared_object.rctm = rctm;
-	int num_threads = __builtin_popcountl(TM(rctm));
-	int r = pthread_barrier_init(&c->barrier, NULL, num_threads);
-	if (r) {
-		printf("Unable to init barrier: %d\n", r);
-		exit(1);
-	}
+	c->sharing_map = rctm;
+	c->reference_map = 0;
+	//int num_threads = __builtin_popcountl(TM(rctm));
+	//int r = pthread_barrier_init(&c->barrier, NULL, num_threads);
+	//if (r) {
+	//	printf("Unable to init barrier: %d\n", r);
+	//	exit(1);
+	//}
 	//printf("setup a barrier for %d threads\n", __builtin_popcountl(TM(rctm)));
 	
 	return c;
@@ -44,7 +46,7 @@ void share_collection(OCollection *oc, u_int64_t rctm) {
 */
 //TODO: make popcount portable
 int collection_is_shared(MContext *mc, OCollection *oc) {
-	if ( __builtin_popcountl(oc->shared_object.rctm) > 1 ) {
+	if ( __builtin_popcountl( oc->sharing_map ) > 1) {
 		return 1;
 	} else {
 		return 0;
@@ -303,12 +305,12 @@ OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 		case OPTIMAL_BTREE:
 			return allocate_optimal_btree(mc, sz, nelem, rctm);
 		case FALSE_SHARING:
-			oc = allocate_fs_pool(mc, sz, nelem, rctm);
-			assign_fs_pool_objects(mc, oc, rctm);
+			oc = allocate_small_fs_pool(mc, sz, nelem, rctm);
+			//assign_fs_pool_objects(mc, oc, rctm);
 			return oc;
 		case OPTIMAL_FALSE_SHARING:
-			oc = allocate_optimal_fs_pool(mc, sz, nelem, rctm);
-			assign_optimal_fs_pool_objects(mc, oc, rctm);
+			oc = allocate_small_optimal_fs_pool(mc, sz, nelem, rctm);
+			//assign_optimal_fs_pool_objects(mc, oc, rctm);
 			return oc;
 		default:
 			printf("Allocate: Collection Type not supported\n");
@@ -317,6 +319,8 @@ OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 }
 
 void deallocate_collection(MContext *mc, OCollection *oc) {
+
+	assert(oc->reference_map == 0);
 
 	switch (oc->type) {
 		case LIST:
@@ -332,10 +336,10 @@ void deallocate_collection(MContext *mc, OCollection *oc) {
 			deallocate_optimal_btree(mc, oc);
 			return;
 		case FALSE_SHARING:
-			deallocate_fs_pool(mc, oc);
+			deallocate_small_fs_pool(mc, oc);
 			return;
 		case OPTIMAL_FALSE_SHARING:
-			deallocate_optimal_fs_pool(mc, oc);
+			deallocate_small_optimal_fs_pool(mc, oc);
 			return;
 		default:
 			printf("Deallocate: Collection Type not supported\n");
@@ -358,10 +362,10 @@ void traverse_collection(MContext *mc, OCollection *oc) {
 			traverse_btree_preorder(mc, oc);
 			return;
 		case FALSE_SHARING:
-			traverse_fs_pool(mc, oc);
+			traverse_small_fs_pool(mc, oc);
 			return;
 		case OPTIMAL_FALSE_SHARING:
-			traverse_optimal_fs_pool(mc, oc);
+			traverse_small_optimal_fs_pool(mc, oc);
 			return;
 		default:
 			printf("Traverse: Collection Type not supported\n");

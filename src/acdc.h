@@ -65,9 +65,9 @@ struct mutator_stat {
  * out of the combined rctm field. RCTM creates the combination
  * of a RC and a TM
  */
-#define RC(_rctm) ((u_int64_t)_rctm >> 58)
-#define TM(_rctm) (((u_int64_t)_rctm << 6) >> 6)
-#define RCTM(_rc, _tm) (((u_int64_t)_rc << 58) | _tm)
+//#define RC(_rctm) ((u_int64_t)_rctm >> 58)
+//#define TM(_rctm) (((u_int64_t)_rctm << 6) >> 6)
+//#define RCTM(_rc, _tm) (((u_int64_t)_rc << 58) | _tm)
 
 
 //object header for every allocated object
@@ -77,6 +77,7 @@ typedef void Object;
 typedef struct shared_mem_object SharedObject;
 struct shared_mem_object {
   u_int64_t rctm; //6bit rc, 58 bit thread map
+  //TODO rename to something like sharing_map
 };
 typedef struct mem_object_lnode LObject;
 struct mem_object_lnode {
@@ -110,9 +111,11 @@ struct object_collection {
   unsigned int id; // in case we have more collections of the same size
   collection_t type;
 
-  //sharing and synchronization
-  SharedObject shared_object;
-  pthread_barrier_t barrier;
+  //which threads should share an object sharing
+  u_int64_t sharing_map;
+
+  //mark which threads already have this OColelction
+  u_int64_t reference_map;
   
   //pointer to start of collection
   Object *start;
@@ -120,7 +123,7 @@ struct object_collection {
 
 typedef struct collection_pool CollectionPool;
 struct collection_pool {
-  unsigned int remaining_lifetime;
+  //unsigned int remaining_lifetime;
   GHashTable *collections; //hash table with one OCollection per size and id
 };
 
@@ -147,6 +150,7 @@ struct mutator_context {
   MOptions opt; //thread local options
   MStat *stat; //mutator stats
   CollectionPool *collection_pools; //one pool for each possible lifetime
+  CollectionPool *shared_collection_pools; //one pool for each possible lifetime
   unsigned int time;
 };
 
