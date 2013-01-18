@@ -236,7 +236,7 @@ void add_to_distribution_pool(MContext *mc, OCollection *oc, int lt) {
 struct gfdc_args {
 	MContext *mc;
 	int lt;
-	GHashTable *survivors;
+	int count;
 };
 gboolean get_from_distribution_collection(gpointer key, gpointer value, gpointer user_data) {
 
@@ -288,6 +288,7 @@ gboolean get_from_distribution_collection(gpointer key, gpointer value, gpointer
 
 	CollectionPool *target_pool = &args->mc->collection_pools[insert_index];
 	add_collection_to_pool(oc, target_pool);
+	args->count += (oc->num_objects * oc->object_size);
 
 	// can we remove this OCollection from hash map?
 	// check if all bits are cleared. not shared anymore
@@ -298,10 +299,12 @@ gboolean get_from_distribution_collection(gpointer key, gpointer value, gpointer
 	return FALSE;
 }
 
-void get_from_distribution_pool(MContext *mc) {
+// returns the number of bytes of all OCollections that we got from the distr. pool
+int get_from_distribution_pool(MContext *mc) {
 
 	struct gfdc_args args;
 	args.mc = mc;
+	args.count = 0;
 	//args.survivors = g_hash_table_new(object_collection_hash, 
 	//				object_collection_equal);
 
@@ -318,8 +321,10 @@ void get_from_distribution_pool(MContext *mc) {
 	}
 	
 	pthread_mutex_unlock(&distribution_pools_lock);
+	return args.count;
 }
 
+int allocators_alive = 1;
 void *acdc_thread(void *ptr) {
 	MContext *mc = (MContext*)ptr;
 
@@ -333,7 +338,7 @@ void *acdc_thread(void *ptr) {
 
 	mc->stat->running_time = rdtsc();
 
-	while (runs < mc->gopts->benchmark_duration) {
+	while (runs < mc->gopts->benchmark_duration && allocators_alive == 1) {
 
 		size_t sz = 0;
 		unsigned int lt;
@@ -371,37 +376,24 @@ void *acdc_thread(void *ptr) {
 		if (tp == BTREE) tp = OPTIMAL_BTREE;
 		if (tp == FALSE_SHARING) tp = OPTIMAL_FALSE_SHARING;
 #endif
-		allocation_start = rdtsc();
-		OCollection *oc = allocate_collection(mc, tp, sz, num_objects, rctm);
-		allocation_end = rdtsc();
-		mc->stat->allocation_time += allocation_end - allocation_start;
+		if (mc->opt.thread_id == 0) {
+			allocation_start = rdtsc();
+			OCollection *oc = 
+				allocate_collection(mc, tp, sz, num_objects, rctm);
 
-		assert(oc->sharing_map != 0);
-		assert(oc->reference_map == 0);
+			allocation_end = rdtsc();
+			mc->stat->allocation_time += allocation_end - allocation_start;
 
-		//in case of sharing, prepare collection and distribute references
-		//if (TM(rctm) != (1 << mc->opt.thread_id) ) {
-		/*if (tp == FALSE_SHARING || tp == OPTIMAL_FALSE_SHARING ) {
-			//TODO: find a better name for that function
-			share_collection(c, rctm);
-		}*/
-		
-		//local references
-		//get CollectionPool for lt
-		//unsigned int insert_index = (mc->time + lt) % 
-		//	mc->gopts->max_lifetime;
-
-		//CollectionPool *cp;
-	       	//if (collection_is_shared(mc, oc)) {
-			//put it in a shared datastructure for the other threads
+			assert(oc->sharing_map != 0);
+			assert(oc->reference_map == 0);
 			add_to_distribution_pool(mc, oc, lt);
-		//}
-		//cp = &(mc->collection_pools[insert_index]);
-		//add_collection_to_pool(oc, cp);
+		}
 		
-
-		get_from_distribution_pool(mc);
-		assert(oc->reference_map != 0);
+		
+		unsigned long bytes_from_dist_pool = 0;
+		while (bytes_from_dist_pool == 0 && allocators_alive == 1) {
+			bytes_from_dist_pool += get_from_distribution_pool(mc);
+		}
 
 
 		//access (all) objects
@@ -413,7 +405,7 @@ void *acdc_thread(void *ptr) {
 		mc->stat->access_time += access_end - access_start;
 
 
-		time_counter += num_objects * sz;
+		time_counter += bytes_from_dist_pool;
 		if (time_counter >= mc->gopts->time_threshold) {
 			
 			//access shared objects
@@ -439,6 +431,8 @@ void *acdc_thread(void *ptr) {
 	}
 
 	mc->stat->running_time = rdtsc() - mc->stat->running_time;
+
+	if (mc->opt.thread_id == 0) allocators_alive = 0;
 
 
 	return (void*)mc;
