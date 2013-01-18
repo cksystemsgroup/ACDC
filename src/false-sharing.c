@@ -52,12 +52,14 @@ OCollection *allocate_optimal_fs_pool(MContext *mc, size_t sz, unsigned long nel
 void deallocate_fs_pool(MContext *mc, OCollection *oc) {
 
 	assert(oc->reference_map == 0);
+	assert(oc->start != NULL);
 
 	int i;
 	for (i = 0; i < oc->num_objects; ++i) {
 		 deallocate(mc, ((SharedObject**)oc->start)[i], oc->object_size);
 	}
 	free(oc->start);
+	oc->start = NULL;
 	free(oc);
 }
 
@@ -139,110 +141,6 @@ void assign_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rctm) {
 	free(thread_ids);
 
 }
-/*
-void traverse_optimal_fs_pool(MContext *mc, OCollection *oc) {
-	
-	//check if thread bit is set in share map
-	u_int64_t my_bit = 1 << mc->opt.thread_id;
-	
-	int cache_lines_per_element = (oc->object_size / L1_LINE_SZ) + 1;
-
-	int num_threads = __builtin_popcountl(oc->sharing_map);
-	int *thread_ids = calloc(num_threads, sizeof(int));
-
-
-	int k, j;
-	for (k = 0, j = 0; k < sizeof(u_int64_t); ++k) {
-		if ( (1 << k) & oc->sharing_map ) {
-			//printf("Bit %d is set\n", i);
-			thread_ids[j++] = k;
-		}
-	}	//DEBUG
-	//printf("TRAVERSE: Sharing threads accessing: ");
-	for (k = 0; k < num_threads; ++k) {
-		//printf("%d ", thread_ids[k]);
-	}
-	//printf("\n");
-
-
-
-	if (oc->sharing_map & my_bit) {
-		//to re-init it properly
-		int r = pthread_barrier_wait(&oc->barrier);
-		if (!(r == 0 || r == PTHREAD_BARRIER_SERIAL_THREAD)) {
-			printf("unable to wait at barrier: %d\n", r);
-		}
-
-		int i;
-		for (i = 0; i < oc->num_objects; ++i) {
-			char *next = (char*)oc->start + 
-				cache_lines_per_element * L1_LINE_SZ * i;
-			SharedObject *so = (SharedObject*)next;
-
-			if (TM(so->rctm) & my_bit) {
-				//found my element. wait for neighbours
-				//printf("%d waits at acc barr\n", mc->opt.thread_id);
-				int r = pthread_barrier_wait(&oc->barrier);
-				if (!(r == 0 || r == PTHREAD_BARRIER_SERIAL_THREAD)) {
-					printf("unable to wait at barrier: %d\n", r);
-					exit(EXIT_FAILURE);
-				}
-				//assert. 
-				//printf("%d: I'm over it\n", mc->opt.thread_id);
-				int j;	
-				long long access_start = rdtsc();
-				for (j = 0; j < 100; ++j)
-					access_object(so, oc->object_size, sizeof(SharedObject));
-				long long access_end = rdtsc();
-				mc->stat->access_time += access_end - access_start;
-			}
-		}
-	} else {
-		//printf("%d: nothing to do here...\n", mc->opt.thread_id);
-	}//else I don't have access to this collection
-} 
-
-
-void traverse_fs_pool(MContext *mc, OCollection *oc) {
-
-	//check if thread bit is set in rctm
-	u_int64_t tm = TM(oc->shared_object.rctm);
-	u_int64_t my_bit = 1 << mc->opt.thread_id;
-
-	if (tm & my_bit) {
-		//wait at barrier for others
-		//TODO: in case we want to use this barrier, we have
-		//to re-init it properly
-		int r = pthread_barrier_wait(&oc->barrier);
-		if (!(r == 0 || r == PTHREAD_BARRIER_SERIAL_THREAD)) {
-			printf("unable to wait at barrier: %d\n", r);
-		}
-
-		int i;
-		for (i = 0; i < oc->num_objects; ++i) {
-			//check out what are my objects
-			SharedObject *so = ((SharedObject**)oc->start)[i];
-			if (TM(so->rctm) & my_bit) {
-				int r = pthread_barrier_wait(&oc->barrier);
-				if (!(r == 0 || r == PTHREAD_BARRIER_SERIAL_THREAD)) {
-					printf("unable to wait at barrier: %d\n", r);
-					exit(EXIT_FAILURE);
-				}
-				//assert. 
-				//printf("%d: I'm over it\n", mc->opt.thread_id);
-				int j;
-				long long access_start = rdtsc();
-				for (j = 0; j < 100; ++j)
-					access_object(so, oc->object_size, sizeof(SharedObject));
-				long long access_end = rdtsc();
-				mc->stat->access_time += access_end - access_start;
-			}
-		}
-	} //else I don't have access to this collection
-}
-
-*/
-
 
 
 /////////////////////////////////////////////
@@ -269,10 +167,15 @@ void deallocate_small_fs_pool(MContext *mc, OCollection *oc) {
 	//same thing, different interface
 	deallocate_fs_pool(mc, oc);
 }
+
 void deallocate_small_optimal_fs_pool(MContext *mc, OCollection *oc) {}
+
 void traverse_small_fs_pool(MContext *mc, OCollection *oc) {
 	//check if thread bit is set in rctm
 	u_int64_t my_bit = 1 << mc->opt.thread_id;
+
+	assert(oc->reference_map != 0);
+	assert(oc->start != NULL);
 
 	if (oc->sharing_map & my_bit) {
 		int i;
@@ -281,11 +184,12 @@ void traverse_small_fs_pool(MContext *mc, OCollection *oc) {
 			SharedObject *so = ((SharedObject**)oc->start)[i];
 			if (so->rctm & my_bit) {
 				int j;
-				long long access_start = rdtsc();
-				for (j = 0; j < 10; ++j)
+				assert(oc->reference_map != 0);
+				//long long access_start = rdtsc();
+				for (j = 0; j < 10000000; ++j)
 					access_object(so, oc->object_size, sizeof(SharedObject));
-				long long access_end = rdtsc();
-				mc->stat->access_time += access_end - access_start;
+				//long long access_end = rdtsc();
+				//mc->stat->access_time += access_end - access_start;
 			}
 		}
 	} //else I don't have access to this collection

@@ -112,10 +112,10 @@ struct object_collection {
   collection_t type;
 
   //which threads should share an object sharing
-  u_int64_t sharing_map;
+  volatile u_int64_t sharing_map;
 
   //mark which threads already have this OColelction
-  u_int64_t reference_map;
+  volatile u_int64_t reference_map;
   
   //pointer to start of collection
   Object *start;

@@ -46,22 +46,29 @@ acdc_env.Append(CPPFLAGS=['-g', '-Wall', '-Werror'])
 #acdc_env.Program('acdc', ['main.c', 'memory.c', 'acdc.c', 'distribution.c', 'collections.c'])
 
 
-for config in ['optimal', 'glibc', 'hoard', 'tcmalloc', 'jemalloc', 'tbb']:
+for config in ['optimal', 'ptmalloc', 'hoard', 'tcmalloc', 'jemalloc', 'tbb']:
 	e = acdc_env.Clone()
 
 	if config == 'optimal':
 		e.Append(CPPFLAGS=['-DOPTIMAL_MODE'])
+		e.Append(CPPFLAGS=['-DALLOCATOR=optimal'])
+	if config == 'ptmalloc':
+		e.Append(CPPFLAGS=['-DALLOCATOR=ptmalloc'])
 	if config == 'hoard':
 		e.Append(LIBS=['hoard'], LIBPATH=['../allocators'])
+		e.Append(CPPFLAGS=['-DALLOCATOR=hoard'])
 	if config == 'tcmalloc':
 		#if not e.CheckLib('tcmalloc_minimal'):
 		#	print 'tcmalloc_minimal not found'
 		#	Exit(1)
 		e.Append(LIBS=['tcmalloc_minimal'], LIBPATH=['/usr/lib'])
+		e.Append(CPPFLAGS=['-DALLOCATOR=tcmalloc'])
 	if config == 'jemalloc':
 		e.Append(LIBS=['jemalloc'], LIBPATH=['../allocators'])
+		e.Append(CPPFLAGS=['-DALLOCATOR=jemalloc'])
 	if config == 'tbb':
 		e.Append(LIBS=['tbbmalloc_proxy', 'tbbmalloc'], LIBPATH=['../allocators'])
+		e.Append(CPPFLAGS=['-DALLOCATOR=tbb'])
 
 	object_list = []
 	for obj in ['main', 'memory', 'acdc', 'distribution', 'collections', 'false-sharing']:

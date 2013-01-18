@@ -16,7 +16,7 @@ OCollection *new_collection(MContext *mc, collection_t t,
 	c->num_objects = nelem;
 	c->type = t;
 	c->sharing_map = rctm;
-	c->reference_map = 0;
+	c->reference_map = 0;//1 << mc->opt.thread_id;
 	//int num_threads = __builtin_popcountl(TM(rctm));
 	//int r = pthread_barrier_init(&c->barrier, NULL, num_threads);
 	//if (r) {
@@ -45,6 +45,7 @@ void share_collection(OCollection *oc, u_int64_t rctm) {
 }
 */
 //TODO: make popcount portable
+/*
 int collection_is_shared(MContext *mc, OCollection *oc) {
 	if ( __builtin_popcountl( oc->sharing_map ) > 1) {
 		return 1;
@@ -52,6 +53,7 @@ int collection_is_shared(MContext *mc, OCollection *oc) {
 		return 0;
 	}
 }
+*/
 
 
 void traverse_list(MContext *mc, OCollection *oc) {

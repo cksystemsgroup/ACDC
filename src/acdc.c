@@ -8,6 +8,10 @@
 #include "arch.h"
 #include "memory.h"
 
+#define QUOTE(name) #name
+#define STR(macro) QUOTE(macro)
+#define ALLOCATOR_NAME STR(ALLOCATOR)
+
 CollectionPool *distribution_pools; // one CP per lifetime
 pthread_mutex_t distribution_pools_lock = PTHREAD_MUTEX_INITIALIZER;
 
@@ -100,11 +104,12 @@ void destroy_mutator_context(MContext *mc) {
 
 void print_mutator_stats(MContext *mc) {
 
+
 	//void *program_break = sbrk(0);
 	long heapsz = 0;//(long)program_break - (long)initial_break;
-	
 
-	printf("STATS\t%3u\t%4u\t%12lu\t%12lu\t%12lu\t%12lu\t%ld\n",
+	printf("STATS\t%s\t%3u\t%4u\t%12lu\t%12lu\t%12lu\t%12lu\t%ld\n",
+			ALLOCATOR_NAME,
 			mc->opt.thread_id,
 			mc->time,
 			mc->stat->bytes_allocated,
@@ -125,27 +130,29 @@ void delete_collection(gpointer key, gpointer value, gpointer user_data) {
 	//printf("deallocate %u elements of size %u\n", oc->num_objects, 
 	//		oc->object_size);
 
-	//fast path for unshared objects
-	if ( __builtin_popcountl(oc->sharing_map) == 1) {
-		deallocate_collection(mc, oc);
-		return;
-	}
 
 	//shared Collections
 	//unset reference bit and check if we can deallocate the collection
 	while (1) {
+		assert(oc->reference_map != 0);
+		assert((oc->reference_map & (1 << mc->opt.thread_id )) != 0 );
+
 		u_int64_t old_rm = oc->reference_map;
 		//unset my bit
 		u_int64_t new_rm = old_rm;
 		unset_bit(&new_rm, mc->opt.thread_id);
+		assert(__builtin_popcountl(new_rm) == 
+						__builtin_popcountl(old_rm) - 1);
 
 		if (__sync_bool_compare_and_swap(
 					&oc->reference_map, old_rm, new_rm)) {
 			//worked
-			if (oc->reference_map == 0) {
+			if (oc->reference_map == 0 && oc->sharing_map == 0) {
 				deallocate_collection(mc, oc);
 			} else {
 				//someone else will deallocate
+				assert((oc->reference_map & (1<<mc->opt.thread_id))
+					       	== 0);
 			}
 			break;
 		} else {
@@ -216,7 +223,13 @@ void add_to_distribution_pool(MContext *mc, OCollection *oc, int lt) {
 	CollectionPool *cp = &distribution_pools[lt];
 
 	pthread_mutex_lock(&distribution_pools_lock);
+
+	int before = g_hash_table_size(cp->collections);
 	add_collection_to_pool(oc, cp);
+	int after = g_hash_table_size(cp->collections);
+	assert(after == before + 1);
+	
+	
 	pthread_mutex_unlock(&distribution_pools_lock);
 }
 
@@ -238,7 +251,36 @@ gboolean get_from_distribution_collection(gpointer key, gpointer value, gpointer
 	if (oc->reference_map & my_bit) return FALSE; //i already have a reference
 	
 	//set my bit in reference mask
-	set_bit(&oc->reference_map, args->mc->opt.thread_id);
+	while (1) {
+		u_int64_t old_rm = oc->reference_map;
+		u_int64_t new_rm = old_rm;
+		set_bit(&new_rm, args->mc->opt.thread_id);
+	
+		if (__sync_bool_compare_and_swap(
+					&oc->reference_map, old_rm, new_rm)) {
+			//worked
+			assert((oc->reference_map & (1<<args->mc->opt.thread_id)) != 0);
+			break;
+		} else {
+			//some other thread changed the reference mask
+		}
+	}
+	//unset my bit in the sharing map
+	while (1) {
+		u_int64_t old_sm = oc->sharing_map;
+		u_int64_t new_sm = old_sm;
+		unset_bit(&new_sm, args->mc->opt.thread_id);
+	
+		if (__sync_bool_compare_and_swap(
+					&oc->sharing_map, old_sm, new_sm)) {
+			//worked
+			assert(__builtin_popcountl(oc->sharing_map) <
+						__builtin_popcountl(old_sm));
+			break;
+		} else {
+			//some other thread changed the reference mask
+		}
+	}
 	
 	//insert in thread local CollectionPool for this lifetime
 	unsigned int insert_index = (args->mc->time + args->lt) % 
@@ -248,9 +290,8 @@ gboolean get_from_distribution_collection(gpointer key, gpointer value, gpointer
 	add_collection_to_pool(oc, target_pool);
 
 	// can we remove this OCollection from hash map?
-	// check if all necessary bits are set
-	if (__builtin_popcountl(oc->reference_map) ==
-			__builtin_popcountl(oc->sharing_map)) return TRUE;
+	// check if all bits are cleared. not shared anymore
+	if (oc->sharing_map == 0) return TRUE;
        	
 	//others have to get a reference to oc first.
 	//do not delete yet
@@ -335,6 +376,7 @@ void *acdc_thread(void *ptr) {
 		allocation_end = rdtsc();
 		mc->stat->allocation_time += allocation_end - allocation_start;
 
+		assert(oc->sharing_map != 0);
 		assert(oc->reference_map == 0);
 
 		//in case of sharing, prepare collection and distribute references
@@ -346,20 +388,18 @@ void *acdc_thread(void *ptr) {
 		
 		//local references
 		//get CollectionPool for lt
-		unsigned int insert_index = (mc->time + lt) % 
-			mc->gopts->max_lifetime;
+		//unsigned int insert_index = (mc->time + lt) % 
+		//	mc->gopts->max_lifetime;
 
-		CollectionPool *cp;
-	       	if (collection_is_shared(mc, oc)) {
-			//put it in a datastructure of all threads
+		//CollectionPool *cp;
+	       	//if (collection_is_shared(mc, oc)) {
+			//put it in a shared datastructure for the other threads
 			add_to_distribution_pool(mc, oc, lt);
-		} else {
-			assert(0);
-			cp = &(mc->collection_pools[insert_index]);
-			add_collection_to_pool(oc, cp);
-		}
+		//}
+		//cp = &(mc->collection_pools[insert_index]);
+		//add_collection_to_pool(oc, cp);
+		
 
-		assert(oc->reference_map == 0);
 		get_from_distribution_pool(mc);
 		assert(oc->reference_map != 0);
 
@@ -488,7 +528,8 @@ void run_acdc(GOptions *gopts) {
 				);
 	}
 
-	printf("RUNTIME \t%llu \t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%%\n", 
+	printf("RUNTIME\t%s\t%llu \t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%%\n", 
+			ALLOCATOR_NAME,
 			thread_results[0]->stat->running_time, 
 			100.0,
 			thread_results[0]->stat->allocation_time,
