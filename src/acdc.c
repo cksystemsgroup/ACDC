@@ -16,7 +16,7 @@
 CollectionPool *distribution_pools; // one CP per lifetime
 pthread_mutex_t distribution_pools_lock = PTHREAD_MUTEX_INITIALIZER;
 
-spin_barrier_t barrier;
+volatile spin_barrier_t barrier;
 
 
 inline void set_bit(u_int64_t *word, int bitpos) {
@@ -367,15 +367,17 @@ void *false_sharing_thread(void *ptr) {
 					mc->opt.thread_id);
 		
 			get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &rctm);
+			// for false sharing we only use num_threads objects for one time slot
+			tp = FALSE_SHARING;
+			num_objects = mc->gopts->num_threads;
+			lt = 1;
 #ifdef OPTIMAL_MODE
 			tp = OPTIMAL_FALSE_SHARING;
 #endif		
 			if (sz < sizeof(SharedObject))
 				sz = sizeof(SharedObject) + 4;
 
-			// for false sharing we only use num_threads objects for one time slot
-			num_objects = __builtin_popcountl(rctm);
-			lt = 1;
+
 		
 			mc->stat->lt_histogram[lt] += num_objects;
 			mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;

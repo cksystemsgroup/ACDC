@@ -17,44 +17,9 @@ OCollection *new_collection(MContext *mc, collection_t t,
 	c->type = t;
 	c->sharing_map = rctm;
 	c->reference_map = 0;//1 << mc->opt.thread_id;
-	//int num_threads = __builtin_popcountl(TM(rctm));
-	//int r = pthread_barrier_init(&c->barrier, NULL, num_threads);
-	//if (r) {
-	//	printf("Unable to init barrier: %d\n", r);
-	//	exit(1);
-	//}
-	//printf("setup a barrier for %d threads\n", __builtin_popcountl(TM(rctm)));
 	
 	return c;
 }
-/*
-void share_collection(OCollection *oc, u_int64_t rctm) {
-
-	oc->shared_object.rctm = rctm;
-
-	u_int64_t tm = TM(rctm);
-	int num_threads = __builtin_popcountl(tm);
-
-	//printf("setup a barrier for %d threads\n", __builtin_popcountl(tm));
-
-	int r = pthread_barrier_init(&oc->barrier, NULL, num_threads);
-	if (r) {
-		printf("Unable to init barrier: %d\n", r);
-		exit(1);
-	}
-}
-*/
-//TODO: make popcount portable
-/*
-int collection_is_shared(MContext *mc, OCollection *oc) {
-	if ( __builtin_popcountl( oc->sharing_map ) > 1) {
-		return 1;
-	} else {
-		return 0;
-	}
-}
-*/
-
 
 void traverse_list(MContext *mc, OCollection *oc) {
 	//remember that the first word in payload is the next pointer
@@ -66,7 +31,9 @@ void traverse_list(MContext *mc, OCollection *oc) {
 	
 	while (list != NULL) {
 		//printf("access object\n");
-		access_object((Object*)list, oc->object_size, sizeof(LObject));
+		int i;
+		for (i = 0; i < mc->gopts->access_iterations; ++i)
+			access_object((Object*)list, oc->object_size, sizeof(LObject));
 		list = list->next;
 	}
 }
@@ -113,45 +80,7 @@ static void deallocate_optimal_list_unaligned(MContext *mc, OCollection *oc) {
 	deallocate(mc, oc->start, oc->object_size * oc->num_objects);
 	free(oc);
 }
-/*
-OCollection *allocate_optimal_list_aligned(MContext *mc, size_t sz, 
-		unsigned long nelem) {
 
-	if (sz < sizeof(LObject)) {
-		printf("Unable to allocate list. Config error. Min. object size too small.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	OCollection *list = new_collection(mc, OPTIMAL_LIST, sz, nelem);
-
-	size_t aligned_size = get_optimal_list_sz(sz, nelem, L1_LINE_SZ);
-
-	//allocate whole memory at once
-	//reserve one extra cache line for alignment
-	list->start = allocate_aligned(mc, aligned_size, L1_LINE_SZ);
-
-
-	LObject *tmp = (LObject*)list->start;
-
-
-	int i;
-	for (i = 1; i < nelem; ++i) {
-		LObject *next = (LObject*)((long)tmp + sz);
-		long bytes_available = L1_LINE_SZ - ((L1_LINE_SZ - 1) & (long)next);
-		if (bytes_available >= sz) {
-			tmp->next = next;
-		} else {
-			//start new cache line
-			tmp->next = (LObject*)((long)next + bytes_available);
-		}
-		tmp = tmp->next;
-	}
-	tmp->next = 0;
-
-
-	return list;
-}
-*/
 
 static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem, u_int64_t rctm) {
 
@@ -177,14 +106,6 @@ static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem, 
 	return list;
 }
 
-/*
-static void deallocate_optimal_list_aligned(MContext *mc, OCollection *oc) {
-	int objects_per_cache_line = L1_LINE_SZ / oc->object_size;
-	deallocate_aligned(mc, oc->start, objects_per_cache_line * L1_LINE_SZ,
-			L1_LINE_SZ);
-	free(oc);
-}
-*/
 
 static void deallocate_list(MContext *mc, OCollection *oc) {
 	LObject *l = (LObject*)(oc->start);
@@ -196,8 +117,6 @@ static void deallocate_list(MContext *mc, OCollection *oc) {
 	}
 	free(oc);
 }
-
-
 
 
 void deallocate_optimal_btree(MContext *mc, OCollection *oc) {
@@ -281,7 +200,9 @@ void deallocate_btree(MContext *mc, OCollection *oc) {
 
 void btree_preorder_recursion(MContext *mc, BTObject *t, size_t sz) {
 	if (t == NULL) return;
-	access_object((Object*)t, sz, sizeof(BTObject));
+	int i;
+	for (i = 0; i < mc->gopts->access_iterations; ++i)
+		access_object((Object*)t, sz, sizeof(BTObject));
 	btree_preorder_recursion(mc, t->left, sz);
 	btree_preorder_recursion(mc, t->right, sz);
 }

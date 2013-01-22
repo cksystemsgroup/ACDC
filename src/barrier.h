@@ -6,6 +6,6 @@ struct spin_barrier {
 };
 typedef struct spin_barrier spin_barrier_t;
 
-int spin_barrier_init(spin_barrier_t *barrier, unsigned int num_threads);
-int spin_barrier_wait(spin_barrier_t *barrier);
+int spin_barrier_init(volatile spin_barrier_t *barrier, unsigned int num_threads);
+int spin_barrier_wait(volatile spin_barrier_t *barrier);
 

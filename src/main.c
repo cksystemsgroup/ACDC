@@ -13,13 +13,14 @@ static void print_usage() {
 			" Options for all modes:\n"
 			"-n number of threads\n"
 			"-d benchmark duration\n"
-			"-t time threshold\n"
+			"-s min. sizeclass (1<<x)\n"
+			"-S max. sizeclass (1<<x)\n"		
 			"-r seed value\n"
+			"-i access iterations\n"
 			" Options for ACDC MODE:\n"
+			"-t time threshold\n"
 			"-l min. object lifetime\n"
 			"-L max. object lifetime\n"
-			"-s min. sizeclass (1<<x)\n"
-			"-S max. sizeclass (1<<x)\n"
 			"-O share objects\n"
 			"-R share ratio\n"
 			"-T share thread ratio\n"
@@ -44,6 +45,7 @@ static void set_default_params(GOptions *gopts) {
 	gopts->share_thread_ratio = 100;
 	gopts->list_ratio = 100;
 	gopts->btree_ratio = 0;
+	gopts->access_iterations = 1;
 	//gopts->false_sharing_ratio = 100;
 }
 
@@ -71,6 +73,7 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->max_object_sc = %d\n", gopts->max_object_sc);
 	printf("gopts->list_ratio = %d\n", gopts->list_ratio);
 	printf("gopts->btree_ratio = %d\n", gopts->btree_ratio);
+	printf("gopts->access_iterations = %d\n", gopts->access_iterations);
 	printf("gopts->share_objects = %d\n", gopts->share_objects);
 	printf("gopts->share_ratio = %d\n", gopts->share_ratio);
 	printf("gopts->share_thread_ratio = %d\n", gopts->share_thread_ratio);
@@ -83,7 +86,7 @@ int main(int argc, char **argv) {
 
 	GOptions *gopts = malloc(sizeof(GOptions));
 	set_default_params(gopts);
-	const char *optString = "afn:t:d:r:l:L:s:S:OR:T:b:q:vh";
+	const char *optString = "afn:t:d:r:l:L:s:S:OR:T:b:q:i:vh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
@@ -133,6 +136,8 @@ int main(int argc, char **argv) {
 			case 'q':
 				gopts->list_ratio = atoi(optarg);
 				break;
+			case 'i':
+				gopts->access_iterations = atoi(optarg);
 			case 'v':
 				gopts->verbosity++;
 				break;

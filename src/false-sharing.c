@@ -173,7 +173,7 @@ void traverse_small_fs_pool(MContext *mc, OCollection *oc) {
 			int j;
 			assert(oc->reference_map != 0);
 			//long long access_start = rdtsc();
-			for (j = 0; j < 10000000; ++j)
+			for (j = 0; j < mc->gopts->access_iterations; ++j)
 				access_object(so, oc->object_size, sizeof(SharedObject));
 			//long long access_end = rdtsc();
 			//mc->stat->access_time += access_end - access_start;
@@ -203,7 +203,7 @@ void traverse_small_optimal_fs_pool(MContext *mc, OCollection *oc) {
 			int j;
 			assert(oc->reference_map != 0);
 			//long long access_start = rdtsc();
-			for (j = 0; j < 10000000; ++j)
+			for (j = 0; j < mc->gopts->access_iterations; ++j)
 				access_object(so, oc->object_size, sizeof(SharedObject));
 			//long long access_end = rdtsc();
 			//mc->stat->access_time += access_end - access_start;
