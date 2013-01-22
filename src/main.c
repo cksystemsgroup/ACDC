@@ -8,11 +8,14 @@
 static void print_usage() {
 	printf("ACDC Benchmark usage:\n"
 			"\n"
-			"-m mode\n"
+			"-a (run in ACDC MODE)\n"
+			"-f (run in FALSE_SHARING MODE)\n"
+			" Options for all modes:\n"
 			"-n number of threads\n"
 			"-d benchmark duration\n"
 			"-t time threshold\n"
 			"-r seed value\n"
+			" Options for ACDC MODE:\n"
 			"-l min. object lifetime\n"
 			"-L max. object lifetime\n"
 			"-s min. sizeclass (1<<x)\n"
@@ -22,7 +25,6 @@ static void print_usage() {
 			"-T share thread ratio\n"
 			"-b %% ratio of btree collections\n"
 			"-q %% ratio of linked-list collections\n"
-			"-f %% ratio of false-sharing collections\n"
 			);
 	exit(EXIT_FAILURE);
 }
@@ -40,18 +42,17 @@ static void set_default_params(GOptions *gopts) {
 	gopts->share_objects = 1;
 	gopts->share_ratio = 0;
 	gopts->share_thread_ratio = 100;
-	gopts->list_ratio = 0;
+	gopts->list_ratio = 100;
 	gopts->btree_ratio = 0;
-	gopts->false_sharing_ratio = 100;
+	//gopts->false_sharing_ratio = 100;
 }
 
 static void check_params(GOptions *gopts) {
 	//TODO; exit on wrong parameter settings
 	
 	if (gopts->list_ratio + 
-			gopts->btree_ratio +
-			gopts->false_sharing_ratio != 100) {
-		printf("If using -b, -f and -q, their arguments must add"
+			gopts->btree_ratio  != 100) {
+		printf("If using -b and -q, their arguments must add"
 				" up to 100%%\n");
 		exit(EXIT_FAILURE);
 	}
@@ -70,7 +71,6 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->max_object_sc = %d\n", gopts->max_object_sc);
 	printf("gopts->list_ratio = %d\n", gopts->list_ratio);
 	printf("gopts->btree_ratio = %d\n", gopts->btree_ratio);
-	printf("gopts->false_sharing_ratio = %d\n", gopts->false_sharing_ratio);
 	printf("gopts->share_objects = %d\n", gopts->share_objects);
 	printf("gopts->share_ratio = %d\n", gopts->share_ratio);
 	printf("gopts->share_thread_ratio = %d\n", gopts->share_thread_ratio);
@@ -83,13 +83,16 @@ int main(int argc, char **argv) {
 
 	GOptions *gopts = malloc(sizeof(GOptions));
 	set_default_params(gopts);
-	const char *optString = "m:n:t:d:r:l:L:s:S:OR:T:b:q:f:vh";
+	const char *optString = "afn:t:d:r:l:L:s:S:OR:T:b:q:vh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
 		switch (opt) {
-			case 'm':
-				//TODO: set mode. Don't know if necessary
+			case 'a':
+				gopts->mode = ACDC;
+				break;
+			case 'f':
+				gopts->mode = FS;
 				break;
 			case 'n':
 				gopts->num_threads = atoi(optarg);
@@ -129,9 +132,6 @@ int main(int argc, char **argv) {
 				break;
 			case 'q':
 				gopts->list_ratio = atoi(optarg);
-				break;
-			case 'f':
-				gopts->false_sharing_ratio = atoi(optarg);
 				break;
 			case 'v':
 				gopts->verbosity++;

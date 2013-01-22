@@ -7,5 +7,4 @@ allocators/tbb*
 .sconsign.dblite
 .sconf_temp
 config.log
-run.sh
 results.txt

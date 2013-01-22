@@ -8,6 +8,7 @@
 //global acdc options
 typedef enum {
   ACDC, //default mode
+  FS
 } benchmark_mode_t;
 typedef struct global_options GOptions;
 struct global_options {
@@ -25,7 +26,7 @@ struct global_options {
   int max_object_sc; //-S: max sizeclass
   int list_ratio; //-q:
   int btree_ratio; //-b:
-  int false_sharing_ratio; //-f
+  //int false_sharing_ratio; //-f
 
   //sharing options
   int share_objects; //-O:

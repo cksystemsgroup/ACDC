@@ -46,11 +46,11 @@ static collection_t get_random_collection_type(MContext *mc) {
 	if (r < (mc->gopts->list_ratio + mc->gopts->btree_ratio)) {
 		return BTREE;
 	}
-	if (r < (mc->gopts->list_ratio + 
+	/*if (r < (mc->gopts->list_ratio + 
 				mc->gopts->btree_ratio +
 				mc->gopts->false_sharing_ratio)) {
 		return FALSE_SHARING;
-	}
+	}*/
 	
 	//default. never reached
 	return LIST;

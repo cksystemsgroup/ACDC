@@ -7,6 +7,7 @@
 #include "acdc.h"
 #include "arch.h"
 #include "memory.h"
+#include "barrier.h"
 
 #define QUOTE(name) #name
 #define STR(macro) QUOTE(macro)
@@ -14,6 +15,8 @@
 
 CollectionPool *distribution_pools; // one CP per lifetime
 pthread_mutex_t distribution_pools_lock = PTHREAD_MUTEX_INITIALIZER;
+
+spin_barrier_t barrier;
 
 
 inline void set_bit(u_int64_t *word, int bitpos) {
@@ -324,7 +327,115 @@ int get_from_distribution_pool(MContext *mc) {
 	return args.count;
 }
 
-int allocators_alive = 1;
+volatile OCollection *fs_collection = NULL;
+volatile int fs_collection_bytes;
+volatile int fs_allocation_thread;
+volatile int fs_deallocation_thread;
+void *false_sharing_thread(void *ptr) {
+
+	MContext *mc = (MContext*)ptr;
+	unsigned long time_counter = 0;
+	int runs = 0;
+	unsigned long long allocation_start, allocation_end;
+	unsigned long long deallocation_start, deallocation_end;
+	unsigned long long access_start, access_end;
+
+	int local_fs_collection_bytes;
+
+	printf("running thread %d\n", mc->opt.thread_id);
+
+	mc->stat->running_time = rdtsc();
+
+	//while (runs < mc->gopts->benchmark_duration && allocators_alive == 1) {
+	while (runs < mc->gopts->benchmark_duration) {
+
+		size_t sz = 0;
+		unsigned int lt;
+		unsigned int num_objects;
+		collection_t tp;
+		u_int64_t rctm;
+	
+		//one thread allocates and tells the others how much it allocated
+		//sho allocates?
+		if (mc->opt.thread_id == 0) {
+			fs_allocation_thread = get_random_thread(mc);
+		}
+		spin_barrier_wait(&barrier);
+
+		if (mc->opt.thread_id == fs_allocation_thread) {
+			printf("thread %d will allocate fs collection\n",
+					mc->opt.thread_id);
+		
+			get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &rctm);
+#ifdef OPTIMAL_MODE
+			tp = OPTIMAL_FALSE_SHARING;
+#endif		
+			if (sz < sizeof(SharedObject))
+				sz = sizeof(SharedObject) + 4;
+
+			// for false sharing we only use num_threads objects for one time slot
+			num_objects = __builtin_popcountl(rctm);
+			lt = 1;
+		
+			mc->stat->lt_histogram[lt] += num_objects;
+			mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
+		
+			allocation_start = rdtsc();
+			fs_collection = 
+				allocate_collection(mc, tp, sz, num_objects, rctm);
+
+			fs_collection->reference_map = rctm;
+
+			allocation_end = rdtsc();
+			mc->stat->allocation_time += allocation_end - allocation_start;
+
+			fs_collection_bytes = num_objects * sz;
+		
+		}
+		spin_barrier_wait(&barrier);
+
+		//all theads access the fs collection
+		assert(fs_collection != NULL);
+		access_start = rdtsc();
+		traverse_collection(mc, (OCollection*)fs_collection);
+		access_end = rdtsc();
+		mc->stat->access_time += access_end - access_start;
+		
+		local_fs_collection_bytes = fs_collection_bytes;
+	
+		time_counter += local_fs_collection_bytes;
+
+		//fs collections only last for one time period
+		if (mc->opt.thread_id == 0) {
+			fs_deallocation_thread = get_random_thread(mc);
+		}
+		spin_barrier_wait(&barrier);
+
+		if (mc->opt.thread_id == fs_deallocation_thread) {
+			printf("thread %d will deallocate fs collection\n",
+					mc->opt.thread_id);
+			OCollection *old_c = (OCollection*)fs_collection;
+			old_c->reference_map = 0;
+			deallocation_start = rdtsc();
+			deallocate_collection(mc, (OCollection*)fs_collection);
+			deallocation_end = rdtsc();
+			mc->stat->deallocation_time += 
+				deallocation_end - deallocation_start;
+		}
+		spin_barrier_wait(&barrier);
+
+		mc->time++;
+		runs++;
+		print_mutator_stats(mc);
+	}
+
+	mc->stat->running_time = rdtsc() - mc->stat->running_time;
+
+	return (void*)mc;
+}
+
+
+//int allocators_alive = 1;
 void *acdc_thread(void *ptr) {
 	MContext *mc = (MContext*)ptr;
 
@@ -338,7 +449,8 @@ void *acdc_thread(void *ptr) {
 
 	mc->stat->running_time = rdtsc();
 
-	while (runs < mc->gopts->benchmark_duration && allocators_alive == 1) {
+	//while (runs < mc->gopts->benchmark_duration && allocators_alive == 1) {
+	while (runs < mc->gopts->benchmark_duration) {
 
 		size_t sz = 0;
 		unsigned int lt;
@@ -351,11 +463,11 @@ void *acdc_thread(void *ptr) {
 		//TODO: move to get_random_object...
 		//check if collections can be built with sz
 		if (tp == BTREE && sz < sizeof(BTObject))
-			sz = sizeof(BTObject);
+			sz = sizeof(BTObject) + 4;
 		if (tp == LIST && sz < sizeof(LObject))
-			sz = sizeof(LObject);
+			sz = sizeof(LObject) + 4;
 		if (tp == FALSE_SHARING && sz < sizeof(SharedObject))
-			sz = sizeof(SharedObject);
+			sz = sizeof(SharedObject) + 4;
 
 		// for small false sharing we only use num_threads objects
 		if (tp == FALSE_SHARING) 
@@ -374,27 +486,25 @@ void *acdc_thread(void *ptr) {
 #ifdef OPTIMAL_MODE
 		if (tp == LIST) tp = OPTIMAL_LIST;
 		if (tp == BTREE) tp = OPTIMAL_BTREE;
-		if (tp == FALSE_SHARING) tp = OPTIMAL_FALSE_SHARING;
 #endif
-		if (mc->opt.thread_id == 0) {
-			allocation_start = rdtsc();
-			OCollection *oc = 
-				allocate_collection(mc, tp, sz, num_objects, rctm);
 
-			allocation_end = rdtsc();
-			mc->stat->allocation_time += allocation_end - allocation_start;
+					
+		allocation_start = rdtsc();
+		OCollection *oc = 
+			allocate_collection(mc, tp, sz, num_objects, rctm);
 
-			assert(oc->sharing_map != 0);
-			assert(oc->reference_map == 0);
-			add_to_distribution_pool(mc, oc, lt);
-		}
-		
+		allocation_end = rdtsc();
+		mc->stat->allocation_time += allocation_end - allocation_start;
+
+		assert(oc->sharing_map != 0);
+		assert(oc->reference_map == 0);
+		add_to_distribution_pool(mc, oc, lt);
 		
 		unsigned long bytes_from_dist_pool = 0;
-		while (bytes_from_dist_pool == 0 && allocators_alive == 1) {
+		//while (bytes_from_dist_pool == 0 && allocators_alive == 1) {
+		while (bytes_from_dist_pool == 0) {
 			bytes_from_dist_pool += get_from_distribution_pool(mc);
 		}
-
 
 		//access (all) objects
 		//access objects that were allocated together
@@ -403,15 +513,11 @@ void *acdc_thread(void *ptr) {
 		access_end = rdtsc();
 
 		mc->stat->access_time += access_end - access_start;
-
-
+		
 		time_counter += bytes_from_dist_pool;
+
 		if (time_counter >= mc->gopts->time_threshold) {
 			
-			//access shared objects
-			//access_shared_objects(mc);
-
-			print_mutator_stats(mc);
 		
 			//proceed in time
 			mc->time++;
@@ -424,16 +530,13 @@ void *acdc_thread(void *ptr) {
 			mc->stat->deallocation_time += 
 				deallocation_end - deallocation_start;
 
-
-			//delete_expired_shared_objects(mc);
-			//pthread_barrier_wait(&sync_barrier);
+			print_mutator_stats(mc);
 		}
 	}
 
 	mc->stat->running_time = rdtsc() - mc->stat->running_time;
 
-	if (mc->opt.thread_id == 0) allocators_alive = 0;
-
+	//if (mc->opt.thread_id == 0) allocators_alive = 0;
 
 	return (void*)mc;
 }
@@ -448,21 +551,25 @@ void run_acdc(GOptions *gopts) {
 
 	distribution_pools = create_collection_pools(gopts->max_lifetime + 1);
 
-	
+	r = spin_barrier_init(&barrier, gopts->num_threads);
 
-/*
-	r = pthread_barrier_init(&sync_barrier, NULL, gopts->num_threads);
-	if (r) {
-		printf("Unable to create barrier: %d\n", r);
+	void *(*thread_function)(void*);
+
+	if (gopts->mode == ACDC) {
+		thread_function = acdc_thread;
+	} else if (gopts->mode == FS) {
+		thread_function = false_sharing_thread;
+	} else {
+		printf("Mode not supported\n");
 		exit(EXIT_FAILURE);
 	}
-*/
+	
 
 	for (i = 0; i < gopts->num_threads; ++i) {
 		MContext *mc = create_mutator_context(gopts, i);
-		r = pthread_create(&threads[i], NULL, acdc_thread, (void*)mc);
+		r = pthread_create(&threads[i], NULL, thread_function, (void*)mc);
 		if (r) {
-			printf("Unable to create acdc_thread: %d\n", r);
+			printf("Unable to create thread_function: %d\n", r);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -470,7 +577,7 @@ void run_acdc(GOptions *gopts) {
 	for (i = 0; i < gopts->num_threads; ++i) {
 		r = pthread_join(threads[i], (void*)(&thread_results[i]));
 		if (r) {
-			printf("Unable to join acdc_thread: %d\n", r);
+			printf("Unable to join thread_function: %d\n", r);
 			exit(EXIT_FAILURE);
 		}
 	}
