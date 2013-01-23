@@ -1,27 +1,33 @@
 #/bin/bash
 
-OPTIONS="-f -s 2 -S 2 -d 50 -i 1000000"
+OPTIONS="-f -s 2 -S 4 -d 50 -i 1000000"
 #OPTIONS="-f -s 2 -S 2 -d 1 -i 200"
-
-echo -e "threads\toptimal\tptmalloc\ttcmalloc\tjemalloc\ttbb"
+REPS=5
+echo "#ACDC Options: $OPTIONS"
+echo "#Created at: `date` on `hostname`"
+echo -e "#threads\toptimal\tstddev\tptmalloc\tstddev\ttcmalloc\tstddev\tjemalloc\tstddev\ttbb\tstddev"
 for THREADS in 1 2 3 4 5 6 7 8
 do
 	OUTPUT="$THREADS"
 	for CONF in optimal ptmalloc tcmalloc jemalloc tbb
 	do
-		T_SUM=0
-		for REP in 1 2 3 4 5
+		VALUE_SUM=0
+		for (( REP=1; REP<=$REPS; REP++ ))
 		do
 			RESULT=$(./build/acdc-$CONF $OPTIONS -r $REP -n $THREADS | grep RUNTIME)
 			read -a ARRAY <<<$RESULT
-			T=${ARRAY[9]}
-			T_PER_THR=$(echo "$T/$THREADS" | bc)
-			T_SUM=$(echo "${T_SUM}+${T_PER_THR}" | bc)
+			VALUE[$REP]=$(echo "scale=1;${ARRAY[9]}/$THREADS" | bc)
+			VALUE_SUM=$(echo "${VALUE_SUM}+${VALUE[$REP]}" | bc)
 		done
-		T_AVG=$(echo "${T_SUM}/5" | bc)
-		OUTPUT="$OUTPUT\t$T_AVG"
+		AVG=$(echo "scale=1;${VALUE_SUM}/5" | bc)
+		SSD=0
+		for (( REP=1; REP<=$REPS; REP++ ))
+		do
+			SSD=$(echo "$SSD + (${VALUE[$REP]} - $AVG)^2"|bc)
+		done
+		SSD=$(echo "scale=1;sqrt($SSD * (1 / ($REPS - 1)))"|bc)
+		OUTPUT="$OUTPUT\t$AVG\t$SSD"
 	done
 	echo -e $OUTPUT
-
 done
 
