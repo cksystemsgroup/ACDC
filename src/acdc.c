@@ -347,8 +347,8 @@ void *false_sharing_thread(void *ptr) {
 #ifdef OPTIMAL_MODE
 			tp = OPTIMAL_FALSE_SHARING;
 #endif		
-			if (sz < sizeof(Object))
-				sz = sizeof(Object) + 4;
+			if (sz < sizeof(SharedObject))
+				sz = sizeof(SharedObject) + 4;
 		
 			mc->stat->lt_histogram[lt] += num_objects;
 			mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;

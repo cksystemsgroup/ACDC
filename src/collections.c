@@ -39,7 +39,6 @@ void traverse_list(MContext *mc, OCollection *oc) {
 	while (list != NULL) {
 		//printf("access object\n");
 		int i;
-	//TODO: access only my objects
 		for (i = 0; i < mc->gopts->access_iterations; ++i)
 			access_object((Object*)list, oc->object_size, sizeof(LObject));
 		list = list->next;
@@ -101,7 +100,6 @@ static OCollection *allocate_list(MContext *mc, size_t sz, unsigned long nelem, 
 	
 	OCollection *list = new_collection(mc, LIST, sz, nelem, rctm);
 
-	//TODO: check for shared setting
 	list->start = allocate(mc, sz);
 	LObject *tmp = (LObject*)list->start;
 
@@ -209,7 +207,6 @@ void deallocate_btree(MContext *mc, OCollection *oc) {
 void btree_preorder_recursion(MContext *mc, BTObject *t, size_t sz) {
 	if (t == NULL) return;
 	int i;
-	//TODO: access only my objects
 	for (i = 0; i < mc->gopts->access_iterations; ++i)
 		access_object((Object*)t, sz, sizeof(BTObject));
 	btree_preorder_recursion(mc, t->left, sz);
