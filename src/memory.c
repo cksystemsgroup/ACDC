@@ -1,23 +1,29 @@
+ /*
+ * Copyright (c) 2012, the ACDC Project Authors.
+ * All rights reserved. Please see the AUTHORS file for details.
+ * Use of this source code is governed by a BSD license that
+ * can be found in the LICENSE file.
+ */
+
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "acdc.h"
 
 Object *allocate(MContext *mc, size_t size) {
-		void *ptr;
+	void *ptr;
 		
-		if (size < sizeof(Object)) {
-			printf("Error: min object size is %lu. Requested: %lu\n",
+	if (size < sizeof(Object)) {
+		printf("Error: min object size is %lu. Requested: %lu\n",
 				sizeof(Object),
 				size);
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 
 	ptr = malloc(size);
 	
 	//set header information
 	Object *o = (Object*)ptr;
-	//o->rctm = 0;
 
 	//update mutator stats
 	mc->stat->bytes_allocated += size;

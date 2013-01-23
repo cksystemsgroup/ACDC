@@ -1,3 +1,10 @@
+ /*
+ * Copyright (c) 2012, the ACDC Project Authors.
+ * All rights reserved. Please see the AUTHORS file for details.
+ * Use of this source code is governed by a BSD license that
+ * can be found in the LICENSE file.
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
@@ -270,6 +277,8 @@ void deallocate_collection(MContext *mc, OCollection *oc) {
 	}
 }
 void traverse_collection(MContext *mc, OCollection *oc) {
+
+	if (mc->gopts->access_iterations == 0) return;
 
 	switch (oc->type) {
 		case LIST:

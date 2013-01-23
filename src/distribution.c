@@ -1,3 +1,11 @@
+ /*
+ * Copyright (c) 2012, the ACDC Project Authors.
+ * All rights reserved. Please see the AUTHORS file for details.
+ * Use of this source code is governed by a BSD license that
+ * can be found in the LICENSE file.
+ */
+
+
 #include <glib.h>
 #include <stdio.h>
 
@@ -12,6 +20,16 @@ void free_rand(GRand *rand) {
 	g_rand_free(rand);
 }
 
+static unsigned int get_sharing_dist(MContext *mc) {
+
+	if (!mc->gopts->share_objects) return 0;
+
+	unsigned int r = g_rand_int_range(mc->opt.rand,
+			0, 100);
+	if (r < mc->gopts->share_ratio) return 1;
+	return 0;
+
+}
 
 static unsigned int get_random_lifetime(MContext *mc) {
 
@@ -115,7 +133,11 @@ void get_random_object_props(MContext *mc,
 	*num_objects = effect_of_sizeclass * effect_of_lifetime;
 	//*num_objects = 10;
 	*type = get_random_collection_type(mc);
-	*rctm = get_random_thread_selection(mc);
+	if (get_sharing_dist(mc)) {
+		*rctm = get_random_thread_selection(mc); //shared objects
+	} else {
+		*rctm = 1 << mc->opt.thread_id; //unshared
+	}
 }
 
 

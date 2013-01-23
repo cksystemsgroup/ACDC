@@ -1,3 +1,11 @@
+ /*
+ * Copyright (c) 2012, the ACDC Project Authors.
+ * All rights reserved. Please see the AUTHORS file for details.
+ * Use of this source code is governed by a BSD license that
+ * can be found in the LICENSE file.
+ */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -57,6 +65,13 @@ static void check_params(GOptions *gopts) {
 		printf("If using -b and -q, their arguments must add"
 				" up to 100%%\n");
 		exit(EXIT_FAILURE);
+	}
+
+	if (gopts->mode == FS) {
+		gopts->share_thread_ratio = 100;
+		gopts->share_objects = 1;
+		gopts->share_ratio = 100;
+
 	}
 }
 

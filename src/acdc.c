@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2012, the ACDC Project Authors.
+ * All rights reserved. Please see the AUTHORS file for details.
+ * Use of this source code is governed by a BSD license that
+ * can be found in the LICENSE file.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -25,7 +32,6 @@ inline void set_bit(u_int64_t *word, int bitpos) {
 inline void unset_bit(u_int64_t *word, int bitpos) {
 	*word &= ~(1 << bitpos);
 }
-
 
 guint object_collection_hash(gconstpointer key) {
 
@@ -107,21 +113,15 @@ void destroy_mutator_context(MContext *mc) {
 
 void print_mutator_stats(MContext *mc) {
 
-
-	//void *program_break = sbrk(0);
-	long heapsz = 0;//(long)program_break - (long)initial_break;
-
-	printf("STATS\t%s\t%3u\t%4u\t%12lu\t%12lu\t%12lu\t%12lu\t%ld\n",
+	printf("STATS\t%s\t%3u\t%4u\t%12lu\t%12lu\t%12lu\t%12lu\n",
 			ALLOCATOR_NAME,
 			mc->opt.thread_id,
 			mc->time,
 			mc->stat->bytes_allocated,
 			mc->stat->bytes_deallocated,
 			mc->stat->objects_allocated,
-			mc->stat->objects_deallocated,
-			heapsz
+			mc->stat->objects_deallocated
 			);
-
 }
 
 void delete_collection(gpointer key, gpointer value, gpointer user_data) {
@@ -129,11 +129,6 @@ void delete_collection(gpointer key, gpointer value, gpointer user_data) {
 	OCollection *oc = (OCollection*)value;
 	MContext *mc = (MContext*)user_data;
 	
-	//printf("%p %p \n", key, value);
-	//printf("deallocate %u elements of size %u\n", oc->num_objects, 
-	//		oc->object_size);
-
-
 	//shared Collections
 	//unset reference bit and check if we can deallocate the collection
 	while (1) {
@@ -167,18 +162,12 @@ void delete_collection(gpointer key, gpointer value, gpointer user_data) {
 void delete_expired_objects(MContext *mc) {
 
 	int delete_index = (mc->time) % mc->gopts->max_lifetime;
-
-	//printf("DEBUG: will remove from pool %d\n", delete_index);
-
+	
 	CollectionPool *cp = &(mc->collection_pools[delete_index]);
-
 	g_hash_table_foreach(cp->collections, delete_collection, mc);
-
 	//delete items in hashmap
 	g_hash_table_remove_all(cp->collections);
 }
-
-
 
 static void access_collection(gpointer key, gpointer value, gpointer user_data) {
 
@@ -186,10 +175,8 @@ static void access_collection(gpointer key, gpointer value, gpointer user_data) 
 	MContext *mc = (MContext*)user_data;
 
 	traverse_collection(mc, oc);
-
 }
 
-//TODO: rename to access_unshared_objects
 void access_live_objects(MContext *mc) {
 
 	int i, idx;
@@ -203,23 +190,16 @@ void access_live_objects(MContext *mc) {
 	}
 }
 
-
 void add_collection_to_pool(OCollection *oc, CollectionPool *cp) {
+
+	//make sure we have a unique key for OCollection objects
 	while (g_hash_table_contains(cp->collections,
 				(gconstpointer)oc)) {
-
-		//printf("a collection for size %lu objects with "
-		//		"id %u already exists\n",
-		//		c->object_size,
-		//		c->id);
 		oc->id++;
-		
 	}
-	//add collection with proper id to hash map
-	//g_hash_table_insert(cp->collections, (gpointer)c, (gpointer)c);
+	//add collection with proper id to hash map (key == value)
 	g_hash_table_add(cp->collections, (gpointer)oc);
 }
-
 
 void add_to_distribution_pool(MContext *mc, OCollection *oc, int lt) {
 	
@@ -231,7 +211,6 @@ void add_to_distribution_pool(MContext *mc, OCollection *oc, int lt) {
 	add_collection_to_pool(oc, cp);
 	int after = g_hash_table_size(cp->collections);
 	assert(after == before + 1);
-	
 	
 	pthread_mutex_unlock(&distribution_pools_lock);
 }
@@ -281,7 +260,7 @@ gboolean get_from_distribution_collection(gpointer key, gpointer value, gpointer
 						__builtin_popcountl(old_sm));
 			break;
 		} else {
-			//some other thread changed the reference mask
+			//some other thread changed the reference mask, retry
 		}
 	}
 	
@@ -308,9 +287,6 @@ int get_from_distribution_pool(MContext *mc) {
 	struct gfdc_args args;
 	args.mc = mc;
 	args.count = 0;
-	//args.survivors = g_hash_table_new(object_collection_hash, 
-	//				object_collection_equal);
-
 	
 	pthread_mutex_lock(&distribution_pools_lock);
 
@@ -320,7 +296,6 @@ int get_from_distribution_pool(MContext *mc) {
 		args.lt = lt;
 		g_hash_table_foreach_remove(cp->collections, 
 				get_from_distribution_collection, (gpointer)&args);
-		//printf("removed %d of %d collections\n", removed, total);
 	}
 	
 	pthread_mutex_unlock(&distribution_pools_lock);
@@ -363,8 +338,6 @@ void *false_sharing_thread(void *ptr) {
 		spin_barrier_wait(&barrier);
 
 		if (mc->opt.thread_id == fs_allocation_thread) {
-			printf("thread %d will allocate fs collection\n",
-					mc->opt.thread_id);
 		
 			get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &rctm);
 			// for false sharing we only use num_threads objects for one time slot
@@ -376,8 +349,6 @@ void *false_sharing_thread(void *ptr) {
 #endif		
 			if (sz < sizeof(SharedObject))
 				sz = sizeof(SharedObject) + 4;
-
-
 		
 			mc->stat->lt_histogram[lt] += num_objects;
 			mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
@@ -414,8 +385,6 @@ void *false_sharing_thread(void *ptr) {
 		spin_barrier_wait(&barrier);
 
 		if (mc->opt.thread_id == fs_deallocation_thread) {
-			printf("thread %d will deallocate fs collection\n",
-					mc->opt.thread_id);
 			OCollection *old_c = (OCollection*)fs_collection;
 			old_c->reference_map = 0;
 			deallocation_start = rdtsc();
@@ -436,7 +405,6 @@ void *false_sharing_thread(void *ptr) {
 	return (void*)mc;
 }
 
-
 //int allocators_alive = 1;
 void *acdc_thread(void *ptr) {
 	MContext *mc = (MContext*)ptr;
@@ -451,7 +419,6 @@ void *acdc_thread(void *ptr) {
 
 	mc->stat->running_time = rdtsc();
 
-	//while (runs < mc->gopts->benchmark_duration && allocators_alive == 1) {
 	while (runs < mc->gopts->benchmark_duration) {
 
 		size_t sz = 0;
@@ -459,8 +426,8 @@ void *acdc_thread(void *ptr) {
 		unsigned int num_objects;
 		collection_t tp;
 		u_int64_t rctm;
-		get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &rctm);
 
+		get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &rctm);
 
 		//TODO: move to get_random_object...
 		//check if collections can be built with sz
@@ -478,18 +445,11 @@ void *acdc_thread(void *ptr) {
 		mc->stat->lt_histogram[lt] += num_objects;
 		mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
 
-		//allocate objects
-		//create data structures
-		
-		//create trees and lists
-		//printf("allocate list of %u elements of sz %lu lt %u\n", 
-		//		num_objects, sz, lt);
 
 #ifdef OPTIMAL_MODE
 		if (tp == LIST) tp = OPTIMAL_LIST;
 		if (tp == BTREE) tp = OPTIMAL_BTREE;
 #endif
-
 					
 		allocation_start = rdtsc();
 		OCollection *oc = 
@@ -519,12 +479,11 @@ void *acdc_thread(void *ptr) {
 		time_counter += bytes_from_dist_pool;
 
 		if (time_counter >= mc->gopts->time_threshold) {
-			
-		
 			//proceed in time
 			mc->time++;
 			time_counter = 0;
 			runs++;
+
 			deallocation_start = rdtsc();
 			delete_expired_objects(mc);
 			deallocation_end = rdtsc();
@@ -538,18 +497,14 @@ void *acdc_thread(void *ptr) {
 
 	mc->stat->running_time = rdtsc() - mc->stat->running_time;
 
-	//if (mc->opt.thread_id == 0) allocators_alive = 0;
-
 	return (void*)mc;
 }
-
 
 void run_acdc(GOptions *gopts) {
 
 	int i, r;
 	pthread_t *threads = malloc(sizeof(pthread_t) * gopts->num_threads);
 	MContext **thread_results = malloc(sizeof(MContext*) * gopts->num_threads);
-
 
 	distribution_pools = create_collection_pools(gopts->max_lifetime + 1);
 
@@ -565,7 +520,6 @@ void run_acdc(GOptions *gopts) {
 		printf("Mode not supported\n");
 		exit(EXIT_FAILURE);
 	}
-	
 
 	for (i = 0; i < gopts->num_threads; ++i) {
 		MContext *mc = create_mutator_context(gopts, i);
@@ -583,8 +537,6 @@ void run_acdc(GOptions *gopts) {
 			exit(EXIT_FAILURE);
 		}
 	}
-
-
 
 	//aggreagate info in thread 0's MContext
 	int j;
@@ -617,7 +569,6 @@ void run_acdc(GOptions *gopts) {
 		}
 	}
 
-
 	for (j = 0; j <= gopts->max_lifetime; ++j) {
 		printf("LT_HISTO:\t%d\t%lu\n", 
 				j, 
@@ -645,6 +596,6 @@ void run_acdc(GOptions *gopts) {
 			((double)thread_results[0]->stat->access_time /
 			 (double)thread_results[0]->stat->running_time)*100.0
 			);
-		//free mutator context
+	//TODO: free mutator context
 }
 
