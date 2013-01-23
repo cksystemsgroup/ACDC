@@ -40,11 +40,11 @@ OCollection *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
 	OCollection *oc = new_collection(mc, FALSE_SHARING, sz, nelem, rctm);
 
 	//we store all objects on an array. one after the other
-	oc->start = calloc(nelem, sizeof(SharedObject*));
+	oc->start = calloc(nelem, sizeof(Object*));
 
 	int i;
 	for (i = 0; i < nelem; ++i) {
-		((SharedObject**)oc->start)[i] = allocate(mc, sz);
+		((Object**)oc->start)[i] = allocate(mc, sz);
 	}
 
 	return oc;
@@ -77,7 +77,7 @@ void deallocate_fs_pool(MContext *mc, OCollection *oc) {
 
 	int i;
 	for (i = 0; i < oc->num_objects; ++i) {
-		 deallocate(mc, ((SharedObject**)oc->start)[i], oc->object_size);
+		 deallocate(mc, ((Object**)oc->start)[i], oc->object_size);
 	}
 	free(oc->start);
 	oc->start = NULL;
@@ -96,6 +96,7 @@ void deallocate_optimal_fs_pool(MContext *mc, OCollection *oc) {
 }
 
 //TODO: refactor. same code twice
+/*
 void assign_optimal_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rctm) {
 
 	//check which threads should participate
@@ -130,7 +131,7 @@ void assign_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rctm) {
 	}
 	free(thread_ids);
 }
-
+*/
 
 /////////////////////////////////////////////
 //false sharing with small objects
@@ -143,7 +144,7 @@ OCollection *allocate_small_fs_pool(MContext *mc, size_t sz, unsigned long nelem
 	assert (num_threads == nelem);
 
 	OCollection *oc = allocate_fs_pool(mc, sz, nelem, rctm);
-	assign_fs_pool_objects(mc, oc, rctm);
+	//assign_fs_pool_objects(mc, oc, rctm);
 	return oc;
 }
 
@@ -151,7 +152,7 @@ OCollection *allocate_small_optimal_fs_pool(MContext *mc, size_t sz,
 		unsigned long nelem, u_int64_t rctm) {
 
 	OCollection *oc = allocate_optimal_fs_pool(mc, sz, nelem, rctm);
-	assign_optimal_fs_pool_objects(mc, oc, rctm);
+	//assign_optimal_fs_pool_objects(mc, oc, rctm);
 	return oc;
 }
 
@@ -167,7 +168,7 @@ void deallocate_small_optimal_fs_pool(MContext *mc, OCollection *oc) {
 
 void traverse_small_fs_pool(MContext *mc, OCollection *oc) {
 	//check if thread bit is set in rctm
-	u_int64_t my_bit = 1 << mc->opt.thread_id;
+	//u_int64_t my_bit = 1 << mc->opt.thread_id;
 
 	assert(oc->reference_map != 0);
 	assert(oc->start != NULL);
@@ -175,23 +176,23 @@ void traverse_small_fs_pool(MContext *mc, OCollection *oc) {
 	int i;
 	for (i = 0; i < oc->num_objects; ++i) {
 		//check out what are my objects
-		SharedObject *so = ((SharedObject**)oc->start)[i];
-		if (so->rctm & my_bit) {
+		Object *so = ((Object**)oc->start)[i];
+		//if (so->rctm & my_bit) {
 			//printf("ACCESS\n");
 			int j;
 			assert(oc->reference_map != 0);
 			//long long access_start = rdtsc();
 			for (j = 0; j < mc->gopts->access_iterations; ++j)
-				access_object(so, oc->object_size, sizeof(SharedObject));
+				access_object(so, oc->object_size, sizeof(Object));
 			//long long access_end = rdtsc();
 			//mc->stat->access_time += access_end - access_start;
-		}
+		//}
 	}
 }
 void traverse_small_optimal_fs_pool(MContext *mc, OCollection *oc) {
 
 	//check if thread bit is set in rctm
-	u_int64_t my_bit = 1 << mc->opt.thread_id;
+	//u_int64_t my_bit = 1 << mc->opt.thread_id;
 
 	assert(oc->reference_map != 0);
 	assert(oc->start != NULL);
@@ -202,20 +203,20 @@ void traverse_small_optimal_fs_pool(MContext *mc, OCollection *oc) {
 	for (i = 0; i < oc->num_objects; ++i) {
 		char *next = (char*)oc->start + 
 			cache_lines_per_element * L1_LINE_SZ * i;
-		SharedObject *so = (SharedObject*)next;
+		Object *so = (Object*)next;
 		
 		assert(oc->reference_map != 0);
 		
-		if (so->rctm & my_bit) {
+		//if (so->rctm & my_bit) {
 			//printf("ACCESS\n");
 			int j;
 			assert(oc->reference_map != 0);
 			//long long access_start = rdtsc();
 			for (j = 0; j < mc->gopts->access_iterations; ++j)
-				access_object(so, oc->object_size, sizeof(SharedObject));
+				access_object(so, oc->object_size, sizeof(Object));
 			//long long access_end = rdtsc();
 			//mc->stat->access_time += access_end - access_start;
-		}
+		//}
 	}
 }
 

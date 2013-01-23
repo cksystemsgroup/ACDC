@@ -347,8 +347,8 @@ void *false_sharing_thread(void *ptr) {
 #ifdef OPTIMAL_MODE
 			tp = OPTIMAL_FALSE_SHARING;
 #endif		
-			if (sz < sizeof(SharedObject))
-				sz = sizeof(SharedObject) + 4;
+			if (sz < sizeof(Object))
+				sz = sizeof(Object) + 4;
 		
 			mc->stat->lt_histogram[lt] += num_objects;
 			mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
@@ -582,8 +582,9 @@ void run_acdc(GOptions *gopts) {
 				);
 	}
 
-	printf("RUNTIME\t%s\t%llu \t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%%\n", 
+	printf("RUNTIME\t%s\t%d\t%llu\t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%%\n", 
 			ALLOCATOR_NAME,
+			gopts->num_threads,
 			thread_results[0]->stat->running_time, 
 			100.0,
 			thread_results[0]->stat->allocation_time,
