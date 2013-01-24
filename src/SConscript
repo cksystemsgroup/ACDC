@@ -42,7 +42,8 @@ acdc_env = acdc_conf.Finish()
 
 acdc_env.ParseConfig('pkg-config --cflags --libs glib-2.0')
 acdc_env.Append(LIBS=['pthread'])
-acdc_env.Append(CPPFLAGS=['-O3', '-Wall', '-Werror'])
+#acdc_env.Append(CPPFLAGS=['-O3', '-Wall', '-Werror'])
+acdc_env.Append(CPPFLAGS=['-g', '-Wall', '-Werror'])
 #acdc_env.Program('acdc', ['main.c', 'memory.c', 'acdc.c', 'distribution.c', 'collections.c'])
 
 
@@ -77,7 +78,7 @@ for config in ['optimal', 'ptmalloc2', 'ptmalloc3', 'hoard', 'tcmalloc', 'jemall
 		e.Append(CPPFLAGS=['-DALLOCATOR=llalloc'])
 
 	object_list = []
-	for obj in ['main', 'memory', 'acdc', 'distribution', 'collections', 'false-sharing', 'barrier']:
+	for obj in ['main', 'memory', 'acdc', 'distribution', 'collections', 'false-sharing', 'barrier', 'proc_status']:
 		e.Object(obj+"-"+config, obj+".c")
 		object_list.append(obj+"-"+config+".o")
 

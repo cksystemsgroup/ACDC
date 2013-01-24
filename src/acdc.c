@@ -15,6 +15,7 @@
 #include "arch.h"
 #include "memory.h"
 #include "barrier.h"
+#include "proc_status.h"
 
 #define QUOTE(name) #name
 #define STR(macro) QUOTE(macro)
@@ -592,6 +593,14 @@ void run_acdc(GOptions *gopts) {
 			((double)thread_results[0]->stat->access_time /
 			 (double)thread_results[0]->stat->running_time)*100.0
 			);
+
+	update_proc_status(gopts->pid);
+	printf("MEMORY\t%s\t%ld\t%ld\n",
+			ALLOCATOR_NAME,
+			get_vm_peak(),
+			get_high_water_mark()
+			);
+
 	//TODO: free mutator context
 }
 

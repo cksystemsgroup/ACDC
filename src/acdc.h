@@ -44,6 +44,7 @@ struct global_options {
 
   //misc options
   int verbosity; //-v
+  pid_t pid;
 };
 
 //thread local mutator options

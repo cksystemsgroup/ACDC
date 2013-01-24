@@ -12,6 +12,7 @@
 
 #include "acdc.h"
 #include "memory.h"
+#include "proc_status.h"
 
 static void print_usage() {
 	printf("ACDC Benchmark usage:\n"
@@ -100,6 +101,9 @@ int main(int argc, char **argv) {
 
 
 	GOptions *gopts = malloc(sizeof(GOptions));
+
+	gopts->pid = getpid();
+
 	set_default_params(gopts);
 	const char *optString = "afn:t:d:r:l:L:s:S:OR:T:b:q:i:vh";
 

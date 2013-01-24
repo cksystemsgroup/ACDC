@@ -6,9 +6,14 @@
  */
 
 
-#ifndef RESOURCES_H
-#define RESOURCES_H
+#ifndef PROC_STATUS_H
+#define PROC_STATUS_H
 
+#include <sys/types.h>
+
+void update_proc_status(pid_t pid);
+long get_vm_peak();
+long get_vm_size();
 long get_resident_set_size();
 long get_high_water_mark();
 long get_data_segment_size();
