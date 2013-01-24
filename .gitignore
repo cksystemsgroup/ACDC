@@ -2,6 +2,7 @@ build/*
 *.swp
 allocators/*
 data/*
+tmp/*
 .sconsign.dblite
 .sconf_temp
 config.log

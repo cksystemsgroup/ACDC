@@ -46,7 +46,7 @@ acdc_env.Append(CPPFLAGS=['-O3', '-Wall', '-Werror'])
 #acdc_env.Program('acdc', ['main.c', 'memory.c', 'acdc.c', 'distribution.c', 'collections.c'])
 
 
-for config in ['optimal', 'ptmalloc2', 'ptmalloc3', 'hoard', 'tcmalloc', 'jemalloc', 'tbb']:
+for config in ['optimal', 'ptmalloc2', 'ptmalloc3', 'hoard', 'tcmalloc', 'jemalloc', 'tbb', 'llalloc']:
 	e = acdc_env.Clone()
 
 	if config == 'optimal':
@@ -72,6 +72,9 @@ for config in ['optimal', 'ptmalloc2', 'ptmalloc3', 'hoard', 'tcmalloc', 'jemall
 	if config == 'tbb':
 		e.Append(LIBS=['tbbmalloc_proxy', 'tbbmalloc'], LIBPATH=['../allocators'])
 		e.Append(CPPFLAGS=['-DALLOCATOR=tbb'])
+	if config == 'llalloc':
+		e.Append(LIBS=['llalloc'], LIBPATH=['../allocators'])
+		e.Append(CPPFLAGS=['-DALLOCATOR=llalloc'])
 
 	object_list = []
 	for obj in ['main', 'memory', 'acdc', 'distribution', 'collections', 'false-sharing', 'barrier']:
