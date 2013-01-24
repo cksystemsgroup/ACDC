@@ -328,7 +328,7 @@ void *false_sharing_thread(void *ptr) {
 		unsigned int lt;
 		unsigned int num_objects;
 		collection_t tp;
-		u_int64_t rctm;
+		u_int64_t sharing_map;
 	
 		//one thread allocates and tells the others how much it allocated
 		//sho allocates?
@@ -339,7 +339,7 @@ void *false_sharing_thread(void *ptr) {
 
 		if (mc->opt.thread_id == fs_allocation_thread) {
 		
-			get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &rctm);
+			get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
 			// for false sharing we only use num_threads objects for one time slot
 			tp = FALSE_SHARING;
 			num_objects = mc->gopts->num_threads;
@@ -355,9 +355,9 @@ void *false_sharing_thread(void *ptr) {
 		
 			allocation_start = rdtsc();
 			fs_collection = 
-				allocate_collection(mc, tp, sz, num_objects, rctm);
+				allocate_collection(mc, tp, sz, num_objects, sharing_map);
 
-			fs_collection->reference_map = rctm;
+			fs_collection->reference_map = sharing_map;
 
 			allocation_end = rdtsc();
 			mc->stat->allocation_time += allocation_end - allocation_start;
@@ -425,9 +425,9 @@ void *acdc_thread(void *ptr) {
 		unsigned int lt;
 		unsigned int num_objects;
 		collection_t tp;
-		u_int64_t rctm;
+		u_int64_t sharing_map;
 
-		get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &rctm);
+		get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
 
 		//TODO: move to get_random_object...
 		//check if collections can be built with sz
@@ -438,13 +438,8 @@ void *acdc_thread(void *ptr) {
 		if (tp == FALSE_SHARING && sz < sizeof(SharedObject))
 			sz = sizeof(SharedObject) + 4;
 
-		// for small false sharing we only use num_threads objects
-		if (tp == FALSE_SHARING) 
-			num_objects = __builtin_popcountl(rctm);
-		
 		mc->stat->lt_histogram[lt] += num_objects;
 		mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
-
 
 #ifdef OPTIMAL_MODE
 		if (tp == LIST) tp = OPTIMAL_LIST;
@@ -453,7 +448,7 @@ void *acdc_thread(void *ptr) {
 					
 		allocation_start = rdtsc();
 		OCollection *oc = 
-			allocate_collection(mc, tp, sz, num_objects, rctm);
+			allocate_collection(mc, tp, sz, num_objects, sharing_map);
 
 		allocation_end = rdtsc();
 		mc->stat->allocation_time += allocation_end - allocation_start;

@@ -70,15 +70,6 @@ struct mutator_stat {
 
 
 //memory object abstraction
-/*
- * Some Makros to access the reference counter and the thread mask
- * out of the combined rctm field. RCTM creates the combination
- * of a RC and a TM
- */
-//#define RC(_rctm) ((u_int64_t)_rctm >> 58)
-//#define TM(_rctm) (((u_int64_t)_rctm << 6) >> 6)
-//#define RCTM(_rc, _tm) (((u_int64_t)_rc << 58) | _tm)
-
 
 //object header for every allocated object
 //the min. size for an object must be sizeof(Object)
@@ -86,8 +77,8 @@ struct mutator_stat {
 typedef void Object;
 typedef struct shared_mem_object SharedObject;
 struct shared_mem_object {
-  u_int64_t rctm; //6bit rc, 58 bit thread map
-  //TODO rename to something like sharing_map
+  u_int64_t sharing_map; 
+  //a bit at pos i indicates that thread i may access this object
 };
 typedef struct mem_object_lnode LObject;
 struct mem_object_lnode {
@@ -143,16 +134,16 @@ struct collection_pool {
 typedef struct mutator_context MContext;
 
 OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
-		unsigned long nelem, u_int64_t rctm);
+		unsigned long nelem, u_int64_t sharing_map);
 void deallocate_collection(MContext *mc, OCollection *oc); 
 void traverse_collection(MContext *mc, OCollection *oc);
 int collection_is_shared(MContext *mc, OCollection *oc);
 
 
 OCollection *new_collection(MContext *mc, collection_t t, size_t sz, 
-                            unsigned long nelem, u_int64_t rctm);
+                            unsigned long nelem, u_int64_t sharing_map);
 
-void share_collection(OCollection *oc, u_int64_t rctm);
+void share_collection(OCollection *oc, u_int64_t sharing_map);
 
 //thread context specific data
 struct mutator_context {
@@ -183,7 +174,7 @@ void get_random_object_props(MContext *mc,
 		unsigned int *lifetime, 
 		unsigned int *num_objects,
     collection_t *type,
-    u_int64_t *rctm
+    u_int64_t *sharing_map
     );
 
 unsigned int get_random_thread(MContext *mc);

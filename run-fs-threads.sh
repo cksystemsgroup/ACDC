@@ -2,14 +2,14 @@
 
 OPTIONS="-f -s 2 -S 4 -d 50 -i 1000000"
 #OPTIONS="-f -s 2 -S 2 -d 1 -i 200"
-REPS=5
+REPS=10
 echo "#ACDC Options: $OPTIONS"
 echo "#Created at: `date` on `hostname`"
-echo -e "#threads\toptimal\tstddev\tptmalloc\tstddev\ttcmalloc\tstddev\tjemalloc\tstddev\ttbb\tstddev"
+echo -e "#threads\tjemalloc\tstddev\toptimal\tstddev\tptmalloc2\tstddev\tptmalloc3\tstddev\ttbb\tstddev\ttcmalloc\tstddev"
 for THREADS in 1 2 3 4 5 6 7 8
 do
 	OUTPUT="$THREADS"
-	for CONF in optimal ptmalloc tcmalloc jemalloc tbb
+	for CONF in jemalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc
 	do
 		VALUE_SUM=0
 		for (( REP=1; REP<=$REPS; REP++ ))

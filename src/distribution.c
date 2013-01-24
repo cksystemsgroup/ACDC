@@ -113,7 +113,7 @@ void get_random_object_props(MContext *mc,
 		unsigned int *lifetime, 
 		unsigned int *num_objects,
 		collection_t *type,
-		u_int64_t *rctm) {
+		u_int64_t *sharing_map) {
 
 	unsigned int lt = get_random_lifetime(mc);
 	unsigned int sz = get_random_size(mc);
@@ -134,9 +134,9 @@ void get_random_object_props(MContext *mc,
 	//*num_objects = 10;
 	*type = get_random_collection_type(mc);
 	if (get_sharing_dist(mc)) {
-		*rctm = get_random_thread_selection(mc); //shared objects
+		*sharing_map = get_random_thread_selection(mc); //shared objects
 	} else {
-		*rctm = 1 << mc->opt.thread_id; //unshared
+		*sharing_map = 1 << mc->opt.thread_id; //unshared
 	}
 }
 

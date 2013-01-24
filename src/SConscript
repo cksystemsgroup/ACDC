@@ -41,19 +41,22 @@ if not acdc_conf.CheckPKG('glib-2.0 >= 2.32'):
 acdc_env = acdc_conf.Finish()
 
 acdc_env.ParseConfig('pkg-config --cflags --libs glib-2.0')
-#acdc_env.Append(LIBS=['pthread'])
+acdc_env.Append(LIBS=['pthread'])
 acdc_env.Append(CPPFLAGS=['-O3', '-Wall', '-Werror'])
 #acdc_env.Program('acdc', ['main.c', 'memory.c', 'acdc.c', 'distribution.c', 'collections.c'])
 
 
-for config in ['optimal', 'ptmalloc', 'hoard', 'tcmalloc', 'jemalloc', 'tbb']:
+for config in ['optimal', 'ptmalloc2', 'ptmalloc3', 'hoard', 'tcmalloc', 'jemalloc', 'tbb']:
 	e = acdc_env.Clone()
 
 	if config == 'optimal':
 		e.Append(CPPFLAGS=['-DOPTIMAL_MODE'])
 		e.Append(CPPFLAGS=['-DALLOCATOR=optimal'])
-	if config == 'ptmalloc':
-		e.Append(CPPFLAGS=['-DALLOCATOR=ptmalloc'])
+	if config == 'ptmalloc2':
+		e.Append(CPPFLAGS=['-DALLOCATOR=ptmalloc2'])
+	if config == 'ptmalloc3':
+		e.Append(LIBS=['ptmalloc3'], LIBPATH=['../allocators'])
+		e.Append(CPPFLAGS=['-DALLOCATOR=ptmalloc3'])
 	if config == 'hoard':
 		e.Append(LIBS=['hoard'], LIBPATH=['../allocators'])
 		e.Append(CPPFLAGS=['-DALLOCATOR=hoard'])

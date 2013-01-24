@@ -16,12 +16,12 @@
 #include "false-sharing.h"
 
 
-int *get_thread_ids(u_int64_t rctm) {
-	int num_threads = __builtin_popcountl(rctm);
+int *get_thread_ids(u_int64_t sharing_map) {
+	int num_threads = __builtin_popcountl(sharing_map);
 	int *thread_ids = calloc(num_threads, sizeof(int));
 	int i, j;
 	for (i = 0, j = 0; i < sizeof(u_int64_t); ++i) {
-		if ( (1 << i) & rctm ) {
+		if ( (1 << i) & sharing_map ) {
 			thread_ids[j++] = i;
 		}
 	}
@@ -29,15 +29,15 @@ int *get_thread_ids(u_int64_t rctm) {
 }
 
 OCollection *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem, 
-		u_int64_t rctm) {
+		u_int64_t sharing_map) {
 	
 
-	int num_threads = __builtin_popcountl(rctm);
+	int num_threads = __builtin_popcountl(sharing_map);
 	//make sure that nelem is a multiple of num_threads
 	if (nelem % num_threads != 0)
 		nelem += num_threads - (nelem % num_threads);
 
-	OCollection *oc = new_collection(mc, FALSE_SHARING, sz, nelem, rctm);
+	OCollection *oc = new_collection(mc, FALSE_SHARING, sz, nelem, sharing_map);
 
 	//we store all objects on an array. one after the other
 	oc->start = calloc(nelem, sizeof(SharedObject*));
@@ -51,16 +51,16 @@ OCollection *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
 }
 
 OCollection *allocate_optimal_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
-		u_int64_t rctm) {
+		u_int64_t sharing_map) {
 	
-	int num_threads = __builtin_popcountl(rctm);
+	int num_threads = __builtin_popcountl(sharing_map);
 	//make sure that nelem is a multiple of num_threads
 	if (nelem % num_threads != 0)
 		nelem += num_threads - (nelem % num_threads);
 
 	assert(nelem % num_threads == 0);
 	
-	OCollection *oc = new_collection(mc, OPTIMAL_FALSE_SHARING, sz, nelem, rctm);
+	OCollection *oc = new_collection(mc, OPTIMAL_FALSE_SHARING, sz, nelem, sharing_map);
 
 	int cache_lines_per_element = (sz / L1_LINE_SZ) + 1;
 
@@ -97,11 +97,11 @@ void deallocate_optimal_fs_pool(MContext *mc, OCollection *oc) {
 
 //TODO: refactor. same code twice
 
-void assign_optimal_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rctm) {
+void assign_optimal_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t sharing_map) {
 
 	//check which threads should participate
-	int num_threads = __builtin_popcountl(rctm);
-	int *thread_ids = get_thread_ids(rctm);
+	int num_threads = __builtin_popcountl(sharing_map);
+	int *thread_ids = get_thread_ids(sharing_map);
 
 	int cache_lines_per_element = (oc->object_size / L1_LINE_SZ) + 1;
 	assert(cache_lines_per_element == 1);
@@ -110,7 +110,7 @@ void assign_optimal_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rct
 	for (i = 0; i < oc->num_objects; ++i) {
 		char *next = (char*)oc->start + cache_lines_per_element * L1_LINE_SZ * i;
 		SharedObject *o = (SharedObject*)next;
-		o->rctm = 1 << ( thread_ids[i % num_threads] );
+		o->sharing_map = 1 << ( thread_ids[i % num_threads] );
 	}
 
 	assert(i % num_threads == 0);
@@ -118,16 +118,16 @@ void assign_optimal_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rct
 }
 
 
-void assign_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rctm) {
+void assign_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t sharing_map) {
 
 	//check which threads should participate
-	int num_threads = __builtin_popcountl(rctm);
-	int *thread_ids = get_thread_ids(rctm);
+	int num_threads = __builtin_popcountl(sharing_map);
+	int *thread_ids = get_thread_ids(sharing_map);
 
 	int i;
 	for (i = 0; i < oc->num_objects; ++i) {
 		SharedObject *o = ((SharedObject**)oc->start)[i];
-		o->rctm = 1 << ( thread_ids[i % num_threads]  );	
+		o->sharing_map = 1 << ( thread_ids[i % num_threads]  );	
 	}
 	free(thread_ids);
 }
@@ -137,22 +137,22 @@ void assign_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t rctm) {
 //false sharing with small objects
 /////////////////////////////////////////////
 OCollection *allocate_small_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
-                              u_int64_t rctm) {
+                              u_int64_t sharing_map) {
 
 	//idea: only create num_threads objects and every thread gets one
-	int num_threads = __builtin_popcountl(rctm);
+	int num_threads = __builtin_popcountl(sharing_map);
 	assert (num_threads == nelem);
 
-	OCollection *oc = allocate_fs_pool(mc, sz, nelem, rctm);
-	assign_fs_pool_objects(mc, oc, rctm);
+	OCollection *oc = allocate_fs_pool(mc, sz, nelem, sharing_map);
+	assign_fs_pool_objects(mc, oc, sharing_map);
 	return oc;
 }
 
 OCollection *allocate_small_optimal_fs_pool(MContext *mc, size_t sz, 
-		unsigned long nelem, u_int64_t rctm) {
+		unsigned long nelem, u_int64_t sharing_map) {
 
-	OCollection *oc = allocate_optimal_fs_pool(mc, sz, nelem, rctm);
-	assign_optimal_fs_pool_objects(mc, oc, rctm);
+	OCollection *oc = allocate_optimal_fs_pool(mc, sz, nelem, sharing_map);
+	assign_optimal_fs_pool_objects(mc, oc, sharing_map);
 	return oc;
 }
 
@@ -167,7 +167,7 @@ void deallocate_small_optimal_fs_pool(MContext *mc, OCollection *oc) {
 }
 
 void traverse_small_fs_pool(MContext *mc, OCollection *oc) {
-	//check if thread bit is set in rctm
+	//check if thread bit is set in sharing_map
 	u_int64_t my_bit = 1 << mc->opt.thread_id;
 
 	assert(oc->reference_map != 0);
@@ -177,7 +177,7 @@ void traverse_small_fs_pool(MContext *mc, OCollection *oc) {
 	for (i = 0; i < oc->num_objects; ++i) {
 		//check out what are my objects
 		SharedObject *so = ((SharedObject**)oc->start)[i];
-		if (so->rctm & my_bit) {
+		if (so->sharing_map & my_bit) {
 			//printf("ACCESS\n");
 			int j;
 			assert(oc->reference_map != 0);
@@ -191,7 +191,7 @@ void traverse_small_fs_pool(MContext *mc, OCollection *oc) {
 }
 void traverse_small_optimal_fs_pool(MContext *mc, OCollection *oc) {
 
-	//check if thread bit is set in rctm
+	//check if thread bit is set in sharing_map
 	u_int64_t my_bit = 1 << mc->opt.thread_id;
 
 	assert(oc->reference_map != 0);
@@ -207,7 +207,7 @@ void traverse_small_optimal_fs_pool(MContext *mc, OCollection *oc) {
 		
 		assert(oc->reference_map != 0);
 		
-		if (so->rctm & my_bit) {
+		if (so->sharing_map & my_bit) {
 			//printf("ACCESS\n");
 			int j;
 			assert(oc->reference_map != 0);
