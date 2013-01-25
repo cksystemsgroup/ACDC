@@ -111,8 +111,29 @@ void destroy_mutator_context(MContext *mc) {
 	free(mc);
 }
 
+void get_and_print_memstats(MContext *mc) {
+
+	update_proc_status(mc->gopts->pid);
+	mc->stat->current_rss = get_resident_set_size();
+	mc->stat->resident_set_size_counter +=
+		mc->stat->current_rss;
+	mc->stat->vm_peak = get_vm_peak();
+	mc->stat->rss_hwm = get_high_water_mark();
+
+	if (mc->gopts->verbosity == 0) return;
+
+	printf("MEMSTATS\t%s\t%3u\t%4u\t%12lu\n",
+			ALLOCATOR_NAME,
+			mc->opt.thread_id,
+			mc->time,
+			mc->stat->current_rss
+	      );
+
+}
 
 void print_mutator_stats(MContext *mc) {
+
+	if (mc->gopts->verbosity == 0) return;
 
 	printf("STATS\t%s\t%3u\t%4u\t%12lu\t%12lu\t%12lu\t%12lu\n",
 			ALLOCATOR_NAME,
@@ -122,7 +143,7 @@ void print_mutator_stats(MContext *mc) {
 			mc->stat->bytes_deallocated,
 			mc->stat->objects_allocated,
 			mc->stat->objects_deallocated
-			);
+		);
 }
 
 void delete_collection(gpointer key, gpointer value, gpointer user_data) {
@@ -179,6 +200,8 @@ static void access_collection(gpointer key, gpointer value, gpointer user_data) 
 }
 
 void access_live_objects(MContext *mc) {
+
+	if (mc->gopts->access_iterations == 0) return;
 
 	int i, idx;
 	for (i = mc->time; i < mc->time + mc->gopts->max_lifetime; ++i) {
@@ -472,9 +495,15 @@ void *acdc_thread(void *ptr) {
 
 		mc->stat->access_time += access_end - access_start;
 		
-		time_counter += bytes_from_dist_pool;
+		//time_counter += bytes_from_dist_pool;
+		time_counter += sz * num_objects;
 
 		if (time_counter >= mc->gopts->time_threshold) {
+
+			if (mc->opt.thread_id == 0) {
+				get_and_print_memstats(mc);
+			}
+
 			//proceed in time
 			mc->time++;
 			time_counter = 0;
@@ -501,6 +530,7 @@ void run_acdc(GOptions *gopts) {
 	int i, r;
 	pthread_t *threads = malloc(sizeof(pthread_t) * gopts->num_threads);
 	MContext **thread_results = malloc(sizeof(MContext*) * gopts->num_threads);
+	int thread_0_index;
 
 	distribution_pools = create_collection_pools(gopts->max_lifetime + 1);
 
@@ -532,9 +562,11 @@ void run_acdc(GOptions *gopts) {
 			printf("Unable to join thread_function: %d\n", r);
 			exit(EXIT_FAILURE);
 		}
+		if (thread_results[i]->opt.thread_id == 0)
+			thread_0_index = i;
 	}
 
-	//aggreagate info in thread 0's MContext
+	//aggreagate info in first thread's MContext
 	int j;
 	for (i = 1; i < gopts->num_threads; ++i) {
 		MContext *res = thread_results[i];
@@ -594,11 +626,14 @@ void run_acdc(GOptions *gopts) {
 			 (double)thread_results[0]->stat->running_time)*100.0
 			);
 
-	update_proc_status(gopts->pid);
-	printf("MEMORY\t%s\t%ld\t%ld\n",
+	//update_proc_status(gopts->pid);
+	printf("MEMORY\t%s\t%d\t%ld\t%ld\t%ld\n",
 			ALLOCATOR_NAME,
-			get_vm_peak(),
-			get_high_water_mark()
+			gopts->num_threads,
+			thread_results[thread_0_index]->stat->vm_peak, 
+			thread_results[thread_0_index]->stat->rss_hwm, 
+			thread_results[thread_0_index]->stat->resident_set_size_counter / 
+			gopts->benchmark_duration
 			);
 
 	//TODO: free mutator context

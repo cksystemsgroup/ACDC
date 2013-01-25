@@ -49,12 +49,13 @@ static void set_default_params(GOptions *gopts) {
 	gopts->max_lifetime = 10;
 	gopts->min_object_sc = 4;
 	gopts->max_object_sc = 8;
-	gopts->share_objects = 1;
+	gopts->share_objects = 0;
 	gopts->share_ratio = 0;
 	gopts->share_thread_ratio = 100;
 	gopts->list_ratio = 100;
 	gopts->btree_ratio = 0;
 	gopts->access_iterations = 1;
+	gopts->verbosity = 0;
 	//gopts->false_sharing_ratio = 100;
 }
 
@@ -93,6 +94,7 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->share_objects = %d\n", gopts->share_objects);
 	printf("gopts->share_ratio = %d\n", gopts->share_ratio);
 	printf("gopts->share_thread_ratio = %d\n", gopts->share_thread_ratio);
+	printf("gopts->verbosity = %d\n", gopts->verbosity);
 }
 
 int main(int argc, char **argv) {
@@ -157,6 +159,7 @@ int main(int argc, char **argv) {
 				break;
 			case 'i':
 				gopts->access_iterations = atoi(optarg);
+				break;
 			case 'v':
 				gopts->verbosity++;
 				break;
