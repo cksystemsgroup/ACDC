@@ -1,7 +1,7 @@
 #/bin/bash
 
 OUTPUT_DIR=t1
-OPTIONS="-a -s 2 -S 4 -d 10 -i 1 -t 10000 -b 50 -q 50"
+OPTIONS="-a -s 2 -S 4 -d 10 -l 1 -L 10 -i 0 -t 10000 -b 50 -q 50"
 FACTOR1="-n"
 FACTOR2=""
 REPS=5
@@ -19,7 +19,7 @@ echo -e $HEADLINE > $OUTPUT_DIR/free.dat
 echo -e $HEADLINE > $OUTPUT_DIR/access.dat
 echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
-for XVALUE in 1 2 4 6 8 12 16 20 24
+for XVALUE in 1 2 4 6 8
 do
 	ALLOC_OUTPUT="$XVALUE"
 	FREE_OUTPUT="$XVALUE"
@@ -97,5 +97,14 @@ do
 	echo -e $FREE_OUTPUT >> $OUTPUT_DIR/free.dat
 	echo -e $ACCESS_OUTPUT >> $OUTPUT_DIR/access.dat
 	echo -e $MEMCONS_OUTPUT >> $OUTPUT_DIR/memcons.dat
+
 done
 
+CWD=`pwd`
+cp gnuplot_templates/*.p $OUTPUT_DIR/
+cd $OUTPUT_DIR
+gnuplot plot_alloc.p && epstopdf alloc.eps
+gnuplot plot_free.p && epstopdf free.eps
+gnuplot plot_access.p && epstopdf access.eps
+gnuplot plot_memcons.p && epstopdf memcons.eps
+cd $CWD
