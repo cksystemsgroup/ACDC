@@ -7,3 +7,5 @@ tmp/*
 .sconf_temp
 config.log
 results.txt
+.DS_Store
+._.DS_Store

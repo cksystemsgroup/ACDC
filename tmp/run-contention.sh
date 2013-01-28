@@ -7,7 +7,8 @@ echo "#Average on $REPS runs. ACDC Options: $OPTIONS"
 
 echo -e "#x-value\tjemalloc_alloc\tstddev\tjemalloc_free\tstddev\tllalloc_alloc\tstddev\tllalloc_free\tstddev\toptimal_alloc\tstddev\toptimal_free\tstddev\tptmalloc2_alloc\tstddev\tptmalloc2_free\tstddev\tptmalloc3_alloc\tstddev\tptmalloc3_free\tstddev\ttbb_alloc\tstddev\ttbb_free\tstddev\ttcmalloc_alloc\tstddev\ttcmalloc_free\tstddev"
 
-for XVALUE in 1 2 4 6 8 12 16 20 24
+#for XVALUE in 1 2 4 6 8 12 16 20 24
+for XVALUE in 1 2 4 6 8
 do
 	OUTPUT="$XVALUE"
 	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc

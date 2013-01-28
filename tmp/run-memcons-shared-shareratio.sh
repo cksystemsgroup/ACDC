@@ -1,6 +1,7 @@
 #/bin/bash
 
-OPTIONS="-a -s 3 -S 10 -l 1 -L 10 -t 100000000 -i 0 -d 50 -O -n 8 -T 100"
+#OPTIONS="-a -s 3 -S 10 -l 1 -L 10 -t 100000000 -i 0 -d 50 -O -n 8 -T 100"
+OPTIONS="-a -s 3 -S 20 -l 1 -L 1 -t 100000000 -i 0 -d 20 -O -n 4 -T 100"
 #OPTIONS="-a -s 3 -S 10 -l 1 -L 10 -t 1000000 -i 0 -d 20 -O -n 8 -T 100"
 REPS=5
 echo "#Created at: `date` on `hostname`"
