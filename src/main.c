@@ -25,7 +25,9 @@ static void print_usage() {
 			"-s min. sizeclass (1<<x)\n"
 			"-S max. sizeclass (1<<x)\n"		
 			"-r seed value\n"
-			"-i access iterations\n"
+			"-i access iterations.\n"
+			"-w write ratio\n"
+			"-k skip traversal\n"
 			" Options for ACDC MODE:\n"
 			"-t time threshold\n"
 			"-l min. object lifetime\n"
@@ -55,6 +57,8 @@ static void set_default_params(GOptions *gopts) {
 	gopts->list_ratio = 100;
 	gopts->btree_ratio = 0;
 	gopts->access_iterations = 1;
+	gopts->write_ratio = 10; // 10 percent of all traversed objects are accessed too
+	gopts->skip_traversal = 0;
 	gopts->verbosity = 0;
 	//gopts->false_sharing_ratio = 100;
 }
@@ -73,7 +77,8 @@ static void check_params(GOptions *gopts) {
 		gopts->share_thread_ratio = 100;
 		gopts->share_objects = 1;
 		gopts->share_ratio = 100;
-
+		gopts->skip_traversal = 0;
+		gopts->write_ratio = 100;
 	}
 }
 
@@ -91,6 +96,8 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->list_ratio = %d\n", gopts->list_ratio);
 	printf("gopts->btree_ratio = %d\n", gopts->btree_ratio);
 	printf("gopts->access_iterations = %d\n", gopts->access_iterations);
+	printf("gopts->write_ratio = %d\n", gopts->write_ratio);
+	printf("gopts->skip_traversal = %d\n", gopts->skip_traversal);
 	printf("gopts->share_objects = %d\n", gopts->share_objects);
 	printf("gopts->share_ratio = %d\n", gopts->share_ratio);
 	printf("gopts->share_thread_ratio = %d\n", gopts->share_thread_ratio);
@@ -107,7 +114,7 @@ int main(int argc, char **argv) {
 	gopts->pid = getpid();
 
 	set_default_params(gopts);
-	const char *optString = "afn:t:d:r:l:L:s:S:OR:T:b:q:i:vh";
+	const char *optString = "afn:t:d:r:l:L:s:S:OR:T:b:q:i:w:kvh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
@@ -159,6 +166,12 @@ int main(int argc, char **argv) {
 				break;
 			case 'i':
 				gopts->access_iterations = atoi(optarg);
+				break;
+			case 'w':
+				gopts->write_ratio = atoi(optarg);
+				break;
+			case 'k':
+				gopts->skip_traversal = 1;
 				break;
 			case 'v':
 				gopts->verbosity++;

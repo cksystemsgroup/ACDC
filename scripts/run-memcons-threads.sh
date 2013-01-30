@@ -1,7 +1,7 @@
 #/bin/bash
 
 OUTPUT_DIR=data/memcons-threads
-OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 10 -i 1 -t 100000 -b 50 -q 50 -O -R 100 -T 100"
+OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 10 -i 0 -k -t 10000000 -b 50 -q 50 -O -R 100 -T 100"
 FACTOR1="-n"
 FACTOR2=""
 REPS=5

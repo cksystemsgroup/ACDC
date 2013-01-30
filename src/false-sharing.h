@@ -31,8 +31,8 @@ OCollection *allocate_small_optimal_fs_pool(MContext *mc, size_t sz, unsigned lo
                                       u_int64_t sharing_map);
 void deallocate_small_fs_pool(MContext *mc, OCollection *oc);
 void deallocate_small_optimal_fs_pool(MContext *mc, OCollection *oc);
-void traverse_small_fs_pool(MContext *mc, OCollection *oc);
-void traverse_small_optimal_fs_pool(MContext *mc, OCollection *oc);
+void traverse_small_fs_pool(MContext *mc, OCollection *oc, int readonly);
+void traverse_small_optimal_fs_pool(MContext *mc, OCollection *oc, int readonly);
 void assign_small_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t sharing_map);
 void assign_small_optimal_fs_pool_objects(MContext *mc, OCollection *oc, u_int64_t sharing_map);
 #endif

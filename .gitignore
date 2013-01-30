@@ -1,7 +1,7 @@
 build/*
 *.swp
 allocators/*
-data/*
+data*
 tmp/*
 .sconsign.dblite
 .sconf_temp
@@ -9,3 +9,5 @@ config.log
 results.txt
 .DS_Store
 ._.DS_Store
+log.txt
+runall.sh

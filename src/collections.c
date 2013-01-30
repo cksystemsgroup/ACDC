@@ -28,7 +28,7 @@ OCollection *new_collection(MContext *mc, collection_t t,
 	return c;
 }
 
-void traverse_list(MContext *mc, OCollection *oc) {
+void traverse_list(MContext *mc, OCollection *oc, int readonly) {
 	//remember that the first word in payload is the next pointer
 	//do not alter! cast Objects to LObjects
 	//
@@ -39,8 +39,9 @@ void traverse_list(MContext *mc, OCollection *oc) {
 	while (list != NULL) {
 		//printf("access object\n");
 		int i;
-		for (i = 0; i < mc->gopts->access_iterations; ++i)
-			access_object((Object*)list, oc->object_size, sizeof(LObject));
+		if (!readonly)
+			for (i = 0; i < mc->gopts->access_iterations; ++i)
+				access_object((Object*)list, oc->object_size, sizeof(LObject));
 		list = list->next;
 	}
 }
@@ -204,17 +205,19 @@ void deallocate_btree(MContext *mc, OCollection *oc) {
 }
 
 
-void btree_preorder_recursion(MContext *mc, BTObject *t, size_t sz) {
+void btree_preorder_recursion(MContext *mc, BTObject *t, size_t sz, int readonly) {
 	if (t == NULL) return;
 	int i;
-	for (i = 0; i < mc->gopts->access_iterations; ++i)
-		access_object((Object*)t, sz, sizeof(BTObject));
-	btree_preorder_recursion(mc, t->left, sz);
-	btree_preorder_recursion(mc, t->right, sz);
+	if (!readonly)
+		for (i = 0; i < mc->gopts->access_iterations; ++i)
+			access_object((Object*)t, sz, sizeof(BTObject));
+
+	btree_preorder_recursion(mc, t->left, sz, readonly);
+	btree_preorder_recursion(mc, t->right, sz, readonly);
 }
 
-void traverse_btree_preorder(MContext *mc, OCollection *oc) {
-	btree_preorder_recursion(mc, (BTObject*)oc->start, oc->object_size);
+void traverse_btree_preorder(MContext *mc, OCollection *oc, int readonly) {
+	btree_preorder_recursion(mc, (BTObject*)oc->start, oc->object_size, readonly);
 }
 
 
@@ -275,28 +278,28 @@ void deallocate_collection(MContext *mc, OCollection *oc) {
 			exit(EXIT_FAILURE);
 	}
 }
-void traverse_collection(MContext *mc, OCollection *oc) {
+void traverse_collection(MContext *mc, OCollection *oc, int readonly) {
 
-	if (mc->gopts->access_iterations == 0) return;
+	//if (mc->gopts->access_iterations == 0) return;
 
 	switch (oc->type) {
 		case LIST:
-			traverse_list(mc, oc);
+			traverse_list(mc, oc, readonly);
 			return;
 		case OPTIMAL_LIST:
-			traverse_list(mc, oc);
+			traverse_list(mc, oc, readonly);
 			return;
 		case BTREE:
-			traverse_btree_preorder(mc, oc);
+			traverse_btree_preorder(mc, oc, readonly);
 			return;
 		case OPTIMAL_BTREE:
-			traverse_btree_preorder(mc, oc);
+			traverse_btree_preorder(mc, oc, readonly);
 			return;
 		case FALSE_SHARING:
-			traverse_small_fs_pool(mc, oc);
+			traverse_small_fs_pool(mc, oc, readonly);
 			return;
 		case OPTIMAL_FALSE_SHARING:
-			traverse_small_optimal_fs_pool(mc, oc);
+			traverse_small_optimal_fs_pool(mc, oc, readonly);
 			return;
 		default:
 			printf("Traverse: Collection Type not supported\n");

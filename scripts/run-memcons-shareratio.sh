@@ -1,11 +1,11 @@
 #/bin/bash
 
 OUTPUT_DIR=data/memcons-shareratio-12
-OPTIONS="-a -s 3 -S 12 -d 30 -l 1 -L 1 -i 1 -t 1000000 -b 50 -q 50 -O -n 12 -T 100"
+OPTIONS="-a -s 3 -S 12 -d 30 -l 1 -L 1 -i 0 -k -t 10000000 -b 50 -q 50 -O -n 12 -T 100"
 FACTOR1="-R"
 FACTOR2=""
 REPS=5
-RELATIVE=1
+RELATIVE=0
 
 HEADLINE="#Created at: `date` on `hostname`"
 HEADLINE="$HEADLINE\n#Average on $REPS runs. ACDC Options: $OPTIONS"

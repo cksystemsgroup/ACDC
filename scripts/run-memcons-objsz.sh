@@ -1,11 +1,11 @@
 #/bin/bash
 
 OUTPUT_DIR=data/memcons-objsz
-OPTIONS="-a -d 100 -l 1 -L 10 -i 1 -t 1000000 -b 50 -q 50"
+OPTIONS="-a -d 50 -l 1 -L 10 -i 0 -t 10000000 -b 50 -q 50 -n 1 -k"
 FACTOR1="-s"
 FACTOR2="-S"
 REPS=5
-RELATIVE=1
+RELATIVE=0
 
 HEADLINE="#Created at: `date` on `hostname`"
 HEADLINE="$HEADLINE\n#Average on $REPS runs. ACDC Options: $OPTIONS"

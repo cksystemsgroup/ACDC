@@ -36,6 +36,8 @@ struct global_options {
   
   //options for object access
   int access_iterations; //-i:
+  int skip_traversal; //-k
+  int write_ratio; //-w: 
 
   //sharing options
   int share_objects; //-O:
@@ -141,7 +143,7 @@ typedef struct mutator_context MContext;
 OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 		unsigned long nelem, u_int64_t sharing_map);
 void deallocate_collection(MContext *mc, OCollection *oc); 
-void traverse_collection(MContext *mc, OCollection *oc);
+void traverse_collection(MContext *mc, OCollection *oc, int readonly);
 int collection_is_shared(MContext *mc, OCollection *oc);
 
 
