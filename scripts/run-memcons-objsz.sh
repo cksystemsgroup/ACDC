@@ -1,10 +1,10 @@
 #/bin/bash
 
 OUTPUT_DIR=data/memcons-objsz
-OPTIONS="-a -d 50 -l 1 -L 10 -i 0 -t 10000000 -b 50 -q 50 -n 1 -k"
+OPTIONS="-a -d 20 -l 1 -L 1 -k -t 1000000 -b 50 -q 50 -n 1"
 FACTOR1="-s"
 FACTOR2="-S"
-REPS=5
+REPS=3
 RELATIVE=0
 
 HEADLINE="#Created at: `date` on `hostname`"
@@ -19,7 +19,7 @@ echo -e $HEADLINE > $OUTPUT_DIR/free.dat
 echo -e $HEADLINE > $OUTPUT_DIR/access.dat
 echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
-for XVALUE in 3 4 5 6 7 8 9 10
+for XVALUE in 3 4 5 6 7 8 9 10 11 12
 do
 	ALLOC_OUTPUT="$XVALUE"
 	FREE_OUTPUT="$XVALUE"

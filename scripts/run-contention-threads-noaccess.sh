@@ -1,7 +1,7 @@
 #/bin/bash
 
 OUTPUT_DIR=data/contention-threads-noaccess
-OPTIONS="-a -s 3 -S 12 -d 30 -l 1 -L 10 -i 0 -t 1000000 -b 50 -q 50"
+OPTIONS="-a -s 3 -S 12 -d 30 -l 1 -L 10 -k -t 1000000 -b 50 -q 50"
 FACTOR1="-n"
 FACTOR2=""
 REPS=5
