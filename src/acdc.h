@@ -35,7 +35,7 @@ struct global_options {
   int btree_ratio; //-b:
   
   //options for object access
-  int access_iterations; //-i:
+  int write_iterations; //-i:
   int skip_traversal; //-k
   int write_ratio; //-w: 
 
@@ -143,7 +143,7 @@ typedef struct mutator_context MContext;
 OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 		unsigned long nelem, u_int64_t sharing_map);
 void deallocate_collection(MContext *mc, OCollection *oc); 
-void traverse_collection(MContext *mc, OCollection *oc, int readonly);
+void traverse_collection(MContext *mc, OCollection *oc);
 int collection_is_shared(MContext *mc, OCollection *oc);
 
 
@@ -171,7 +171,7 @@ Object *allocate(MContext *mc, size_t size);
 void deallocate(MContext *mc, Object *o, size_t size);
 Object *allocate_aligned(MContext *mc, size_t size, size_t alignment);
 void deallocate_aligned(MContext *mc, Object *o, size_t size, size_t alignment);
-void access_object(Object *o, size_t size, size_t offset);
+void write_object(Object *o, size_t size, size_t offset);
 unsigned int get_sizeclass(size_t size);
 
 GRand *init_rand(unsigned int seed);

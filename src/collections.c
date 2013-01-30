@@ -14,6 +14,16 @@
 #include "caches.h"
 #include "false-sharing.h"
 
+/**
+ * write_ratio determines how many objects are written. e.g., 
+ * write_ratio of 20 means that every 5th element is written
+ */
+int write_ith_element(MContext *mc, int i) {
+	int ith = 100 / mc->gopts->write_ratio;
+	if ( i % ith == 0 ) return 1;
+	return 0;
+}
+
 OCollection *new_collection(MContext *mc, collection_t t, 
 		size_t sz, unsigned long nelem, u_int64_t sharing_map) {
 
@@ -28,20 +38,20 @@ OCollection *new_collection(MContext *mc, collection_t t,
 	return c;
 }
 
-void traverse_list(MContext *mc, OCollection *oc, int readonly) {
+void traverse_list(MContext *mc, OCollection *oc) {
+	
+	int access_counter = 0;
+
 	//remember that the first word in payload is the next pointer
 	//do not alter! cast Objects to LObjects
-	//
-	//access object
-	
 	LObject *list = (LObject*)oc->start;
 	
 	while (list != NULL) {
 		//printf("access object\n");
 		int i;
-		if (!readonly)
-			for (i = 0; i < mc->gopts->access_iterations; ++i)
-				access_object((Object*)list, oc->object_size, sizeof(LObject));
+		if (write_ith_element(mc, access_counter++))
+			for (i = 0; i < mc->gopts->write_iterations; ++i)
+				write_object((Object*)list, oc->object_size, sizeof(LObject));
 		list = list->next;
 	}
 }
@@ -205,19 +215,20 @@ void deallocate_btree(MContext *mc, OCollection *oc) {
 }
 
 
-void btree_preorder_recursion(MContext *mc, BTObject *t, size_t sz, int readonly) {
+void btree_preorder_recursion(MContext *mc, BTObject *t, size_t sz) {
 	if (t == NULL) return;
+	int access_counter = 0;
 	int i;
-	if (!readonly)
-		for (i = 0; i < mc->gopts->access_iterations; ++i)
-			access_object((Object*)t, sz, sizeof(BTObject));
+	if (write_ith_element(mc, access_counter++))
+		for (i = 0; i < mc->gopts->write_iterations; ++i)
+			write_object((Object*)t, sz, sizeof(BTObject));
 
-	btree_preorder_recursion(mc, t->left, sz, readonly);
-	btree_preorder_recursion(mc, t->right, sz, readonly);
+	btree_preorder_recursion(mc, t->left, sz);
+	btree_preorder_recursion(mc, t->right, sz);
 }
 
-void traverse_btree_preorder(MContext *mc, OCollection *oc, int readonly) {
-	btree_preorder_recursion(mc, (BTObject*)oc->start, oc->object_size, readonly);
+void traverse_btree_preorder(MContext *mc, OCollection *oc) {
+	btree_preorder_recursion(mc, (BTObject*)oc->start, oc->object_size);
 }
 
 
@@ -278,28 +289,27 @@ void deallocate_collection(MContext *mc, OCollection *oc) {
 			exit(EXIT_FAILURE);
 	}
 }
-void traverse_collection(MContext *mc, OCollection *oc, int readonly) {
+void traverse_collection(MContext *mc, OCollection *oc) {
 
-	//if (mc->gopts->access_iterations == 0) return;
 
 	switch (oc->type) {
 		case LIST:
-			traverse_list(mc, oc, readonly);
+			traverse_list(mc, oc);
 			return;
 		case OPTIMAL_LIST:
-			traverse_list(mc, oc, readonly);
+			traverse_list(mc, oc);
 			return;
 		case BTREE:
-			traverse_btree_preorder(mc, oc, readonly);
+			traverse_btree_preorder(mc, oc);
 			return;
 		case OPTIMAL_BTREE:
-			traverse_btree_preorder(mc, oc, readonly);
+			traverse_btree_preorder(mc, oc);
 			return;
 		case FALSE_SHARING:
-			traverse_small_fs_pool(mc, oc, readonly);
+			traverse_small_fs_pool(mc, oc);
 			return;
 		case OPTIMAL_FALSE_SHARING:
-			traverse_small_optimal_fs_pool(mc, oc, readonly);
+			traverse_small_optimal_fs_pool(mc, oc);
 			return;
 		default:
 			printf("Traverse: Collection Type not supported\n");

@@ -191,26 +191,17 @@ void delete_expired_objects(MContext *mc) {
 	g_hash_table_remove_all(cp->collections);
 }
 
-struct ac_args {
-	MContext *mc;
-	int readonly;
-};
 static void access_collection(gpointer key, gpointer value, gpointer user_data) {
 
 	OCollection *oc = (OCollection*)value;
-	//MContext *mc = (MContext*)user_data;
-	struct ac_args *args = (struct ac_args*)user_data;
+	MContext *mc = (MContext*)user_data;
 
-	traverse_collection(args->mc, oc, args->readonly);
+	traverse_collection(mc, oc);
 }
 
-void access_live_objects(MContext *mc, int readonly) {
+void access_live_objects(MContext *mc) {
 
 	if (mc->gopts->skip_traversal == 1) return;
-
-	struct ac_args args;
-	args.mc = mc;
-	args.readonly = readonly;
 
 	int i, idx;
 	for (i = mc->time; i < mc->time + mc->gopts->max_lifetime; ++i) {
@@ -218,7 +209,7 @@ void access_live_objects(MContext *mc, int readonly) {
 		//printf("access objects from pool %d\n", idx);
 		
 		CollectionPool *cp = &(mc->collection_pools[idx]);
-		g_hash_table_foreach(cp->collections, access_collection, &args);
+		g_hash_table_foreach(cp->collections, access_collection, mc);
 
 	}
 }
@@ -403,7 +394,7 @@ void *false_sharing_thread(void *ptr) {
 		//all theads access the fs collection
 		assert(fs_collection != NULL);
 		access_start = rdtsc();
-		traverse_collection(mc, (OCollection*)fs_collection, FALSE);
+		traverse_collection(mc, (OCollection*)fs_collection);
 		access_end = rdtsc();
 		mc->stat->access_time += access_end - access_start;
 		
@@ -496,9 +487,8 @@ void *acdc_thread(void *ptr) {
 			bytes_from_dist_pool += get_from_distribution_pool(mc);
 		}
 
-		//read only access. traverse data strucutes but do not write
 		access_start = rdtsc();
-		access_live_objects(mc, TRUE); //read only
+		access_live_objects(mc);
 		access_end = rdtsc();
 		mc->stat->access_time += access_end - access_start;
 		
@@ -506,11 +496,6 @@ void *acdc_thread(void *ptr) {
 		time_counter += sz * num_objects;
 
 		if (time_counter >= mc->gopts->time_threshold) {
-			//access (live) objects, read and write
-			access_start = rdtsc();
-			access_live_objects(mc, FALSE);// r/w
-			access_end = rdtsc();
-			mc->stat->access_time += access_end - access_start;
 
 			if (mc->opt.thread_id == 0) {
 				get_and_print_memstats(mc);

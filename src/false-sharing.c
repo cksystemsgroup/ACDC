@@ -166,7 +166,7 @@ void deallocate_small_optimal_fs_pool(MContext *mc, OCollection *oc) {
 	deallocate_optimal_fs_pool(mc, oc);
 }
 
-void traverse_small_fs_pool(MContext *mc, OCollection *oc, int readonly) {
+void traverse_small_fs_pool(MContext *mc, OCollection *oc) {
 	//check if thread bit is set in sharing_map
 	u_int64_t my_bit = 1 << mc->opt.thread_id;
 
@@ -182,15 +182,14 @@ void traverse_small_fs_pool(MContext *mc, OCollection *oc, int readonly) {
 			int j;
 			assert(oc->reference_map != 0);
 			//long long access_start = rdtsc();
-			if (!readonly)
-				for (j = 0; j < mc->gopts->access_iterations; ++j)
-					access_object(so, oc->object_size, sizeof(SharedObject));
+			for (j = 0; j < mc->gopts->write_iterations; ++j)
+				write_object(so, oc->object_size, sizeof(SharedObject));
 			//long long access_end = rdtsc();
 			//mc->stat->access_time += access_end - access_start;
 		}
 	}
 }
-void traverse_small_optimal_fs_pool(MContext *mc, OCollection *oc, int readonly) {
+void traverse_small_optimal_fs_pool(MContext *mc, OCollection *oc) {
 
 	//check if thread bit is set in sharing_map
 	u_int64_t my_bit = 1 << mc->opt.thread_id;
@@ -213,9 +212,8 @@ void traverse_small_optimal_fs_pool(MContext *mc, OCollection *oc, int readonly)
 			int j;
 			assert(oc->reference_map != 0);
 			//long long access_start = rdtsc();
-			if (!readonly)
-				for (j = 0; j < mc->gopts->access_iterations; ++j)
-					access_object(so, oc->object_size, sizeof(SharedObject));
+			for (j = 0; j < mc->gopts->write_iterations; ++j)
+				write_object(so, oc->object_size, sizeof(SharedObject));
 			//long long access_end = rdtsc();
 			//mc->stat->access_time += access_end - access_start;
 		}

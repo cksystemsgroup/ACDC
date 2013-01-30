@@ -25,8 +25,8 @@ static void print_usage() {
 			"-s min. sizeclass (1<<x)\n"
 			"-S max. sizeclass (1<<x)\n"		
 			"-r seed value\n"
-			"-i access iterations.\n"
 			"-w write ratio\n"
+			"-i write iterations.\n"
 			"-k skip traversal\n"
 			" Options for ACDC MODE:\n"
 			"-t time threshold\n"
@@ -56,7 +56,7 @@ static void set_default_params(GOptions *gopts) {
 	gopts->share_thread_ratio = 100;
 	gopts->list_ratio = 100;
 	gopts->btree_ratio = 0;
-	gopts->access_iterations = 1;
+	gopts->write_iterations = 1;
 	gopts->write_ratio = 10; // 10 percent of all traversed objects are accessed too
 	gopts->skip_traversal = 0;
 	gopts->verbosity = 0;
@@ -95,7 +95,7 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->max_object_sc = %d\n", gopts->max_object_sc);
 	printf("gopts->list_ratio = %d\n", gopts->list_ratio);
 	printf("gopts->btree_ratio = %d\n", gopts->btree_ratio);
-	printf("gopts->access_iterations = %d\n", gopts->access_iterations);
+	printf("gopts->write_iterations = %d\n", gopts->write_iterations);
 	printf("gopts->write_ratio = %d\n", gopts->write_ratio);
 	printf("gopts->skip_traversal = %d\n", gopts->skip_traversal);
 	printf("gopts->share_objects = %d\n", gopts->share_objects);
@@ -165,7 +165,7 @@ int main(int argc, char **argv) {
 				gopts->list_ratio = atoi(optarg);
 				break;
 			case 'i':
-				gopts->access_iterations = atoi(optarg);
+				gopts->write_iterations = atoi(optarg);
 				break;
 			case 'w':
 				gopts->write_ratio = atoi(optarg);
