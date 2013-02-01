@@ -56,7 +56,7 @@ inline void unset_bit(u_int64_t *word, int bitpos) {
 
 guint object_collection_hash(gconstpointer key) {
 
-	OCollection *oc = (OCollection*)key;
+	LSClass *oc = (LSClass*)key;
 	unsigned long combined_key = oc->object_size << 32;
 	combined_key |= oc->id;
 	return g_int64_hash((gconstpointer)&combined_key);
@@ -64,8 +64,8 @@ guint object_collection_hash(gconstpointer key) {
 
 gboolean object_collection_equal(gconstpointer a, gconstpointer b) {
 
-	OCollection *ac = (OCollection*)a;
-	OCollection *bc = (OCollection*)b;
+	LSClass *ac = (LSClass*)a;
+	LSClass *bc = (LSClass*)b;
 
 	return (ac->object_size == bc->object_size &&
 			ac->id == bc->id);
@@ -173,7 +173,7 @@ void print_mutator_stats(MContext *mc) {
 
 void delete_collection(gpointer key, gpointer value, gpointer user_data) {
 
-	volatile OCollection *oc = (volatile OCollection*)value;
+	volatile LSClass *oc = (volatile LSClass*)value;
 	MContext *mc = (MContext*)user_data;
 
 	assert((oc->sharing_map & (1 << mc->opt.thread_id)) == 0);
@@ -197,7 +197,7 @@ void delete_collection(gpointer key, gpointer value, gpointer user_data) {
 					&oc->reference_map, old_rm, new_rm)) {
 			//worked
 			if (oc->reference_map == 0 && oc->sharing_map == 0) {
-				deallocate_collection(mc, (OCollection*)oc);
+				deallocate_collection(mc, (LSClass*)oc);
 				debug("deleted %p", oc);
 			} else {
 				//someone else will deallocate
@@ -240,7 +240,7 @@ void delete_expired_objects(MContext *mc) {
 
 static void access_collection(gpointer key, gpointer value, gpointer user_data) {
 
-	OCollection *oc = (OCollection*)value;
+	LSClass *oc = (LSClass*)value;
 	MContext *mc = (MContext*)user_data;
 
 	traverse_collection(mc, oc);
@@ -261,9 +261,9 @@ void access_live_objects(MContext *mc) {
 	}
 }
 
-void add_collection_to_pool(OCollection *oc, CollectionPool *cp) {
+void add_collection_to_pool(LSClass *oc, CollectionPool *cp) {
 
-	//make sure we have a unique key for OCollection objects
+	//make sure we have a unique key for LSClass objects
 	while (g_hash_table_contains(cp->collections,
 				(gconstpointer)oc)) {
 		oc->id++;
@@ -272,7 +272,7 @@ void add_collection_to_pool(OCollection *oc, CollectionPool *cp) {
 	g_hash_table_add(cp->collections, (gpointer)oc);
 }
 
-void add_to_distribution_pool(MContext *mc, OCollection *oc, int lt) {
+void add_to_distribution_pool(MContext *mc, LSClass *oc, int lt) {
 	
 	CollectionPool *cp = &distribution_pools[lt];
 
@@ -293,7 +293,7 @@ struct gfdc_args {
 };
 gboolean get_from_distribution_collection(gpointer key, gpointer value, gpointer user_data) {
 
-	volatile OCollection *oc = (volatile OCollection*)value;
+	volatile LSClass *oc = (volatile LSClass*)value;
 	struct gfdc_args *args = (struct gfdc_args*)user_data;
 
 	//if sharing map is empty, this oc is not supposed to be here
@@ -301,7 +301,7 @@ gboolean get_from_distribution_collection(gpointer key, gpointer value, gpointer
 
 	u_int64_t my_bit = 1 << args->mc->opt.thread_id;
 
-	//check if I should get this OCollection
+	//check if I should get this LSClass
 	if (!(oc->sharing_map & my_bit)) {
 		return FALSE; //my bit is not set. i'm not involved
 	}
@@ -355,10 +355,10 @@ gboolean get_from_distribution_collection(gpointer key, gpointer value, gpointer
 	//printf("INSERT: t %d lt %d index %d\n", args->mc->time, args->lt, insert_index);
 
 	CollectionPool *target_pool = &args->mc->collection_pools[insert_index];
-	add_collection_to_pool((OCollection*)oc, target_pool);
+	add_collection_to_pool((LSClass*)oc, target_pool);
 	args->count += (oc->num_objects * oc->object_size);
 
-	// can we remove this OCollection from hash map?
+	// can we remove this LSClass from hash map?
 	// check if all bits are cleared. not shared anymore
 	if (oc->sharing_map == 0) {
 		debug("purged %p from sharing pool", oc);
@@ -371,7 +371,7 @@ gboolean get_from_distribution_collection(gpointer key, gpointer value, gpointer
 	}
 }
 
-// returns the number of bytes of all OCollections that we got from the distr. pool
+// returns the number of bytes of all LSClasss that we got from the distr. pool
 int get_from_distribution_pool(MContext *mc) {
 
 	struct gfdc_args args;
@@ -392,7 +392,7 @@ int get_from_distribution_pool(MContext *mc) {
 	return args.count;
 }
 
-volatile OCollection *fs_collection = NULL;
+volatile LSClass *fs_collection = NULL;
 volatile int fs_collection_bytes;
 volatile int fs_allocation_thread;
 volatile int fs_deallocation_thread;
@@ -461,7 +461,7 @@ void *false_sharing_thread(void *ptr) {
 		//all theads access the fs collection
 		assert(fs_collection != NULL);
 		access_start = rdtsc();
-		traverse_collection(mc, (OCollection*)fs_collection);
+		traverse_collection(mc, (LSClass*)fs_collection);
 		access_end = rdtsc();
 		mc->stat->access_time += access_end - access_start;
 		
@@ -476,10 +476,10 @@ void *false_sharing_thread(void *ptr) {
 		spin_barrier_wait(&barrier);
 
 		if (mc->opt.thread_id == fs_deallocation_thread) {
-			OCollection *old_c = (OCollection*)fs_collection;
+			LSClass *old_c = (LSClass*)fs_collection;
 			old_c->reference_map = 0;
 			deallocation_start = rdtsc();
-			deallocate_collection(mc, (OCollection*)fs_collection);
+			deallocate_collection(mc, (LSClass*)fs_collection);
 			deallocation_end = rdtsc();
 			mc->stat->deallocation_time += 
 				deallocation_end - deallocation_start;
@@ -539,7 +539,7 @@ void *acdc_thread(void *ptr) {
 #endif
 					
 		allocation_start = rdtsc();
-		OCollection *oc = 
+		LSClass *oc = 
 			allocate_collection(mc, tp, sz, num_objects, sharing_map);
 
 		allocation_end = rdtsc();

@@ -12,6 +12,8 @@
 #include <sys/types.h>
 #include <glib.h>
 
+typedef void OCollection;
+
 //global acdc options
 typedef enum {
   ACDC, //default mode
@@ -54,7 +56,7 @@ struct global_options {
 //thread local mutator options
 typedef struct mutator_options MOptions;
 struct mutator_options {
-  int thread_id;
+  //int thread_id;
   GRand *rand; //GLib's Mersenne Twister PRNG
 };
 
@@ -111,15 +113,17 @@ typedef enum {
   OPTIMAL_LIST, 
   OPTIMAL_BTREE,
   OPTIMAL_FALSE_SHARING
-} collection_t;
+} collection_type;
 
-//object pool where threads keep refs to the memory chunks
-typedef struct object_collection OCollection;
-struct object_collection {
+//set of objects with common size and lifetime
+typedef struct lifetime_size_class LSClass;
+struct lifetime_size_class {
+  LSClass *prev; //to construct a list
+  LSClass *next; //to construct a list
+
   size_t object_size;
   size_t num_objects;
-  unsigned int id; // in case we have more collections of the same size
-  collection_t type;
+  collection_type type;
 
   //which threads should share an object sharing
   volatile u_int64_t sharing_map;
@@ -127,46 +131,49 @@ struct object_collection {
   //mark which threads already have this OColelction
   volatile u_int64_t reference_map;
   
-  //pointer to start of collection
+  //pointer to the start of the objects
   Object *start;
 };
 
-typedef struct collection_pool CollectionPool;
-struct collection_pool {
-  //unsigned int remaining_lifetime;
-  GHashTable *collections; //hash table with one OCollection per size and id
-};
+//list of LSClasses with the same lifetime
+typedef struct lifetime_class {
+  LSClass *first;
+  LSClass *last;
+} LClass;
+
+
 
 
 
 
 typedef struct mutator_context MContext;
 
-OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
+LSClass *allocate_LSClass(MContext *mc, collection_type ctype, size_t sz,
 		unsigned long nelem, u_int64_t sharing_map);
-void deallocate_collection(MContext *mc, OCollection *oc); 
-void traverse_collection(MContext *mc, OCollection *oc);
-int collection_is_shared(MContext *mc, OCollection *oc);
+
+void deallocate_LSClass(MContext *mc, LSClass *oc); 
+void traverse_LSClass(MContext *mc, LSClass *oc);
+
+//int LSClass_is_shared(MContext *mc, OCollection *oc);
 
 
-OCollection *new_collection(MContext *mc, collection_t t, size_t sz, 
+LSClass *new_LSClass(MContext *mc, collection_type t, size_t sz, 
                             unsigned long nelem, u_int64_t sharing_map);
 
-void share_collection(OCollection *oc, u_int64_t sharing_map);
+//void share_collection(OCollection *oc, u_int64_t sharing_map);
 
 //thread context specific data
 struct mutator_context {
   GOptions *gopts; //pointer to global options. same for all threads
-  MOptions opt; //thread local options
+  int thread_id;
+  MOptions opt; //thread local options TODO: remove
   MStat *stat; //mutator stats
-  CollectionPool *collection_pools; //one pool for each possible lifetime
-  CollectionPool *shared_collection_pools; //one pool for each possible lifetime
   unsigned int time;
+  LClass **expiration_class; // one LClass for each possible lifetime
 };
 
 
 void run_acdc(GOptions *gopts);
-
 
 
 Object *allocate(MContext *mc, size_t size);
@@ -182,7 +189,7 @@ void get_random_object_props(MContext *mc,
 		size_t *size, 
 		unsigned int *lifetime, 
 		unsigned int *num_objects,
-    collection_t *type,
+    collection_type *type,
     u_int64_t *sharing_map
     );
 
