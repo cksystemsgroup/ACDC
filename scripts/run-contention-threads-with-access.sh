@@ -1,7 +1,7 @@
 #/bin/bash
 
 OUTPUT_DIR=data/contention-threads-with-access
-OPTIONS="-a -s 3 -S 12 -d 30 -l 1 -L 10 -i 1 -w 10 -t 1000000 -b 50 -q 50"
+OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 5 -i 1 -w 10 -t 500000 -b 50 -q 50"
 FACTOR1="-n"
 FACTOR2=""
 REPS=5

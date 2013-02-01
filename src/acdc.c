@@ -134,6 +134,10 @@ void destroy_mutator_context(MContext *mc) {
 
 void get_and_print_memstats(MContext *mc) {
 
+	//warmup phase: start memory measurements after max-lifetime
+	//units of time
+	if (mc->time < 2 * mc->gopts->max_lifetime) return;
+
 	update_proc_status(mc->gopts->pid);
 	mc->stat->current_rss = get_resident_set_size();
 	mc->stat->resident_set_size_counter +=

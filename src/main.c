@@ -96,6 +96,7 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->seed = %d\n", gopts->seed);
 	printf("gopts->min_lifetime = %d\n", gopts->min_lifetime);
 	printf("gopts->max_lifetime = %d\n", gopts->max_lifetime);
+	printf("gopts->max_time_gap = %d\n", gopts->max_time_gap);
 	printf("gopts->deallocation_delay = %d\n", gopts->deallocation_delay);
 	printf("gopts->min_object_sc = %d\n", gopts->min_object_sc);
 	printf("gopts->max_object_sc = %d\n", gopts->max_object_sc);
