@@ -24,13 +24,15 @@
 
 #define debug(...) _debug(__FILE__, __LINE__, __VA_ARGS__)
 
-CollectionPool *distribution_pools; // one CP per lifetime
-pthread_mutex_t distribution_pools_lock = PTHREAD_MUTEX_INITIALIZER;
-volatile spin_barrier_t barrier;
-volatile spin_barrier_t acdc_barrier;
-static __thread MContext *my_mc;
-pthread_mutex_t debug_lock = PTHREAD_MUTEX_INITIALIZER;
 
+LClass **shared_expiration_classes; //one class per thread
+pthread_mutex_t *shared_expiration_classes_locks; //one lock per class/thread
+
+volatile spin_barrier_t false_sharing_barrier;
+volatile spin_barrier_t acdc_barrier;
+
+static __thread MContext *my_mc; //TODO: refactor in _debug call
+pthread_mutex_t debug_lock = PTHREAD_MUTEX_INITIALIZER;
 void _debug(char *filename, int linenum, const char *format, ...) {
 	if (my_mc->gopts->verbosity < 2) return;
 	va_list args;
@@ -54,43 +56,77 @@ inline void unset_bit(u_int64_t *word, int bitpos) {
 	*word &= ~(1 << bitpos);
 }
 
-guint object_collection_hash(gconstpointer key) {
 
-	LSClass *oc = (LSClass*)key;
-	unsigned long combined_key = oc->object_size << 32;
-	combined_key |= oc->id;
-	return g_int64_hash((gconstpointer)&combined_key);
+/*
+ * an expiration class is an array of LClass pointer
+ * one LClass for each lifetime
+ */
+static LClass **allocate_expiration_class(unsigned int max_lifetime) {
+
+	LClass **ec = calloc(max_lifetime, sizeof(LClass*));
+	//calloc creates zeroed memory, i.e., the first and last
+	//pointers of each LClass are NULL
 }
 
-gboolean object_collection_equal(gconstpointer a, gconstpointer b) {
-
-	LSClass *ac = (LSClass*)a;
-	LSClass *bc = (LSClass*)b;
-
-	return (ac->object_size == bc->object_size &&
-			ac->id == bc->id);
+//Lifetime class API (doubly linked list handling, basically)
+static void lclass_insert_after(LClass *list, LSClass *after, LSClass *c) {
+	c->prev = after;
+	c->next = after->next;
+	if (after->next == NULL)
+		list->last = c;
+	else
+		after->next->prev = c;
+	after->next = c;
 }
 
-CollectionPool *create_collection_pools(int num_pools) {
+static void lclass_insert_before(LClass *list, LSClass *before, LSClass *c) {
+	c->prev = before->prev;
+	c->next = before;
+	if (before->prev == NULL)
+		list->first = c;
+	else
+		before->prev->next = c;
+	before->prev = c;
+}
 
-	CollectionPool *collection_pools = calloc(num_pools, sizeof(CollectionPool));
-		
-	//setup CollectionPools
-	int i;
-	for (i = 0; i < num_pools; ++i) {
-		//use int keys for the hash maps
-		collection_pools[i].collections = 
-			g_hash_table_new(object_collection_hash, 
-					object_collection_equal);
-
-
-		//collection_pools[i].remaining_lifetime = 
-		//	gopts->min_lifetime + i;
+static void lclass_insert_beginning(LClass *list, LSClass *c) {
+	if (list->first == NULL) {
+		list->first = c;
+		list->last = c;
+		c->prev = NULL;
+		c->next = NULL;
+	} else {
+		lclass_insert_before(list, list->first, c);
 	}
-	return collection_pools;
 }
 
-MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
+static void lclass_insert_end(LClass *list, LSClass *c) {
+	if (list->last == NULL)
+		lclass_insert_beginning(list, c);
+	else
+		lclass_insert_after(list, list->last, c);
+}
+
+//Expiration class API
+static void expiration_class_insert(MContext *mc, LClass **expiration_class, 
+		LSClass *c) {
+
+	unsigned int insert_index = (mc->time + c->lifetime) % 
+			(mc->gopts->max_lifetime + 
+			 mc->gopts->deallocation_delay);
+
+
+	LClass *target_lifetime_class = expiration_class[insert_index];
+
+	lclass_insert_end(target_lifetime_class, c);
+}
+
+
+
+
+
+//Mutator specific data
+static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 	
 	unsigned int seed = gopts->seed + thread_id;
 
@@ -99,7 +135,7 @@ MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 	mc->time = 0;
 	
 	mc->opt.rand = init_rand(seed);
-	mc->opt.thread_id = thread_id;
+	mc->thread_id = thread_id;
 
 	mc->stat = malloc(sizeof(MStat));
 	mc->stat->running_time = 0;
@@ -115,24 +151,22 @@ MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 	mc->stat->sz_histogram = calloc(gopts->max_object_sc + 1, 
 			sizeof(unsigned long));
 
-	//int num_pools = gopts->max_lifetime;
-	//
-	mc->collection_pools = create_collection_pools(
+	mc->expiration_class = allocate_expiration_class(
 			gopts->max_lifetime + gopts->deallocation_delay);
 
 	return mc;
 }
 
-void destroy_mutator_context(MContext *mc) {
-
+static void destroy_mutator_context(MContext *mc) {
 	free_rand(mc->opt.rand);
 	free(mc->stat->lt_histogram);
 	free(mc->stat->sz_histogram);
 	free(mc->stat);
+	free(mc->expiration_class);
 	free(mc);
 }
 
-void get_and_print_memstats(MContext *mc) {
+static void get_and_print_memstats(MContext *mc) {
 
 	//warmup phase: start memory measurements after max-lifetime
 	//units of time
@@ -156,7 +190,7 @@ void get_and_print_memstats(MContext *mc) {
 
 }
 
-void print_mutator_stats(MContext *mc) {
+static void print_runtime_stats(MContext *mc) {
 
 	if (mc->gopts->verbosity == 0) return;
 
@@ -171,6 +205,7 @@ void print_mutator_stats(MContext *mc) {
 		);
 }
 
+/*
 void delete_collection(gpointer key, gpointer value, gpointer user_data) {
 
 	volatile LSClass *oc = (volatile LSClass*)value;
@@ -220,6 +255,7 @@ void delete_collection(gpointer key, gpointer value, gpointer user_data) {
 		}
 	}
 }
+*/
 
 void delete_expired_objects(MContext *mc) {
 

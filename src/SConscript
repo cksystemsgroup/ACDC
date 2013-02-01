@@ -78,7 +78,7 @@ for config in ['optimal', 'ptmalloc2', 'ptmalloc3', 'hoard', 'tcmalloc', 'jemall
 		e.Append(CPPFLAGS=['-DALLOCATOR=llalloc'])
 
 	object_list = []
-	for obj in ['main', 'memory', 'acdc', 'distribution', 'collections', 'false-sharing', 'barrier', 'proc_status']:
+	for obj in ['main', 'memory', 'acdc', 'distribution', 'lifetime-size-classes', 'barrier', 'proc_status']:
 		e.Object(obj+"-"+config, obj+".c")
 		object_list.append(obj+"-"+config+".o")
 

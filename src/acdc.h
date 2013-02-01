@@ -12,7 +12,6 @@
 #include <sys/types.h>
 #include <glib.h>
 
-typedef void OCollection;
 
 //global acdc options
 typedef enum {
@@ -122,6 +121,7 @@ struct lifetime_size_class {
   LSClass *next; //to construct a list
 
   size_t object_size;
+  unsigned int lifetime;
   size_t num_objects;
   collection_type type;
 
@@ -141,11 +141,6 @@ typedef struct lifetime_class {
   LSClass *last;
 } LClass;
 
-
-
-
-
-
 typedef struct mutator_context MContext;
 
 LSClass *allocate_LSClass(MContext *mc, collection_type ctype, size_t sz,
@@ -154,13 +149,6 @@ LSClass *allocate_LSClass(MContext *mc, collection_type ctype, size_t sz,
 void deallocate_LSClass(MContext *mc, LSClass *oc); 
 void traverse_LSClass(MContext *mc, LSClass *oc);
 
-//int LSClass_is_shared(MContext *mc, OCollection *oc);
-
-
-LSClass *new_LSClass(MContext *mc, collection_type t, size_t sz, 
-                            unsigned long nelem, u_int64_t sharing_map);
-
-//void share_collection(OCollection *oc, u_int64_t sharing_map);
 
 //thread context specific data
 struct mutator_context {
