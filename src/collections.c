@@ -264,6 +264,7 @@ OCollection *allocate_collection(MContext *mc, collection_t ctype, size_t sz,
 void deallocate_collection(MContext *mc, OCollection *oc) {
 
 	assert(oc->reference_map == 0);
+	assert(oc->sharing_map == 0);
 
 	switch (oc->type) {
 		case LIST:

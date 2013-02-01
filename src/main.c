@@ -32,6 +32,8 @@ static void print_usage() {
 			"-t time threshold\n"
 			"-l min. object lifetime\n"
 			"-L max. object lifetime\n"
+			"-D deallocation delay\n"
+			"-g max. time gap\n"
 			"-O share objects\n"
 			"-R share ratio\n"
 			"-T share thread ratio\n"
@@ -49,6 +51,8 @@ static void set_default_params(GOptions *gopts) {
 	gopts->seed = 1;
 	gopts->min_lifetime = 1;
 	gopts->max_lifetime = 10;
+	gopts->max_time_gap = -1;
+	gopts->deallocation_delay = 0;
 	gopts->min_object_sc = 4;
 	gopts->max_object_sc = 8;
 	gopts->share_objects = 0;
@@ -80,6 +84,7 @@ static void check_params(GOptions *gopts) {
 		gopts->skip_traversal = 0;
 		gopts->write_ratio = 100;
 	}
+	if (gopts->max_time_gap < 0) gopts->max_time_gap = gopts->max_lifetime;
 }
 
 
@@ -91,6 +96,7 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->seed = %d\n", gopts->seed);
 	printf("gopts->min_lifetime = %d\n", gopts->min_lifetime);
 	printf("gopts->max_lifetime = %d\n", gopts->max_lifetime);
+	printf("gopts->deallocation_delay = %d\n", gopts->deallocation_delay);
 	printf("gopts->min_object_sc = %d\n", gopts->min_object_sc);
 	printf("gopts->max_object_sc = %d\n", gopts->max_object_sc);
 	printf("gopts->list_ratio = %d\n", gopts->list_ratio);
@@ -114,7 +120,7 @@ int main(int argc, char **argv) {
 	gopts->pid = getpid();
 
 	set_default_params(gopts);
-	const char *optString = "afn:t:d:r:l:L:s:S:OR:T:b:q:i:w:kvh";
+	const char *optString = "afn:t:d:r:l:L:D:g:s:S:OR:T:b:q:i:w:kvh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
@@ -142,6 +148,12 @@ int main(int argc, char **argv) {
 				break;
 			case 'L':
 				gopts->max_lifetime = atoi(optarg);
+				break;
+			case 'D':
+				gopts->deallocation_delay = atoi(optarg);
+				break;
+			case 'g':
+				gopts->max_time_gap = atoi(optarg);
 				break;
 			case 's':
 				gopts->min_object_sc = atoi(optarg);

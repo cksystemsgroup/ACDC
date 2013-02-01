@@ -29,6 +29,8 @@ struct global_options {
   //options for object creation
   int min_lifetime; //-l: must be >= 1 and <= max_lifetime
   int max_lifetime; //-L:
+  int deallocation_delay; //-D:
+  int max_time_gap; //-g: defaults to max_lifetime
   int min_object_sc; //-s: minimal sizeclass
   int max_object_sc; //-S: max sizeclass
   int list_ratio; //-q:
