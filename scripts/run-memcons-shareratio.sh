@@ -1,7 +1,7 @@
 #/bin/bash
 
 OUTPUT_DIR=data/memcons-shareratio-12
-OPTIONS="-a -s 3 -S 12 -d 30 -l 1 -L 1 -i 0 -k -t 10000000 -b 50 -q 50 -O -n 12 -T 100"
+OPTIONS="-a -s 3 -S 12 -d 30 -l 1 -L 1 -g 5 -i 0 -k -t 1000000 -b 50 -q 50 -O -n 12 -T 100"
 FACTOR1="-R"
 FACTOR2=""
 REPS=5
@@ -19,7 +19,7 @@ echo -e $HEADLINE > $OUTPUT_DIR/free.dat
 echo -e $HEADLINE > $OUTPUT_DIR/access.dat
 echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
-for XVALUE in {0..100..10}
+for XVALUE in {0..100..20}
 do
 	ALLOC_OUTPUT="$XVALUE"
 	FREE_OUTPUT="$XVALUE"

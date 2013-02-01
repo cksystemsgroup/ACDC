@@ -21,6 +21,7 @@ echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
 for XVALUE in 3 4 5 6 7 8 9 10 11 12
 do
+	echo "XVALUE `date`"
 	ALLOC_OUTPUT="$XVALUE"
 	FREE_OUTPUT="$XVALUE"
 	ACCESS_OUTPUT="$XVALUE"
