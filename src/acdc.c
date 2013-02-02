@@ -25,14 +25,17 @@
 #define debug(...) _debug(__FILE__, __LINE__, __VA_ARGS__)
 
 
-LClass **shared_expiration_classes; //one class per thread
-pthread_mutex_t *shared_expiration_classes_locks; //one lock per class/thread
-
+LClass ***shared_expiration_classes; //one expiration class per thread
+pthread_mutex_t *shared_expiration_classes_locks; //one lock per expiration class
 volatile spin_barrier_t false_sharing_barrier;
 volatile spin_barrier_t acdc_barrier;
-
 static __thread MContext *my_mc; //TODO: refactor in _debug call
 pthread_mutex_t debug_lock = PTHREAD_MUTEX_INITIALIZER;
+
+
+static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c);
+
+
 void _debug(char *filename, int linenum, const char *format, ...) {
 	if (my_mc->gopts->verbosity < 2) return;
 	va_list args;
@@ -40,7 +43,7 @@ void _debug(char *filename, int linenum, const char *format, ...) {
 	fprintf(stdout, "[Debug] %s %4d T%2d @ %4d ", 
 			filename,
 			linenum,
-			my_mc->opt.thread_id, 
+			my_mc->thread_id, 
 			my_mc->time);
 	va_start(args, format);
 	vfprintf(stdout, format, args);
@@ -107,6 +110,17 @@ static void lclass_insert_end(LClass *list, LSClass *c) {
 		lclass_insert_after(list, list->last, c);
 }
 
+static void lclass_remove(LClass *list, LSClass *c) {
+	if (c->prev == NULL)
+		list->first = c->next;
+	else
+		c->prev->next = c->next;
+	if (c->next == NULL)
+		list->last = c->prev;
+	else
+		c->next->prev = c->prev;
+}
+
 //Expiration class API
 static void expiration_class_insert(MContext *mc, LClass **expiration_class, 
 		LSClass *c) {
@@ -121,8 +135,38 @@ static void expiration_class_insert(MContext *mc, LClass **expiration_class,
 	lclass_insert_end(target_lifetime_class, c);
 }
 
+static LClass *expiration_class_get_LClass(MContext *mc, LClass **expiration_class,
+		unsigned int remaining_lifetime) {
 
+	assert(remaining_lifetime < mc->gopts->max_lifetime);
 
+	int index = (mc->time + remaining_lifetime) % 
+		(mc->gopts->max_lifetime + mc->gopts->deallocation_delay);
+	return expiration_class[index];
+}
+
+static void expiration_class_remove(MContext *mc, LClass **expiration_class) {
+
+	int delete_index = (mc->time) % 
+		(mc->gopts->max_lifetime + mc->gopts->deallocation_delay);
+	delete_index -= mc->gopts->deallocation_delay;
+	if (delete_index < 0)
+		delete_index += (mc->gopts->max_lifetime +
+				mc->gopts->deallocation_delay);
+
+	LClass *expired_lifetime_class = expiration_class[delete_index];
+
+	//forall LSClasses in this LClass: 
+	//         decrement reference map and maybe deallocate LSClass
+	LSClass *iterator = expired_lifetime_class->first;
+	while (iterator != NULL) {
+		unreference_and_deallocate_LSClass(mc, iterator);
+		iterator = iterator->next;
+	}
+	//reset list
+	expired_lifetime_class->first = NULL;
+	expired_lifetime_class->last = NULL;
+}
 
 
 //Mutator specific data
@@ -134,7 +178,7 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 	mc->gopts = gopts;
 	mc->time = 0;
 	
-	mc->opt.rand = init_rand(seed);
+	mc->opt.rand = init_rand(seed); //TODO: remove glib dependency
 	mc->thread_id = thread_id;
 
 	mc->stat = malloc(sizeof(MStat));
@@ -154,6 +198,17 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 	mc->expiration_class = allocate_expiration_class(
 			gopts->max_lifetime + gopts->deallocation_delay);
 
+	shared_expiration_classes[thread_id] = allocate_expiration_class(
+			gopts->max_lifetime); 
+	//no deallocation delay necessary here, we only distribute LSClasses 
+	//with lifetimes ranging from 1 to max_lifetime
+	
+	int r = pthread_mutex_init(&shared_expiration_classes_locks[thread_id], NULL);
+	if (r != 0) {
+		printf("unable to init mutex: %d\n", r);
+		exit(EXIT_FAILURE);
+	}
+
 	return mc;
 }
 
@@ -163,6 +218,8 @@ static void destroy_mutator_context(MContext *mc) {
 	free(mc->stat->sz_histogram);
 	free(mc->stat);
 	free(mc->expiration_class);
+	free(shared_expiration_classes[mc->thread_id]);
+	pthread_mutex_destroy(&shared_expiration_classes_locks[mc->thread_id]);
 	free(mc);
 }
 
@@ -183,7 +240,7 @@ static void get_and_print_memstats(MContext *mc) {
 
 	printf("MEMSTATS\t%s\t%3u\t%4u\t%12lu\n",
 			ALLOCATOR_NAME,
-			mc->opt.thread_id,
+			mc->thread_id,
 			mc->time,
 			mc->stat->current_rss
 	      );
@@ -196,7 +253,7 @@ static void print_runtime_stats(MContext *mc) {
 
 	printf("STATS\t%s\t%3u\t%4u\t%12lu\t%12lu\t%12lu\t%12lu\n",
 			ALLOCATOR_NAME,
-			mc->opt.thread_id,
+			mc->thread_id,
 			mc->time,
 			mc->stat->bytes_allocated,
 			mc->stat->bytes_deallocated,
@@ -205,47 +262,40 @@ static void print_runtime_stats(MContext *mc) {
 		);
 }
 
-/*
-void delete_collection(gpointer key, gpointer value, gpointer user_data) {
 
-	volatile LSClass *oc = (volatile LSClass*)value;
-	MContext *mc = (MContext*)user_data;
+static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 
-	assert((oc->sharing_map & (1 << mc->opt.thread_id)) == 0);
+	assert((c->sharing_map & (1 << mc->thread_id)) == 0);
 	
-	//shared Collections
-	//unset reference bit and check if we can deallocate the collection
+	//unset reference bit and check if we can deallocate the class
 	while (1) {
-		//someone still got a reference
-		assert(oc->reference_map != 0);
 		//I got a reference
-		assert((oc->reference_map & (1 << mc->opt.thread_id )) != 0 );
+		assert((c->reference_map & (1 << mc->thread_id )) != 0 );
 
-		u_int64_t old_rm = oc->reference_map;
-		//unset my bit
+		//atomically unset my bit
+		u_int64_t old_rm = c->reference_map;
 		u_int64_t new_rm = old_rm;
-		unset_bit(&new_rm, mc->opt.thread_id);
+		unset_bit(&new_rm, mc->thread_id);
 		assert(__builtin_popcountl(new_rm) == 
 						__builtin_popcountl(old_rm) - 1);
 
 		if (__sync_bool_compare_and_swap(
-					&oc->reference_map, old_rm, new_rm)) {
+					&c->reference_map, old_rm, new_rm)) {
 			//worked
-			if (oc->reference_map == 0 && oc->sharing_map == 0) {
-				deallocate_collection(mc, (LSClass*)oc);
-				debug("deleted %p", oc);
+			if (c->reference_map == 0 && c->sharing_map == 0) {
+				deallocate_collection(mc, (LSClass*)c);
+				debug("deleted %p", c);
 			} else {
 				//someone else will deallocate
-				assert((oc->reference_map & (1<<mc->opt.thread_id))
-					       	== 0);
-				if (oc->reference_map == 0) {
+				assert((c->reference_map & (1<<mc->thread_id)) == 0);
+				if (c->reference_map == 0) {
 					debug("%p still in distribution for %d others", 
-							oc,
-							__builtin_popcountl(oc->sharing_map)
+							c,
+							__builtin_popcountl(c->sharing_map)
 					     );
 				} else {
-					debug("%p can be deleted by %d others", oc,
-						__builtin_popcountl(oc->reference_map)
+					debug("%p can be deleted by %d others", c,
+						__builtin_popcountl(c->reference_map)
 						);
 				}
 			}
@@ -254,24 +304,6 @@ void delete_collection(gpointer key, gpointer value, gpointer user_data) {
 			//some other thread changed the reference mask. retry
 		}
 	}
-}
-*/
-
-void delete_expired_objects(MContext *mc) {
-
-	int delete_index = (mc->time) % 
-		(mc->gopts->max_lifetime + mc->gopts->deallocation_delay);
-	delete_index -= mc->gopts->deallocation_delay;
-	if (delete_index < 0)
-		delete_index += (mc->gopts->max_lifetime +
-				mc->gopts->deallocation_delay);
-
-	debug("delete from index %d", delete_index);
-	
-	CollectionPool *cp = &(mc->collection_pools[delete_index]);
-	g_hash_table_foreach(cp->collections, delete_collection, mc);
-	//delete items in hashmap
-	g_hash_table_remove_all(cp->collections);
 }
 
 static void access_collection(gpointer key, gpointer value, gpointer user_data) {
@@ -297,17 +329,8 @@ void access_live_objects(MContext *mc) {
 	}
 }
 
-void add_collection_to_pool(LSClass *oc, CollectionPool *cp) {
 
-	//make sure we have a unique key for LSClass objects
-	while (g_hash_table_contains(cp->collections,
-				(gconstpointer)oc)) {
-		oc->id++;
-	}
-	//add collection with proper id to hash map (key == value)
-	g_hash_table_add(cp->collections, (gpointer)oc);
-}
-
+/*
 void add_to_distribution_pool(MContext *mc, LSClass *oc, int lt) {
 	
 	CollectionPool *cp = &distribution_pools[lt];
@@ -321,6 +344,7 @@ void add_to_distribution_pool(MContext *mc, LSClass *oc, int lt) {
 	
 	pthread_mutex_unlock(&distribution_pools_lock);
 }
+*/
 
 struct gfdc_args {
 	MContext *mc;
@@ -545,6 +569,9 @@ void *acdc_thread(void *ptr) {
 
 	printf("running thread %d\n", mc->opt.thread_id);
 
+	//start benchmark together
+	spin_barrier_wait(&acdc_barrier);
+
 	mc->stat->running_time = rdtsc();
 
 	while (runs < mc->gopts->benchmark_duration) {
@@ -641,7 +668,13 @@ void run_acdc(GOptions *gopts) {
 	MContext **thread_results = malloc(sizeof(MContext*) * gopts->num_threads);
 	int thread_0_index = 0;
 
-	distribution_pools = create_collection_pools(gopts->max_lifetime + 1);
+	//distribution_pools = create_collection_pools(gopts->max_lifetime + 1);
+	
+	//allocate shared data here. 
+	//init everything per-thread in create_mutator_context
+	shared_expiration_classes = calloc(gopts->num_threads, sizeof(LClass**));
+	shared_expiration_classes_locks = calloc(gopts->num_threads, 
+			sizeof(pthread_mutex_t));
 
 	r = spin_barrier_init(&barrier, gopts->num_threads);
 	r = spin_barrier_init(&acdc_barrier, gopts->num_threads);
