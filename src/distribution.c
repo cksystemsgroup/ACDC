@@ -54,7 +54,7 @@ unsigned int get_random_thread(MContext *mc) {
 			mc->gopts->num_threads);
 }
 
-static collection_t get_random_collection_type(MContext *mc) {
+static collection_type get_random_collection_type(MContext *mc) {
 
 	unsigned int r = g_rand_int_range(mc->opt.rand, 0, 100);
 
@@ -76,7 +76,7 @@ static collection_t get_random_collection_type(MContext *mc) {
 
 static u_int64_t get_random_thread_selection(MContext *mc) {
 
-	u_int64_t my_thread_bit = 1 << mc->opt.thread_id;
+	u_int64_t my_thread_bit = 1 << mc->thread_id;
 
 	if (mc->gopts->share_objects == 0 || 
 			mc->gopts->share_thread_ratio == 0) {
@@ -112,7 +112,7 @@ void get_random_object_props(MContext *mc,
 		size_t *size, 
 		unsigned int *lifetime, 
 		unsigned int *num_objects,
-		collection_t *type,
+		collection_type *type,
 		u_int64_t *sharing_map) {
 
 	unsigned int lt = get_random_lifetime(mc);
@@ -136,7 +136,7 @@ void get_random_object_props(MContext *mc,
 	if (get_sharing_dist(mc)) {
 		*sharing_map = get_random_thread_selection(mc); //shared objects
 	} else {
-		*sharing_map = 1 << mc->opt.thread_id; //unshared
+		*sharing_map = 1 << mc->thread_id; //unshared
 	}
 }
 

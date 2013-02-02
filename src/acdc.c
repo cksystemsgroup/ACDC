@@ -24,17 +24,14 @@
 
 #define debug(...) _debug(__FILE__, __LINE__, __VA_ARGS__)
 
-
-LClass ***shared_expiration_classes; //one expiration class per thread
-pthread_mutex_t *shared_expiration_classes_locks; //one lock per expiration class
-volatile spin_barrier_t false_sharing_barrier;
-volatile spin_barrier_t acdc_barrier;
+static LClass ***shared_expiration_classes; //one expiration class per thread
+static pthread_mutex_t *shared_expiration_classes_locks; //one lock per expiration class
+static volatile spin_barrier_t false_sharing_barrier;
+static volatile spin_barrier_t acdc_barrier;
 static __thread MContext *my_mc; //TODO: refactor in _debug call
-pthread_mutex_t debug_lock = PTHREAD_MUTEX_INITIALIZER;
-
+static pthread_mutex_t debug_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c);
-
 
 void _debug(char *filename, int linenum, const char *format, ...) {
 	if (my_mc->gopts->verbosity < 2) return;
@@ -52,10 +49,10 @@ void _debug(char *filename, int linenum, const char *format, ...) {
 	pthread_mutex_unlock(&debug_lock);
 }
 
-inline void set_bit(u_int64_t *word, int bitpos) {
+static inline void set_bit(u_int64_t *word, int bitpos) {
 	*word |= (1 << bitpos);
 }
-inline void unset_bit(u_int64_t *word, int bitpos) {
+static inline void unset_bit(u_int64_t *word, int bitpos) {
 	*word &= ~(1 << bitpos);
 }
 
@@ -69,6 +66,7 @@ static LClass **allocate_expiration_class(unsigned int max_lifetime) {
 	LClass **ec = calloc(max_lifetime, sizeof(LClass*));
 	//calloc creates zeroed memory, i.e., the first and last
 	//pointers of each LClass are NULL
+	return ec;
 }
 
 //Lifetime class API (doubly linked list handling, basically)
@@ -110,6 +108,7 @@ static void lclass_insert_end(LClass *list, LSClass *c) {
 		lclass_insert_after(list, list->last, c);
 }
 
+/*
 static void lclass_remove(LClass *list, LSClass *c) {
 	if (c->prev == NULL)
 		list->first = c->next;
@@ -120,6 +119,7 @@ static void lclass_remove(LClass *list, LSClass *c) {
 	else
 		c->next->prev = c->prev;
 }
+*/
 
 //Expiration class API
 static void expiration_class_insert(MContext *mc, LClass **expiration_class, 
@@ -285,7 +285,7 @@ static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 			//worked
 			//if (c->reference_map == 0 && c->sharing_map == 0) {
 			if (c->reference_map) {
-				deallocate_collection(mc, (LSClass*)c);
+				deallocate_LSClass(mc, (LSClass*)c);
 				debug("deleted %p", c);
 			} else {
 				//someone else will deallocate
@@ -313,7 +313,7 @@ static void access_live_LClasses(MContext *mc) {
 
 	if (mc->gopts->skip_traversal == 1) return;
 
-	int i, idx;
+	int i;
 	for (i = mc->time; i < mc->time + mc->gopts->max_lifetime; ++i) {
 		
 		LClass *lc = expiration_class_get_LClass(mc, mc->expiration_class, i);
@@ -368,7 +368,7 @@ static void share_LSClass(MContext *mc, LSClass *c) {
 
 // returns the number of bytes of all LSClasss that we got from the distr. pool
 // this method runs in O(max_lifetime)
-int get_shared_LClasses(MContext *mc) {
+static void get_shared_LClasses(MContext *mc) {
 
 	int tid = mc->thread_id;
 
@@ -393,11 +393,11 @@ int get_shared_LClasses(MContext *mc) {
 	unlock_shared_expiration_class(mc->thread_id);
 }
 
-volatile LSClass *fs_collection = NULL;
-volatile int fs_collection_bytes;
-volatile int fs_allocation_thread;
-volatile int fs_deallocation_thread;
-void *false_sharing_thread(void *ptr) {
+static volatile LSClass *fs_collection = NULL;
+static volatile int fs_collection_bytes;
+static volatile int fs_allocation_thread;
+static volatile int fs_deallocation_thread;
+static void *false_sharing_thread(void *ptr) {
 
 	MContext *mc = (MContext*)ptr;
 	my_mc = mc;
@@ -409,7 +409,7 @@ void *false_sharing_thread(void *ptr) {
 
 	int local_fs_collection_bytes;
 
-	printf("running thread %d\n", mc->opt.thread_id);
+	printf("running thread %d\n", mc->thread_id);
 
 	mc->stat->running_time = rdtsc();
 
@@ -419,17 +419,17 @@ void *false_sharing_thread(void *ptr) {
 		size_t sz = 0;
 		unsigned int lt;
 		unsigned int num_objects;
-		collection_t tp;
+		collection_type tp;
 		u_int64_t sharing_map;
 	
 		//one thread allocates and tells the others how much it allocated
 		//sho allocates?
-		if (mc->opt.thread_id == 0) {
+		if (mc->thread_id == 0) {
 			fs_allocation_thread = get_random_thread(mc);
 		}
-		spin_barrier_wait(&barrier);
+		spin_barrier_wait(&false_sharing_barrier);
 
-		if (mc->opt.thread_id == fs_allocation_thread) {
+		if (mc->thread_id == fs_allocation_thread) {
 		
 			get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
 			// for false sharing we only use num_threads objects for one time slot
@@ -439,7 +439,7 @@ void *false_sharing_thread(void *ptr) {
 #ifdef OPTIMAL_MODE
 			tp = OPTIMAL_FALSE_SHARING;
 #endif		
-			if (sz < sizeof(SharedObject))
+			if (sz < (sizeof(SharedObject) + 2))
 				sz = sizeof(SharedObject) + 2;
 		
 			mc->stat->lt_histogram[lt] += num_objects;
@@ -447,7 +447,7 @@ void *false_sharing_thread(void *ptr) {
 		
 			allocation_start = rdtsc();
 			fs_collection = 
-				allocate_collection(mc, tp, sz, num_objects, sharing_map);
+				allocate_LSClass(mc, tp, sz, num_objects, sharing_map);
 
 			fs_collection->reference_map = sharing_map;
 
@@ -457,12 +457,12 @@ void *false_sharing_thread(void *ptr) {
 			fs_collection_bytes = num_objects * sz;
 		
 		}
-		spin_barrier_wait(&barrier);
+		spin_barrier_wait(&false_sharing_barrier);
 
 		//all theads access the fs collection
 		assert(fs_collection != NULL);
 		access_start = rdtsc();
-		traverse_collection(mc, (LSClass*)fs_collection);
+		traverse_LSClass(mc, (LSClass*)fs_collection);
 		access_end = rdtsc();
 		mc->stat->access_time += access_end - access_start;
 		
@@ -471,25 +471,25 @@ void *false_sharing_thread(void *ptr) {
 		time_counter += local_fs_collection_bytes;
 
 		//fs collections only last for one time period
-		if (mc->opt.thread_id == 0) {
+		if (mc->thread_id == 0) {
 			fs_deallocation_thread = get_random_thread(mc);
 		}
-		spin_barrier_wait(&barrier);
+		spin_barrier_wait(&false_sharing_barrier);
 
-		if (mc->opt.thread_id == fs_deallocation_thread) {
+		if (mc->thread_id == fs_deallocation_thread) {
 			LSClass *old_c = (LSClass*)fs_collection;
 			old_c->reference_map = 0;
 			deallocation_start = rdtsc();
-			deallocate_collection(mc, (LSClass*)fs_collection);
+			deallocate_LSClass(mc, (LSClass*)fs_collection);
 			deallocation_end = rdtsc();
 			mc->stat->deallocation_time += 
 				deallocation_end - deallocation_start;
 		}
-		spin_barrier_wait(&barrier);
+		spin_barrier_wait(&false_sharing_barrier);
 
 		mc->time++;
 		runs++;
-		print_mutator_stats(mc);
+		print_runtime_stats(mc);
 	}
 
 	mc->stat->running_time = rdtsc() - mc->stat->running_time;
@@ -498,7 +498,7 @@ void *false_sharing_thread(void *ptr) {
 }
 
 //int allocators_alive = 1;
-void *acdc_thread(void *ptr) {
+static void *acdc_thread(void *ptr) {
 	MContext *mc = (MContext*)ptr;
 	my_mc = mc;
 
@@ -508,7 +508,7 @@ void *acdc_thread(void *ptr) {
 	unsigned long long deallocation_start, deallocation_end;
 	unsigned long long access_start, access_end;
 
-	printf("running thread %d\n", mc->opt.thread_id);
+	printf("running thread %d\n", mc->thread_id);
 
 	//start benchmark together
 	spin_barrier_wait(&acdc_barrier);
@@ -520,19 +520,20 @@ void *acdc_thread(void *ptr) {
 		size_t sz = 0;
 		unsigned int lt;
 		unsigned int num_objects;
-		collection_t tp;
+		collection_type tp;
 		u_int64_t sharing_map;
 
 		get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
 
 		//TODO: move to get_random_object...
-		//check if collections can be built with sz
-		if (tp == BTREE && sz < sizeof(BTObject))
+		//check if collections can be built with sz + min_payload
+		if (tp == BTREE && sz < (sizeof(BTObject) + 4))
 			sz = sizeof(BTObject) + 4;
-		if (tp == LIST && sz < sizeof(LObject))
+		if (tp == LIST && sz < (sizeof(LObject) + 4))
 			sz = sizeof(LObject) + 4;
-		if (tp == FALSE_SHARING && sz < sizeof(SharedObject))
-			sz = sizeof(SharedObject) + 4;
+		if (tp == FALSE_SHARING && sz < sizeof(SharedObject)) {
+			assert(0);
+		}
 
 		mc->stat->lt_histogram[lt] += num_objects;
 		mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
@@ -543,27 +544,20 @@ void *acdc_thread(void *ptr) {
 #endif
 					
 		allocation_start = rdtsc();
-		LSClass *oc = 
-			allocate_collection(mc, tp, sz, num_objects, sharing_map);
+		LSClass *c = 
+			allocate_LSClass(mc, tp, sz, num_objects, sharing_map);
 
 		allocation_end = rdtsc();
 		mc->stat->allocation_time += allocation_end - allocation_start;
 
-		assert(oc->sharing_map != 0);
-		assert(oc->sharing_map == sharing_map);
-		assert(oc->reference_map == 0);
-		assert(__builtin_popcountl(oc->sharing_map) <= mc->gopts->num_threads);
+		assert(c->sharing_map != 0);
+		assert(c->sharing_map == sharing_map);
+		assert(c->reference_map == 0);
+		assert(__builtin_popcountl(c->sharing_map) <= mc->gopts->num_threads);
+		debug("created collection %p with lt %d", c, lt);
 
 		share_LSClass(mc, c);
-
-		debug("created collection %p with lt %d", oc, lt);
-		
-		
-		unsigned long bytes_from_dist_pool = 0;
-		//while (bytes_from_dist_pool == 0 && allocators_alive == 1) {
-		while (bytes_from_dist_pool == 0) {
-			bytes_from_dist_pool += get_from_distribution_pool(mc);
-		}
+		get_shared_LClasses(mc);	
 
 		access_start = rdtsc();
 		access_live_LClasses(mc);
@@ -575,7 +569,7 @@ void *acdc_thread(void *ptr) {
 
 		if (time_counter >= mc->gopts->time_threshold) {
 
-			if (mc->opt.thread_id == 0) {
+			if (mc->thread_id == 0) {
 				get_and_print_memstats(mc);
 			}
 
@@ -585,13 +579,14 @@ void *acdc_thread(void *ptr) {
 			runs++;
 
 			deallocation_start = rdtsc();
-			delete_expired_objects(mc);
+			//remove the just-expired LClass
+			expiration_class_remove(mc, mc->expiration_class);	
 			deallocation_end = rdtsc();
 
 			mc->stat->deallocation_time += 
 				deallocation_end - deallocation_start;
 
-			print_mutator_stats(mc);
+			print_runtime_stats(mc);
 
 			if ((mc->time % mc->gopts->max_time_gap) == 0)
 				spin_barrier_wait(&acdc_barrier);
@@ -618,7 +613,7 @@ void run_acdc(GOptions *gopts) {
 	shared_expiration_classes_locks = calloc(gopts->num_threads, 
 			sizeof(pthread_mutex_t));
 
-	r = spin_barrier_init(&barrier, gopts->num_threads);
+	r = spin_barrier_init(&false_sharing_barrier, gopts->num_threads);
 	r = spin_barrier_init(&acdc_barrier, gopts->num_threads);
 
 	void *(*thread_function)(void*);
@@ -647,7 +642,7 @@ void run_acdc(GOptions *gopts) {
 			printf("Unable to join thread_function: %d\n", r);
 			exit(EXIT_FAILURE);
 		}
-		if (thread_results[i]->opt.thread_id == 0)
+		if (thread_results[i]->thread_id == 0)
 			thread_0_index = i;
 	}
 
@@ -682,16 +677,16 @@ void run_acdc(GOptions *gopts) {
 		}
 	}
 
-	for (j = 0; j <= gopts->max_lifetime; ++j) {
+	for (i = 0; i <= gopts->max_lifetime; ++i) {
 		printf("LT_HISTO:\t%d\t%lu\n", 
-				j, 
-				thread_results[0]->stat->lt_histogram[j]
+				i, 
+				thread_results[0]->stat->lt_histogram[i]
 				);
 	}
-	for (j = 0; j <= gopts->max_object_sc; ++j) {
+	for (i = 0; i <= gopts->max_object_sc; ++i) {
 		printf("SZ_HISTO:\t%d\t%lu\n", 
-				j, 
-				thread_results[0]->stat->sz_histogram[j]
+				i, 
+				thread_results[0]->stat->sz_histogram[i]
 				);
 	}
 
@@ -722,5 +717,12 @@ void run_acdc(GOptions *gopts) {
 			);
 
 	//TODO: free mutator context
+	for (i = 0; i < gopts->num_threads; ++i) {
+		destroy_mutator_context(thread_results[i]);
+		free(shared_expiration_classes[i]);
+		pthread_mutex_destroy(&shared_expiration_classes_locks[i]);
+	}
+	free(shared_expiration_classes);
+	free(shared_expiration_classes_locks);
 }
 

@@ -108,7 +108,7 @@ static LSClass *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
 		((SharedObject**)oc->start)[i] = allocate(mc, sz);
 	}
 		
-	assign_optimal_fs_pool_objects(mc, oc, sharing_map);
+	assign_fs_pool_objects(mc, oc, sharing_map);
 	return oc;
 }
 
@@ -161,7 +161,7 @@ static void deallocate_optimal_fs_pool(MContext *mc, LSClass *oc) {
 
 static void traverse_fs_pool(MContext *mc, LSClass *oc) {
 	//check if thread bit is set in sharing_map
-	u_int64_t my_bit = 1 << mc->opt.thread_id;
+	u_int64_t my_bit = 1 << mc->thread_id;
 
 	assert(oc->reference_map != 0);
 	assert(oc->start != NULL);
@@ -186,7 +186,7 @@ static void traverse_fs_pool(MContext *mc, LSClass *oc) {
 static void traverse_optimal_fs_pool(MContext *mc, LSClass *oc) {
 
 	//check if thread bit is set in sharing_map
-	u_int64_t my_bit = 1 << mc->opt.thread_id;
+	u_int64_t my_bit = 1 << mc->thread_id;
 
 	assert(oc->reference_map != 0);
 	assert(oc->start != NULL);
@@ -234,8 +234,8 @@ static void traverse_list(MContext *mc, LSClass *c) {
 	}
 }
 
-
-static size_t get_optimal_list_sz(size_t sz, unsigned long nelem, size_t alignment) {
+/*
+static size_t get_aligned_optimal_list_sz(size_t sz, unsigned long nelem, size_t alignment) {
 	int objects_per_line = L1_LINE_SZ / sz;
 	int lines_required = 0;
 	if (objects_per_line > 0) {
@@ -250,6 +250,7 @@ static size_t get_optimal_list_sz(size_t sz, unsigned long nelem, size_t alignme
 	}
 	return lines_required * L1_LINE_SZ;
 }
+*/
 
 LSClass *allocate_optimal_list_unaligned(MContext *mc, size_t sz, 
 		unsigned long nelem, u_int64_t sharing_map) {
@@ -416,7 +417,7 @@ static void traverse_btree_preorder(MContext *mc, LSClass *c) {
 
 
 // public methods
-LSClass *allocate_LSClass(MContext *mc, collection_t ctype, size_t sz, 
+LSClass *allocate_LSClass(MContext *mc, collection_type ctype, size_t sz, 
 		unsigned long nelem, u_int64_t sharing_map) {
 
 	LSClass *c;
@@ -431,11 +432,11 @@ LSClass *allocate_LSClass(MContext *mc, collection_t ctype, size_t sz,
 		case OPTIMAL_BTREE:
 			return allocate_optimal_btree(mc, sz, nelem, sharing_map);
 		case FALSE_SHARING:
-			c = allocate_small_fs_pool(mc, sz, nelem, sharing_map);
+			c = allocate_fs_pool(mc, sz, nelem, sharing_map);
 			//assign_fs_pool_objects(mc, c, sharing_map);
 			return c;
 		case OPTIMAL_FALSE_SHARING:
-			c = allocate_small_optimal_fs_pool(mc, sz, nelem, sharing_map);
+			c = allocate_optimal_fs_pool(mc, sz, nelem, sharing_map);
 			//assign_optimal_fs_pool_objects(mc, c, sharing_map);
 			return c;
 		default:
