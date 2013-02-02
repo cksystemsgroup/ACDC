@@ -326,21 +326,34 @@ void access_live_LClasses(MContext *mc) {
 }
 
 
-/*
-void add_to_distribution_pool(MContext *mc, LSClass *oc, int lt) {
-	
-	CollectionPool *cp = &distribution_pools[lt];
+void share_LSClass(MContext *mc, LSClass *c) {
 
-	pthread_mutex_lock(&distribution_pools_lock);
+	assert(c->reference_map == 0);
+	assert(__builtin_popcountl(c->sharing_map) <= mc->gopts->num_threads);
 
-	int before = g_hash_table_size(cp->collections);
-	add_collection_to_pool(oc, cp);
-	int after = g_hash_table_size(cp->collections);
-	assert(after == before + 1);
-	
-	pthread_mutex_unlock(&distribution_pools_lock);
+	//the threads specified in sharing_map will receive a 
+	//reference to this LSClass. We have to prepare the reference map
+	//accordingy. Later, when a thread wants to deallocate the LSClass,
+	//it atomically removes its bit from the reference map.
+	//The last thread to unset its bit can actually deallocate the LSCLass
+	c->reference_map = c->sharing_map;
+	//reference_map is volatile. We can start to distribute the reference to c
+
+	int i;
+	for (i = 0; i < mc->gopts->num_threads; ++i) {
+		if (c->sharing_map & (1 << i)) {
+			//thread i will share this LSCLass
+			//it needs to get a reference
+			LClass **expiration_class = shared_expiration_classes[i];
+			//lock this class
+			pthread_mutex_t *mux = &shared_expiration_classes_locks[i];
+			pthread_mutex_lock(mux);
+			//insert LSClass
+			expiration_class_insert(mc, expiration_class, c);
+			pthread_mutex_unlock(mux);
+		}
+	}
 }
-*/
 
 struct gfdc_args {
 	MContext *mc;
