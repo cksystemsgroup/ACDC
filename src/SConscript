@@ -42,47 +42,56 @@ acdc_env = acdc_conf.Finish()
 
 acdc_env.ParseConfig('pkg-config --cflags --libs glib-2.0')
 acdc_env.Append(LIBS=['pthread'])
-acdc_env.Append(CPPFLAGS=['-O3', '-Wall', '-Werror'])
-#acdc_env.Append(CPPFLAGS=['-g', '-Wall', '-Werror'])
-#acdc_env.Program('acdc', ['main.c', 'memory.c', 'acdc.c', 'distribution.c', 'collections.c'])
+acdc_env.Append(CPPFLAGS=['-Wall', '-Werror'])
 
+for build in ['release', 'debug']:
+	for config in ['optimal', 'ptmalloc2', 'ptmalloc3', 'hoard', 'tcmalloc', 'jemalloc', 'tbb', 'llalloc']:
+		e = acdc_env.Clone()
 
-for config in ['optimal', 'ptmalloc2', 'ptmalloc3', 'hoard', 'tcmalloc', 'jemalloc', 'tbb', 'llalloc']:
-	e = acdc_env.Clone()
+		if build == 'release':
+			e.Append(CPPFLAGS=['-O3'])
+		if build == 'debug':
+			e.Append(CPPFLAGS=['-g'])
 
-	if config == 'optimal':
-		e.Append(CPPFLAGS=['-DOPTIMAL_MODE'])
-		e.Append(CPPFLAGS=['-DALLOCATOR=optimal'])
-	if config == 'ptmalloc2':
-		e.Append(CPPFLAGS=['-DALLOCATOR=ptmalloc2'])
-	if config == 'ptmalloc3':
-		e.Append(LIBS=['ptmalloc3'], LIBPATH=['../allocators'])
-		e.Append(CPPFLAGS=['-DALLOCATOR=ptmalloc3'])
-	if config == 'hoard':
-		e.Append(LIBS=['hoard'], LIBPATH=['../allocators'])
-		e.Append(CPPFLAGS=['-DALLOCATOR=hoard'])
-	if config == 'tcmalloc':
-		#if not e.CheckLib('tcmalloc_minimal'):
-		#	print 'tcmalloc_minimal not found'
-		#	Exit(1)
-		e.Append(LIBS=['tcmalloc_minimal'], LIBPATH=['/usr/lib'])
-		e.Append(CPPFLAGS=['-DALLOCATOR=tcmalloc'])
-	if config == 'jemalloc':
-		e.Append(LIBS=['jemalloc'], LIBPATH=['../allocators'])
-		e.Append(CPPFLAGS=['-DALLOCATOR=jemalloc'])
-	if config == 'tbb':
-		e.Append(LIBS=['tbbmalloc_proxy', 'tbbmalloc'], LIBPATH=['../allocators'])
-		e.Append(CPPFLAGS=['-DALLOCATOR=tbb'])
-	if config == 'llalloc':
-		e.Append(LIBS=['llalloc'], LIBPATH=['../allocators'])
-		e.Append(CPPFLAGS=['-DALLOCATOR=llalloc'])
+		if config == 'optimal':
+			e.Append(CPPFLAGS=['-DOPTIMAL_MODE'])
+			e.Append(CPPFLAGS=['-DALLOCATOR=optimal'])
+		if config == 'ptmalloc2':
+			e.Append(CPPFLAGS=['-DALLOCATOR=ptmalloc2'])
+		if config == 'ptmalloc3':
+			e.Append(LIBS=['ptmalloc3'], LIBPATH=['../allocators'])
+			e.Append(CPPFLAGS=['-DALLOCATOR=ptmalloc3'])
+		if config == 'hoard':
+			e.Append(LIBS=['hoard'], LIBPATH=['../allocators'])
+			e.Append(CPPFLAGS=['-DALLOCATOR=hoard'])
+		if config == 'tcmalloc':
+			#if not e.CheckLib('tcmalloc_minimal'):
+			#	print 'tcmalloc_minimal not found'
+			#	Exit(1)
+			e.Append(LIBS=['tcmalloc_minimal'], LIBPATH=['/usr/lib'])
+			e.Append(CPPFLAGS=['-DALLOCATOR=tcmalloc'])
+		if config == 'jemalloc':
+			e.Append(LIBS=['jemalloc'], LIBPATH=['../allocators'])
+			e.Append(CPPFLAGS=['-DALLOCATOR=jemalloc'])
+		if config == 'tbb':
+			e.Append(LIBS=['tbbmalloc_proxy', 'tbbmalloc'], LIBPATH=['../allocators'])
+			e.Append(CPPFLAGS=['-DALLOCATOR=tbb'])
+		if config == 'llalloc':
+			e.Append(LIBS=['llalloc'], LIBPATH=['../allocators'])
+			e.Append(CPPFLAGS=['-DALLOCATOR=llalloc'])
 
-	object_list = []
-	for obj in ['main', 'memory', 'acdc', 'distribution', 'lifetime-size-classes', 'barrier', 'proc_status']:
-		e.Object(obj+"-"+config, obj+".c")
-		object_list.append(obj+"-"+config+".o")
+		object_list = []
+		for obj in ['main', 'memory', 'acdc', 'distribution', 'lifetime-size-classes', 'barrier', 'proc_status']:
+			obj_name = obj+"-"+config
+			if build == 'debug':
+				obj_name = obj_name+"-dbg"
+			e.Object(obj_name, obj+".c")
+			object_list.append(obj_name+".o")
 
-	e.Program("acdc-"+config, object_list)
+		program_name = "acdc-"+config
+		if build == 'debug':
+			program_name = program_name+"-dbg"
+		e.Program(program_name, object_list)
 
 
 # Test programs

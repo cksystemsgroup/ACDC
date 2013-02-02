@@ -157,7 +157,7 @@ struct mutator_context {
   MOptions opt; //thread local options TODO: remove
   MStat *stat; //mutator stats
   unsigned int time;
-  LClass **expiration_class; // one LClass for each possible lifetime
+  LClass *expiration_class; // one LClass for each possible lifetime
 };
 
 

@@ -24,7 +24,7 @@
 
 #define debug(...) _debug(__FILE__, __LINE__, __VA_ARGS__)
 
-static LClass ***shared_expiration_classes; //one expiration class per thread
+static LClass **shared_expiration_classes; //one expiration class per thread
 static pthread_mutex_t *shared_expiration_classes_locks; //one lock per expiration class
 static volatile spin_barrier_t false_sharing_barrier;
 static volatile spin_barrier_t acdc_barrier;
@@ -61,9 +61,9 @@ static inline void unset_bit(u_int64_t *word, int bitpos) {
  * an expiration class is an array of LClass pointer
  * one LClass for each lifetime
  */
-static LClass **allocate_expiration_class(unsigned int max_lifetime) {
+static LClass *allocate_expiration_class(unsigned int max_lifetime) {
 
-	LClass **ec = calloc(max_lifetime, sizeof(LClass*));
+	LClass *ec = calloc(max_lifetime, sizeof(LClass));
 	//calloc creates zeroed memory, i.e., the first and last
 	//pointers of each LClass are NULL
 	return ec;
@@ -122,7 +122,7 @@ static void lclass_remove(LClass *list, LSClass *c) {
 */
 
 //Expiration class API
-static void expiration_class_insert(MContext *mc, LClass **expiration_class, 
+static void expiration_class_insert(MContext *mc, LClass *expiration_class, 
 		LSClass *c) {
 
 	unsigned int insert_index = (mc->time + c->lifetime) % 
@@ -130,22 +130,22 @@ static void expiration_class_insert(MContext *mc, LClass **expiration_class,
 			 mc->gopts->deallocation_delay);
 
 
-	LClass *target_lifetime_class = expiration_class[insert_index];
+	LClass *target_lifetime_class = &expiration_class[insert_index];
 
 	lclass_insert_end(target_lifetime_class, c);
 }
 
-static LClass *expiration_class_get_LClass(MContext *mc, LClass **expiration_class,
+static LClass *expiration_class_get_LClass(MContext *mc, LClass *expiration_class,
 		unsigned int remaining_lifetime) {
 
 	assert(remaining_lifetime < mc->gopts->max_lifetime);
 
 	int index = (mc->time + remaining_lifetime) % 
 		(mc->gopts->max_lifetime + mc->gopts->deallocation_delay);
-	return expiration_class[index];
+	return &expiration_class[index];
 }
 
-static void expiration_class_remove(MContext *mc, LClass **expiration_class) {
+static void expiration_class_remove(MContext *mc, LClass *expiration_class) {
 
 	int delete_index = (mc->time) % 
 		(mc->gopts->max_lifetime + mc->gopts->deallocation_delay);
@@ -154,7 +154,7 @@ static void expiration_class_remove(MContext *mc, LClass **expiration_class) {
 		delete_index += (mc->gopts->max_lifetime +
 				mc->gopts->deallocation_delay);
 
-	LClass *expired_lifetime_class = expiration_class[delete_index];
+	LClass *expired_lifetime_class = &expiration_class[delete_index];
 
 	//forall LSClasses in this LClass: 
 	//         decrement reference map and maybe deallocate LSClass
@@ -354,7 +354,7 @@ static void share_LSClass(MContext *mc, LSClass *c) {
 		if (c->sharing_map & (1 << i)) {
 			//thread i will share this LSCLass
 			//it needs to get a reference
-			LClass **expiration_class = shared_expiration_classes[i];
+			LClass *expiration_class = shared_expiration_classes[i];
 			//lock the shared expiration class of this thread
 			lock_shared_expiration_class(i);
 			//insert LSClass
@@ -379,7 +379,7 @@ static void get_shared_LClasses(MContext *mc) {
 	int i;
 	for (i = 0; i < mc->gopts->max_lifetime; ++i) {
 		//append shared LClass to local LClass
-		LClass *remote = shared_expiration_classes[tid][i];
+		LClass *remote = &shared_expiration_classes[tid][i];
 		LClass *local = expiration_class_get_LClass(mc, mc->expiration_class, i);
 		if (remote->first == NULL) continue; //no shared LSCLasses here
 		if (local->first == NULL) {
