@@ -265,7 +265,8 @@ static void print_runtime_stats(MContext *mc) {
 
 static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 
-	assert((c->sharing_map & (1 << mc->thread_id)) == 0);
+	assert((c->sharing_map & (1 << mc->thread_id)) != 0);
+	//I'm allowed to be here
 	
 	//unset reference bit and check if we can deallocate the class
 	while (1) {
@@ -282,12 +283,13 @@ static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 		if (__sync_bool_compare_and_swap(
 					&c->reference_map, old_rm, new_rm)) {
 			//worked
-			if (c->reference_map == 0 && c->sharing_map == 0) {
+			//if (c->reference_map == 0 && c->sharing_map == 0) {
+			if (c->reference_map) {
 				deallocate_collection(mc, (LSClass*)c);
 				debug("deleted %p", c);
 			} else {
 				//someone else will deallocate
-				assert((c->reference_map & (1<<mc->thread_id)) == 0);
+				assert((c->reference_map & (1 << mc->thread_id)) == 0);
 				if (c->reference_map == 0) {
 					debug("%p still in distribution for %d others", 
 							c,
@@ -306,7 +308,7 @@ static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 	}
 }
 
-
+//runs in O(number of live objects)
 static void access_live_LClasses(MContext *mc) {
 
 	if (mc->gopts->skip_traversal == 1) return;
@@ -332,6 +334,7 @@ static void unlock_shared_expiration_class(int thread_id) {
 	pthread_mutex_unlock(&shared_expiration_classes_locks[thread_id]);
 }
 
+// runs in O(number of threads)
 static void share_LSClass(MContext *mc, LSClass *c) {
 
 	assert(c->reference_map == 0);
@@ -361,98 +364,33 @@ static void share_LSClass(MContext *mc, LSClass *c) {
 	}
 }
 
-/*
-struct gfdc_args {
-	MContext *mc;
-	int lt;
-	int count;
-};
-gboolean get_from_distribution_collection(gpointer key, gpointer value, gpointer user_data) {
 
-	volatile LSClass *oc = (volatile LSClass*)value;
-	struct gfdc_args *args = (struct gfdc_args*)user_data;
-
-	//if sharing map is empty, this oc is not supposed to be here
-	assert(oc->sharing_map != 0);
-
-	u_int64_t my_bit = 1 << args->mc->opt.thread_id;
-
-	//check if I should get this LSClass
-	if (!(oc->sharing_map & my_bit)) {
-		return FALSE; //my bit is not set. i'm not involved
-	}
-
-	if (oc->reference_map & my_bit) {
-		//others still need to get this reference
-		return FALSE; //i already have a reference
-	}
-	
-	//set my bit in reference mask
-	while (1) {
-		u_int64_t old_rm = oc->reference_map;
-		u_int64_t new_rm = old_rm;
-		set_bit(&new_rm, args->mc->opt.thread_id);
-	
-		if (__sync_bool_compare_and_swap(
-					&oc->reference_map, old_rm, new_rm)) {
-			//worked
-			assert((oc->reference_map & (1<<args->mc->opt.thread_id)) == 
-					(1<<args->mc->opt.thread_id));
-			// i marked that I get a reference to this oc
-			break;
-		} else {
-			//some other thread changed the reference mask
-		}
-	}
-	//unset my bit in the sharing map
-	while (1) {
-		u_int64_t old_sm = oc->sharing_map;
-		u_int64_t new_sm = old_sm;
-		unset_bit(&new_sm, args->mc->opt.thread_id);
-	
-		if (__sync_bool_compare_and_swap(
-					&oc->sharing_map, old_sm, new_sm)) {
-			//worked
-			assert(__builtin_popcountl(oc->sharing_map) <
-						__builtin_popcountl(old_sm));
-			assert((oc->sharing_map & (1 << args->mc->opt.thread_id)) == 0);
-			// I'm no longer interested in this oc
-			break;
-		} else {
-			//some other thread changed the reference mask, retry
-		}
-	}
-	
-	//insert in thread local CollectionPool for this lifetime
-	unsigned int insert_index = (args->mc->time + args->lt) % 
-			(args->mc->gopts->max_lifetime + 
-			 args->mc->gopts->deallocation_delay);
-
-	//printf("INSERT: t %d lt %d index %d\n", args->mc->time, args->lt, insert_index);
-
-	CollectionPool *target_pool = &args->mc->collection_pools[insert_index];
-	add_collection_to_pool((LSClass*)oc, target_pool);
-	args->count += (oc->num_objects * oc->object_size);
-
-	// can we remove this LSClass from hash map?
-	// check if all bits are cleared. not shared anymore
-	if (oc->sharing_map == 0) {
-		debug("purged %p from sharing pool", oc);
-		return TRUE;
-	} else {
-		debug("leaving %p in sharing pool", oc);
-		//others have to get a reference to oc first.
-		//do not delete yet
-		return FALSE;
-	}
-}
-*/
 
 // returns the number of bytes of all LSClasss that we got from the distr. pool
+// this method runs in O(max_lifetime)
 int get_shared_LClasses(MContext *mc) {
 
-	//lock my shared expiration clas
+	int tid = mc->thread_id;
 
+	//lock my shared expiration class
+	lock_shared_expiration_class(tid);
+
+	//for each possible lifetime
+	int i;
+	for (i = 0; i < mc->gopts->max_lifetime; ++i) {
+		//append shared LClass to local LClass
+		LClass *remote = shared_expiration_classes[tid][i];
+		LClass *local = expiration_class_get_LClass(mc, mc->expiration_class, i);
+		if (remote->first == NULL) continue; //no shared LSCLasses here
+		if (local->first == NULL) {
+			local->first = remote->first;
+			local->last = remote->last;
+		} else {
+			local->last->next = remote->first;
+			local->last = remote->last;
+		}
+	}
+	unlock_shared_expiration_class(mc->thread_id);
 }
 
 volatile LSClass *fs_collection = NULL;
