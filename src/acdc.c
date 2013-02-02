@@ -306,26 +306,22 @@ static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 	}
 }
 
-static void access_collection(gpointer key, gpointer value, gpointer user_data) {
 
-	LSClass *oc = (LSClass*)value;
-	MContext *mc = (MContext*)user_data;
-
-	traverse_collection(mc, oc);
-}
-
-void access_live_objects(MContext *mc) {
+void access_live_LClasses(MContext *mc) {
 
 	if (mc->gopts->skip_traversal == 1) return;
 
 	int i, idx;
 	for (i = mc->time; i < mc->time + mc->gopts->max_lifetime; ++i) {
-		idx = i % (mc->gopts->max_lifetime +
-				mc->gopts->deallocation_delay);
-		//printf("access objects from pool %d\n", idx);
 		
-		CollectionPool *cp = &(mc->collection_pools[idx]);
-		g_hash_table_foreach(cp->collections, access_collection, mc);
+		LClass *lc = expiration_class_get_LClass(mc, mc->expiration_class, i);
+
+		//traverse all LSClasses in lc
+		LSClass *iterator = lc->first;
+		while (iterator != NULL) {
+			traverse_LSClass(mc, iterator);
+			iterator = iterator->next;
+		}
 	}
 }
 
@@ -624,7 +620,7 @@ void *acdc_thread(void *ptr) {
 		}
 
 		access_start = rdtsc();
-		access_live_objects(mc);
+		access_live_LClasses(mc);
 		access_end = rdtsc();
 		mc->stat->access_time += access_end - access_start;
 		
