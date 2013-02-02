@@ -70,7 +70,7 @@ static LClass *allocate_expiration_class(unsigned int max_lifetime) {
 }
 
 //Lifetime class API (doubly linked list handling, basically)
-static void lclass_insert_after(LClass *list, LSClass *after, LSClass *c) {
+static void lclass_insert_after(LClass *list, LSCNode *after, LSCNode *c) {
 	c->prev = after;
 	c->next = after->next;
 	if (after->next == NULL)
@@ -80,7 +80,7 @@ static void lclass_insert_after(LClass *list, LSClass *after, LSClass *c) {
 	after->next = c;
 }
 
-static void lclass_insert_before(LClass *list, LSClass *before, LSClass *c) {
+static void lclass_insert_before(LClass *list, LSCNode *before, LSCNode *c) {
 	c->prev = before->prev;
 	c->next = before;
 	if (before->prev == NULL)
@@ -90,7 +90,7 @@ static void lclass_insert_before(LClass *list, LSClass *before, LSClass *c) {
 	before->prev = c;
 }
 
-static void lclass_insert_beginning(LClass *list, LSClass *c) {
+static void lclass_insert_beginning(LClass *list, LSCNode *c) {
 	if (list->first == NULL) {
 		list->first = c;
 		list->last = c;
@@ -101,7 +101,7 @@ static void lclass_insert_beginning(LClass *list, LSClass *c) {
 	}
 }
 
-static void lclass_insert_end(LClass *list, LSClass *c) {
+static void lclass_insert_end(LClass *list, LSCNode *c) {
 	if (list->last == NULL)
 		lclass_insert_beginning(list, c);
 	else
@@ -121,6 +121,15 @@ static void lclass_remove(LClass *list, LSClass *c) {
 }
 */
 
+static LSCNode *get_LSCNode() {
+	//TODO recycling system
+	return calloc(1, sizeof(LSCNode));
+}
+static void recycle_LSCNode(LSCNode *node) {
+	//TODO implement
+	return;
+}
+
 //Expiration class API
 static void expiration_class_insert(MContext *mc, LClass *expiration_class, 
 		LSClass *c) {
@@ -132,7 +141,11 @@ static void expiration_class_insert(MContext *mc, LClass *expiration_class,
 
 	LClass *target_lifetime_class = &expiration_class[insert_index];
 
-	lclass_insert_end(target_lifetime_class, c);
+	//wrap LSClass in a LSCNode object
+	LSCNode *node = get_LSCNode();
+	node->ls_class = c;
+
+	lclass_insert_end(target_lifetime_class, node);
 }
 
 static LClass *expiration_class_get_LClass(MContext *mc, LClass *expiration_class,
@@ -156,12 +169,16 @@ static void expiration_class_remove(MContext *mc, LClass *expiration_class) {
 
 	LClass *expired_lifetime_class = &expiration_class[delete_index];
 
+	debug("delete from index %d", delete_index);
+
 	//forall LSClasses in this LClass: 
 	//         decrement reference map and maybe deallocate LSClass
-	LSClass *iterator = expired_lifetime_class->first;
+	LSCNode *iterator = expired_lifetime_class->first;
 	while (iterator != NULL) {
-		unreference_and_deallocate_LSClass(mc, iterator);
+		unreference_and_deallocate_LSClass(mc, iterator->ls_class);
+		LSCNode *tmp = iterator;
 		iterator = iterator->next;
+		recycle_LSCNode(tmp);
 	}
 	//reset list
 	expired_lifetime_class->first = NULL;
@@ -284,7 +301,7 @@ static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 					&c->reference_map, old_rm, new_rm)) {
 			//worked
 			//if (c->reference_map == 0 && c->sharing_map == 0) {
-			if (c->reference_map) {
+			if (c->reference_map == 0) {
 				deallocate_LSClass(mc, (LSClass*)c);
 				debug("deleted %p", c);
 			} else {
@@ -314,14 +331,16 @@ static void access_live_LClasses(MContext *mc) {
 	if (mc->gopts->skip_traversal == 1) return;
 
 	int i;
-	for (i = mc->time; i < mc->time + mc->gopts->max_lifetime; ++i) {
+	for (i = 0; i < mc->gopts->max_lifetime; ++i) {
 		
 		LClass *lc = expiration_class_get_LClass(mc, mc->expiration_class, i);
 
 		//traverse all LSClasses in lc
-		LSClass *iterator = lc->first;
+		LSCNode *iterator = lc->first;
 		while (iterator != NULL) {
-			traverse_LSClass(mc, iterator);
+			//debug("iterator %p", iterator);
+			debug("traverse %p", iterator->ls_class);
+			traverse_LSClass(mc, iterator->ls_class);
 			iterator = iterator->next;
 		}
 	}
@@ -389,6 +408,8 @@ static void get_shared_LClasses(MContext *mc) {
 			local->last->next = remote->first;
 			local->last = remote->last;
 		}
+		remote->first = NULL;
+		remote->last = NULL;
 	}
 	unlock_shared_expiration_class(mc->thread_id);
 }
@@ -547,6 +568,8 @@ static void *acdc_thread(void *ptr) {
 		LSClass *c = 
 			allocate_LSClass(mc, tp, sz, num_objects, sharing_map);
 
+		c->lifetime = lt; //TODO refactor to allocateLSClass
+
 		allocation_end = rdtsc();
 		mc->stat->allocation_time += allocation_end - allocation_start;
 
@@ -609,7 +632,7 @@ void run_acdc(GOptions *gopts) {
 	
 	//allocate shared data here. 
 	//init everything per-thread in create_mutator_context
-	shared_expiration_classes = calloc(gopts->num_threads, sizeof(LClass**));
+	shared_expiration_classes = calloc(gopts->num_threads, sizeof(LClass*));
 	shared_expiration_classes_locks = calloc(gopts->num_threads, 
 			sizeof(pthread_mutex_t));
 
@@ -719,7 +742,6 @@ void run_acdc(GOptions *gopts) {
 	//TODO: free mutator context
 	for (i = 0; i < gopts->num_threads; ++i) {
 		destroy_mutator_context(thread_results[i]);
-		free(shared_expiration_classes[i]);
 		pthread_mutex_destroy(&shared_expiration_classes_locks[i]);
 	}
 	free(shared_expiration_classes);

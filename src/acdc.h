@@ -117,9 +117,6 @@ typedef enum {
 //set of objects with common size and lifetime
 typedef struct lifetime_size_class LSClass;
 struct lifetime_size_class {
-  LSClass *prev; //to construct a list
-  LSClass *next; //to construct a list
-
   size_t object_size;
   unsigned int lifetime;
   size_t num_objects;
@@ -135,10 +132,17 @@ struct lifetime_size_class {
   Object *start;
 };
 
+typedef struct lifetime_size_class_node LSCNode;
+struct lifetime_size_class_node {
+  LSCNode *prev;
+  LSCNode *next;
+  LSClass *ls_class;
+};
+
 //list of LSClasses with the same lifetime
 typedef struct lifetime_class {
-  LSClass *first;
-  LSClass *last;
+  LSCNode *first;
+  LSCNode *last;
 } LClass;
 
 typedef struct mutator_context MContext;

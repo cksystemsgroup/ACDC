@@ -43,8 +43,6 @@ static LSClass *new_LSClass(MContext *mc, collection_type t,
 		size_t sz, unsigned long nelem, u_int64_t sharing_map) {
 
 	LSClass *c = malloc(sizeof(LSClass));
-	c->prev = NULL;
-	c->next = NULL;
 	c->object_size = sz;
 	c->num_objects = nelem;
 	c->type = t;
@@ -448,7 +446,6 @@ LSClass *allocate_LSClass(MContext *mc, collection_type ctype, size_t sz,
 void deallocate_LSClass(MContext *mc, LSClass *c) {
 
 	assert(c->reference_map == 0);
-	assert(c->sharing_map == 0);
 
 	switch (c->type) {
 		case LIST:
