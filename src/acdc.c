@@ -307,7 +307,7 @@ static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 }
 
 
-void access_live_LClasses(MContext *mc) {
+static void access_live_LClasses(MContext *mc) {
 
 	if (mc->gopts->skip_traversal == 1) return;
 
@@ -325,8 +325,14 @@ void access_live_LClasses(MContext *mc) {
 	}
 }
 
+static void lock_shared_expiration_class(int thread_id) {
+	pthread_mutex_lock(&shared_expiration_classes_locks[thread_id]);
+}
+static void unlock_shared_expiration_class(int thread_id) {
+	pthread_mutex_unlock(&shared_expiration_classes_locks[thread_id]);
+}
 
-void share_LSClass(MContext *mc, LSClass *c) {
+static void share_LSClass(MContext *mc, LSClass *c) {
 
 	assert(c->reference_map == 0);
 	assert(__builtin_popcountl(c->sharing_map) <= mc->gopts->num_threads);
@@ -338,6 +344,7 @@ void share_LSClass(MContext *mc, LSClass *c) {
 	//The last thread to unset its bit can actually deallocate the LSCLass
 	c->reference_map = c->sharing_map;
 	//reference_map is volatile. We can start to distribute the reference to c
+	//TODO: this should be doable with only sharing_map.
 
 	int i;
 	for (i = 0; i < mc->gopts->num_threads; ++i) {
@@ -345,16 +352,16 @@ void share_LSClass(MContext *mc, LSClass *c) {
 			//thread i will share this LSCLass
 			//it needs to get a reference
 			LClass **expiration_class = shared_expiration_classes[i];
-			//lock this class
-			pthread_mutex_t *mux = &shared_expiration_classes_locks[i];
-			pthread_mutex_lock(mux);
+			//lock the shared expiration class of this thread
+			lock_shared_expiration_class(i);
 			//insert LSClass
 			expiration_class_insert(mc, expiration_class, c);
-			pthread_mutex_unlock(mux);
+			unlock_shared_expiration_class(i);
 		}
 	}
 }
 
+/*
 struct gfdc_args {
 	MContext *mc;
 	int lt;
@@ -439,26 +446,13 @@ gboolean get_from_distribution_collection(gpointer key, gpointer value, gpointer
 		return FALSE;
 	}
 }
+*/
 
 // returns the number of bytes of all LSClasss that we got from the distr. pool
-int get_from_distribution_pool(MContext *mc) {
+int get_shared_LClasses(MContext *mc) {
 
-	struct gfdc_args args;
-	args.mc = mc;
-	args.count = 0;
-	
-	pthread_mutex_lock(&distribution_pools_lock);
+	//lock my shared expiration clas
 
-	int lt;
-	for (lt = 0; lt <= mc->gopts->max_lifetime; ++lt) {
-		CollectionPool *cp = &distribution_pools[lt];
-		args.lt = lt;
-		g_hash_table_foreach_remove(cp->collections, 
-				get_from_distribution_collection, (gpointer)&args);
-	}
-	
-	pthread_mutex_unlock(&distribution_pools_lock);
-	return args.count;
 }
 
 volatile LSClass *fs_collection = NULL;
@@ -621,7 +615,8 @@ void *acdc_thread(void *ptr) {
 		assert(oc->sharing_map == sharing_map);
 		assert(oc->reference_map == 0);
 		assert(__builtin_popcountl(oc->sharing_map) <= mc->gopts->num_threads);
-		add_to_distribution_pool(mc, oc, lt);
+
+		share_LSClass(mc, c);
 
 		debug("created collection %p with lt %d", oc, lt);
 		
