@@ -14,10 +14,39 @@
 #include "caches.h"
 
 
+static LSClass *get_LSClass(MContext *mc) {
+	//treat Classes as Nodes. They are big enough. Just cast
+	LSCNode *node = mc->class_cache.first;
+	if (node != NULL) {
+		lclass_remove(&mc->class_cache, node);
+		debug("reuse class %p\n", node);
+		node->next = NULL;
+		node->prev = NULL;
+		return (LSClass*)node;
+	}
+
+	if (mc->class_buffer_counter >= mc->gopts->class_buffer_size) {
+		printf("class buffer overflow. increase -C option\n");
+		exit(EXIT_FAILURE);
+	}
+	node = (LSCNode*)(((char*)mc->class_buffer_memory) + 
+		(mc->class_buffer_counter * L1_LINE_SZ));
+
+	mc->class_buffer_counter++;
+	debug("class %p\n", node);
+	node->next = NULL;
+	node->prev = NULL;
+	return (LSClass*)node;
+}
+static void recycle_LSClass(MContext *mc, LSClass *class) {
+	debug("give back class %p\n", class);
+	LSCNode *n = (LSCNode*)class;
+	lclass_insert_beginning(&mc->class_cache, n);
+}
 
 static int *get_thread_ids(u_int64_t sharing_map) {
 	int num_threads = __builtin_popcountl(sharing_map);
-	int *thread_ids = calloc(num_threads, sizeof(int));
+	int *thread_ids = calloc(num_threads, sizeof(int)); //TODO remove calloc
 	int i, j;
 	for (i = 0, j = 0; i < sizeof(u_int64_t); ++i) {
 		if ( (1 << i) & sharing_map ) {
@@ -42,7 +71,8 @@ static int write_ith_element(MContext *mc, int i) {
 static LSClass *new_LSClass(MContext *mc, collection_type t, 
 		size_t sz, unsigned long nelem, u_int64_t sharing_map) {
 
-	LSClass *c = malloc(sizeof(LSClass));
+	//LSClass *c = malloc(sizeof(LSClass));
+	LSClass *c = get_LSClass(mc);
 	c->object_size = sz;
 	c->num_objects = nelem;
 	c->type = t;
@@ -52,19 +82,19 @@ static LSClass *new_LSClass(MContext *mc, collection_type t,
 }
 
 // false sharing ---------------------
-static void assign_optimal_fs_pool_objects(MContext *mc, LSClass *oc, 
+static void assign_optimal_fs_pool_objects(MContext *mc, LSClass *c, 
 		u_int64_t sharing_map) {
 
 	//check which threads should participate
 	int num_threads = __builtin_popcountl(sharing_map);
 	int *thread_ids = get_thread_ids(sharing_map);
 
-	int cache_lines_per_element = (oc->object_size / L1_LINE_SZ) + 1;
+	int cache_lines_per_element = (c->object_size / L1_LINE_SZ) + 1;
 	assert(cache_lines_per_element == 1);
 
 	int i;
-	for (i = 0; i < oc->num_objects; ++i) {
-		char *next = (char*)oc->start + cache_lines_per_element * L1_LINE_SZ * i;
+	for (i = 0; i < c->num_objects; ++i) {
+		char *next = (char*)c->start + cache_lines_per_element * L1_LINE_SZ * i;
 		SharedObject *o = (SharedObject*)next;
 		o->sharing_map = 1 << ( thread_ids[i % num_threads] );
 	}
@@ -74,15 +104,15 @@ static void assign_optimal_fs_pool_objects(MContext *mc, LSClass *oc,
 }
 
 
-static void assign_fs_pool_objects(MContext *mc, LSClass *oc, u_int64_t sharing_map) {
+static void assign_fs_pool_objects(MContext *mc, LSClass *c, u_int64_t sharing_map) {
 
 	//check which threads should participate
 	int num_threads = __builtin_popcountl(sharing_map);
 	int *thread_ids = get_thread_ids(sharing_map);
 
 	int i;
-	for (i = 0; i < oc->num_objects; ++i) {
-		SharedObject *o = ((SharedObject**)oc->start)[i];
+	for (i = 0; i < c->num_objects; ++i) {
+		SharedObject *o = ((SharedObject**)c->start)[i];
 		o->sharing_map = 1 << ( thread_ids[i % num_threads]  );	
 	}
 	free(thread_ids);
@@ -96,18 +126,18 @@ static LSClass *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
 	if (nelem % num_threads != 0)
 		nelem += num_threads - (nelem % num_threads);
 
-	LSClass *oc = new_LSClass(mc, FALSE_SHARING, sz, nelem, sharing_map);
+	LSClass *c = new_LSClass(mc, FALSE_SHARING, sz, nelem, sharing_map);
 
 	//we store all objects on an array. one after the other
-	oc->start = calloc(nelem, sizeof(SharedObject*));
+	c->start = calloc(nelem, sizeof(SharedObject*));
 
 	int i;
 	for (i = 0; i < nelem; ++i) {
-		((SharedObject**)oc->start)[i] = allocate(mc, sz);
+		((SharedObject**)c->start)[i] = allocate(mc, sz);
 	}
 		
-	assign_fs_pool_objects(mc, oc, sharing_map);
-	return oc;
+	assign_fs_pool_objects(mc, c, sharing_map);
+	return c;
 }
 
 static LSClass *allocate_optimal_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
@@ -120,92 +150,94 @@ static LSClass *allocate_optimal_fs_pool(MContext *mc, size_t sz, unsigned long 
 
 	assert(nelem % num_threads == 0);
 	
-	LSClass *oc = new_LSClass(mc, OPTIMAL_FALSE_SHARING, sz, nelem, sharing_map);
+	LSClass *c = new_LSClass(mc, OPTIMAL_FALSE_SHARING, sz, nelem, sharing_map);
 
 	int cache_lines_per_element = (sz / L1_LINE_SZ) + 1;
 
-	oc->start = allocate_aligned(mc, 
+	c->start = allocate_aligned(mc, 
 			nelem * cache_lines_per_element * L1_LINE_SZ, L1_LINE_SZ);
 	
-	assign_optimal_fs_pool_objects(mc, oc, sharing_map);
+	assign_optimal_fs_pool_objects(mc, c, sharing_map);
 
-	return oc;
+	return c;
 }
 
-static void deallocate_fs_pool(MContext *mc, LSClass *oc) {
+static void deallocate_fs_pool(MContext *mc, LSClass *c) {
 
-	assert(oc->reference_map == 0);
-	assert(oc->start != NULL);
+	assert(c->reference_map == 0);
+	assert(c->start != NULL);
 
 	int i;
-	for (i = 0; i < oc->num_objects; ++i) {
-		 deallocate(mc, ((SharedObject**)oc->start)[i], oc->object_size);
+	for (i = 0; i < c->num_objects; ++i) {
+		 deallocate(mc, ((SharedObject**)c->start)[i], c->object_size);
 	}
-	free(oc->start);
-	oc->start = NULL;
-	free(oc);
+	free(c->start);
+	c->start = NULL;
+	//free(c);
+	recycle_LSClass(mc, c);
 }
 
-static void deallocate_optimal_fs_pool(MContext *mc, LSClass *oc) {
+static void deallocate_optimal_fs_pool(MContext *mc, LSClass *c) {
 	
-	int cache_lines_per_element = (oc->object_size / L1_LINE_SZ) + 1;
+	int cache_lines_per_element = (c->object_size / L1_LINE_SZ) + 1;
 
-	deallocate_aligned(mc, oc->start, 
-			oc->num_objects * cache_lines_per_element * L1_LINE_SZ,
+	deallocate_aligned(mc, c->start, 
+			c->num_objects * cache_lines_per_element * L1_LINE_SZ,
 			L1_LINE_SZ);
 
-	free(oc);
+	//free(c);
+	recycle_LSClass(mc, c);
 }
 
-static void traverse_fs_pool(MContext *mc, LSClass *oc) {
+static void traverse_fs_pool(MContext *mc, LSClass *c) {
 	//check if thread bit is set in sharing_map
 	u_int64_t my_bit = 1 << mc->thread_id;
 
-	assert(oc->reference_map != 0);
-	assert(oc->start != NULL);
+	assert(c->reference_map != 0);
+	assert(c->start != NULL);
 
 	int i;
-	for (i = 0; i < oc->num_objects; ++i) {
+	for (i = 0; i < c->num_objects; ++i) {
 		//check out what are my objects
-		SharedObject *so = ((SharedObject**)oc->start)[i];
+		SharedObject *so = ((SharedObject**)c->start)[i];
 		if (so->sharing_map & my_bit) {
 			//printf("ACCESS\n");
 			int j;
-			assert(oc->reference_map != 0);
+			assert(c->reference_map != 0);
 			//long long access_start = rdtsc();
 			for (j = 0; j < mc->gopts->write_iterations; ++j)
-				write_object(so, oc->object_size, sizeof(SharedObject));
+				write_object(so, c->object_size, sizeof(SharedObject));
 			//long long access_end = rdtsc();
 			//mc->stat->access_time += access_end - access_start;
 		}
 	}
 }
 
-static void traverse_optimal_fs_pool(MContext *mc, LSClass *oc) {
+static void traverse_optimal_fs_pool(MContext *mc, LSClass *c) {
 
 	//check if thread bit is set in sharing_map
 	u_int64_t my_bit = 1 << mc->thread_id;
 
-	assert(oc->reference_map != 0);
-	assert(oc->start != NULL);
+	assert(c->reference_map != 0);
+	assert(c->start != NULL);
 
-	int cache_lines_per_element = (oc->object_size / L1_LINE_SZ) + 1;
+	int cache_lines_per_element = (c->object_size / L1_LINE_SZ) + 1;
 	
 	int i;
-	for (i = 0; i < oc->num_objects; ++i) {
-		char *next = (char*)oc->start + 
+	for (i = 0; i < c->num_objects; ++i) {
+		char *next = (char*)c->start + 
 			cache_lines_per_element * L1_LINE_SZ * i;
 		SharedObject *so = (SharedObject*)next;
 		
-		assert(oc->reference_map != 0);
+		assert(c->reference_map != 0);
 		
 		if (so->sharing_map & my_bit) {
 			//printf("ACCESS\n");
 			int j;
-			assert(oc->reference_map != 0);
+			assert(c->reference_map != 0);
 			//long long access_start = rdtsc();
 			for (j = 0; j < mc->gopts->write_iterations; ++j)
-				write_object(so, oc->object_size, sizeof(SharedObject));
+				write_object(so, c->object_size, sizeof(SharedObject));
 			//long long access_end = rdtsc();
 			//mc->stat->access_time += access_end - access_start;
 		}
@@ -273,7 +305,8 @@ LSClass *allocate_optimal_list_unaligned(MContext *mc, size_t sz,
 
 static void deallocate_optimal_list_unaligned(MContext *mc, LSClass *c) {
 	deallocate(mc, c->start, c->object_size * c->num_objects);
-	free(c);
+	//free(c);
+	recycle_LSClass(mc, c);
 }
 
 
@@ -309,13 +342,16 @@ static void deallocate_list(MContext *mc, LSClass *c) {
 		l = n;
 		//printf("delete\n");
 	}
-	free(c);
+	//free(c);
+	recycle_LSClass(mc, c);
 }
 
 //binary tree -----------------------
 static void deallocate_optimal_btree(MContext *mc, LSClass *c) {
 	deallocate(mc, (Object*)(c->start), c->object_size * c->num_objects);
-	free(c);
+	//free(c);
+	
+	recycle_LSClass(mc, c);
 }
 
 static LSClass *allocate_optimal_btree(MContext *mc, size_t sz, 
@@ -393,7 +429,8 @@ static void deallocate_subtree_recursion(MContext *mc, BTObject *t, size_t node_
 
 static void deallocate_btree(MContext *mc, LSClass *c) {
 	deallocate_subtree_recursion(mc, (BTObject*)c->start, c->object_size);
-	free(c);
+	//free(c);
+	recycle_LSClass(mc, c);
 }
 
 

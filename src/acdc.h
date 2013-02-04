@@ -11,6 +11,8 @@
 #include <pthread.h>
 #include <sys/types.h>
 
+#define debug(...) _debug(__FILE__, __LINE__, __VA_ARGS__)
+void _debug(char *filename, int linenum, const char *format, ...);
 
 //global acdc options
 typedef enum {
@@ -36,6 +38,7 @@ struct global_options {
   int list_ratio; //-q:
   int btree_ratio; //-b:
   int node_buffer_size; //-N: used to recycle nodes for LSClasses
+  int class_buffer_size; //-C: used to recycle nodes for LSClasses
   
   //options for object access
   int write_iterations; //-i:
@@ -156,11 +159,22 @@ struct mutator_context {
   MStat *stat; //mutator stats
   unsigned int time;
   LClass *expiration_class; // one LClass for each possible lifetime
+
   LSCNode *node_buffer_memory;
   int node_buffer_counter;
   LClass node_cache;
+
+  LSClass *class_buffer_memory;
+  int class_buffer_counter;
+  LClass class_cache;
 };
 
+
+void lclass_insert_after(LClass *list, LSCNode *after, LSCNode *c);
+void lclass_insert_before(LClass *list, LSCNode *before, LSCNode *c);
+void lclass_insert_beginning(LClass *list, LSCNode *c);
+void lclass_insert_end(LClass *list, LSCNode *c);
+void lclass_remove(LClass *list, LSCNode *c);
 
 void run_acdc(GOptions *gopts);
 

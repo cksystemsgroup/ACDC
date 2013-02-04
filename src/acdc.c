@@ -22,7 +22,6 @@
 #define STR(macro) QUOTE(macro)
 #define ALLOCATOR_NAME STR(ALLOCATOR)
 
-#define debug(...) _debug(__FILE__, __LINE__, __VA_ARGS__)
 
 struct thread_args {
 	GOptions *gopts;
@@ -75,7 +74,7 @@ static LClass *allocate_expiration_class(unsigned int max_lifetime) {
 }
 
 //Lifetime class API (doubly linked list handling, basically)
-static void lclass_insert_after(LClass *list, LSCNode *after, LSCNode *c) {
+void lclass_insert_after(LClass *list, LSCNode *after, LSCNode *c) {
 	c->prev = after;
 	c->next = after->next;
 	if (after->next == NULL)
@@ -85,7 +84,7 @@ static void lclass_insert_after(LClass *list, LSCNode *after, LSCNode *c) {
 	after->next = c;
 }
 
-static void lclass_insert_before(LClass *list, LSCNode *before, LSCNode *c) {
+void lclass_insert_before(LClass *list, LSCNode *before, LSCNode *c) {
 	c->prev = before->prev;
 	c->next = before;
 	if (before->prev == NULL)
@@ -95,7 +94,7 @@ static void lclass_insert_before(LClass *list, LSCNode *before, LSCNode *c) {
 	before->prev = c;
 }
 
-static void lclass_insert_beginning(LClass *list, LSCNode *c) {
+void lclass_insert_beginning(LClass *list, LSCNode *c) {
 	if (list->first == NULL) {
 		list->first = c;
 		list->last = c;
@@ -106,7 +105,7 @@ static void lclass_insert_beginning(LClass *list, LSCNode *c) {
 	}
 }
 
-static void lclass_insert_end(LClass *list, LSCNode *c) {
+void lclass_insert_end(LClass *list, LSCNode *c) {
 	if (list->last == NULL)
 		lclass_insert_beginning(list, c);
 	else
@@ -114,7 +113,7 @@ static void lclass_insert_end(LClass *list, LSCNode *c) {
 }
 
 
-static void lclass_remove(LClass *list, LSCNode *c) {
+void lclass_remove(LClass *list, LSCNode *c) {
 	if (c->prev == NULL)
 		list->first = c->next;
 	else
@@ -261,7 +260,20 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 		exit(EXIT_FAILURE);
 	}
 	mc->node_buffer_counter = 0;
-	
+	mc->node_cache.first = NULL;
+	mc->node_cache.last = NULL;
+       	
+	assert(sizeof(LSClass) <= L1_LINE_SZ);
+	r = posix_memalign((void**)&mc->class_buffer_memory, 
+			L1_LINE_SZ, 
+			L1_LINE_SZ * gopts->node_buffer_size);
+	if (r != 0) {
+		printf("unable to align memory: %d\n", r);
+		exit(EXIT_FAILURE);
+	}
+	mc->class_buffer_counter = 0;
+	mc->class_cache.first = NULL;
+	mc->class_cache.last = NULL;
 
 	return mc;
 }
@@ -274,6 +286,7 @@ static void destroy_mutator_context(MContext *mc) {
 	free(shared_expiration_classes[mc->thread_id]);
 	pthread_mutex_destroy(&shared_expiration_classes_locks[mc->thread_id]);
 	free(mc->node_buffer_memory);
+	free(mc->class_buffer_memory);
 	free(mc);
 }
 
