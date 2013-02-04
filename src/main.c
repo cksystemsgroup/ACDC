@@ -29,7 +29,7 @@ static void print_usage() {
 			"-i write iterations.\n"
 			"-k skip traversal\n"
 			" Options for ACDC MODE:\n"
-			"-t time threshold\n"
+			"-t time quantum\n"
 			"-l min. object lifetime\n"
 			"-L max. object lifetime\n"
 			"-D deallocation delay\n"
@@ -46,7 +46,7 @@ static void print_usage() {
 static void set_default_params(GOptions *gopts) {
 	gopts->mode = ACDC;
 	gopts->num_threads = 1;
-	gopts->time_threshold = 1<<18;
+	gopts->time_quantum = 1<<18;
 	gopts->benchmark_duration = 100;
 	gopts->seed = 1;
 	gopts->min_lifetime = 1;
@@ -91,7 +91,7 @@ static void check_params(GOptions *gopts) {
 static void print_params(GOptions *gopts) {
 	printf("gopts->mode = %d\n", gopts->mode);
 	printf("gopts->num_threads = %d\n", gopts->num_threads);
-	printf("gopts->time_threshold = %d\n", gopts->time_threshold);
+	printf("gopts->time_quantum = %d\n", gopts->time_quantum);
 	printf("gopts->benchmark_duration = %d\n", gopts->benchmark_duration);
 	printf("gopts->seed = %d\n", gopts->seed);
 	printf("gopts->min_lifetime = %d\n", gopts->min_lifetime);
@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
 				gopts->num_threads = atoi(optarg);
 				break;
 			case 't':
-				gopts->time_threshold = atoi(optarg);
+				gopts->time_quantum = atoi(optarg);
 				break;
 			case 'd':
 				gopts->benchmark_duration = atoi(optarg);

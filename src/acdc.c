@@ -594,7 +594,7 @@ static void *acdc_thread(void *ptr) {
 		//time_counter += bytes_from_dist_pool;
 		time_counter += sz * num_objects;
 
-		if (time_counter >= mc->gopts->time_threshold) {
+		if (time_counter >= mc->gopts->time_quantum) {
 
 			if (mc->thread_id == 0) {
 				get_and_print_memstats(mc);
