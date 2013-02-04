@@ -27,6 +27,7 @@ struct global_options {
   int time_quantum; //-t: allocated bytes until time advances
   int benchmark_duration; //-d: How long acdc will run
   int seed; //-r:
+  size_t metadata_heap_sz; //-H: in kB
   
   //options for object creation
   int min_lifetime; //-l: must be >= 1 and <= max_lifetime
@@ -178,6 +179,11 @@ void lclass_remove(LClass *list, LSCNode *c);
 
 void run_acdc(GOptions *gopts);
 
+void init_metadata_heap(size_t heapsize);
+void *malloc_meta(size_t size);
+void *calloc_meta(size_t nelem, size_t size);
+void *malloc_meta_aligned(size_t size, size_t alignment);
+void *calloc_meta_aligned(size_t nelem, size_t size, size_t alignment);
 
 Object *allocate(MContext *mc, size_t size);
 void deallocate(MContext *mc, Object *o, size_t size);

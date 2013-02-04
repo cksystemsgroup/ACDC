@@ -278,6 +278,7 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 	return mc;
 }
 
+/*
 static void destroy_mutator_context(MContext *mc) {
 	free(mc->stat->lt_histogram);
 	free(mc->stat->sz_histogram);
@@ -289,6 +290,7 @@ static void destroy_mutator_context(MContext *mc) {
 	free(mc->class_buffer_memory);
 	free(mc);
 }
+*/
 
 static void get_and_print_memstats(MContext *mc) {
 
@@ -674,8 +676,8 @@ static void *acdc_thread(void *ptr) {
 void run_acdc(GOptions *gopts) {
 
 	int i, r;
-	pthread_t *threads = malloc(sizeof(pthread_t) * gopts->num_threads);
-	MContext **thread_results = malloc(sizeof(MContext*) * gopts->num_threads);
+	pthread_t *threads = malloc_meta(sizeof(pthread_t) * gopts->num_threads);
+	MContext **thread_results = malloc_meta(sizeof(MContext*) * gopts->num_threads);
 	int thread_0_index = 0;
 
 	//distribution_pools = create_collection_pools(gopts->max_lifetime + 1);
@@ -794,7 +796,7 @@ void run_acdc(GOptions *gopts) {
 
 	//TODO: free mutator context
 	for (i = 0; i < gopts->num_threads; ++i) {
-		destroy_mutator_context(thread_results[i]);
+		//destroy_mutator_context(thread_results[i]);
 		pthread_mutex_destroy(&shared_expiration_classes_locks[i]);
 	}
 	free(shared_expiration_classes);

@@ -22,6 +22,7 @@ static void print_usage() {
 			" Options for all modes:\n"
 			"-n number of threads\n"
 			"-d benchmark duration\n"
+			"-H meta data heap size in kB\n"
 			"-s min. sizeclass (1<<x)\n"
 			"-S max. sizeclass (1<<x)\n"		
 			"-r seed value\n"
@@ -51,6 +52,7 @@ static void set_default_params(GOptions *gopts) {
 	gopts->time_quantum = 1<<18;
 	gopts->benchmark_duration = 100;
 	gopts->seed = 1;
+	gopts->metadata_heap_sz = 4096; //4MB
 	gopts->min_lifetime = 1;
 	gopts->max_lifetime = 10;
 	gopts->max_time_gap = -1;
@@ -98,6 +100,7 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->time_quantum = %d\n", gopts->time_quantum);
 	printf("gopts->benchmark_duration = %d\n", gopts->benchmark_duration);
 	printf("gopts->seed = %d\n", gopts->seed);
+	printf("gopts->metadata_heap_sz = %lu\n", gopts->metadata_heap_sz);
 	printf("gopts->min_lifetime = %d\n", gopts->min_lifetime);
 	printf("gopts->max_lifetime = %d\n", gopts->max_lifetime);
 	printf("gopts->max_time_gap = %d\n", gopts->max_time_gap);
@@ -121,13 +124,16 @@ int main(int argc, char **argv) {
 
 	//initial_break = sbrk(0);
 
-
-	GOptions *gopts = malloc(sizeof(GOptions));
+	GOptions *gopts = sbrk(sizeof(GOptions));	
+	if (gopts == (void*)-1) {
+		printf("unable to allocate global options\n");
+		exit(EXIT_FAILURE);
+	}
 
 	gopts->pid = getpid();
 
 	set_default_params(gopts);
-	const char *optString = "afn:t:d:r:l:L:D:g:s:S:N:C:OR:T:b:q:i:w:kvh";
+	const char *optString = "afn:t:d:r:H:l:L:D:g:s:S:N:C:OR:T:b:q:i:w:kvh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
@@ -149,6 +155,9 @@ int main(int argc, char **argv) {
 				break;
 			case 'r':
 				gopts->seed = atoi(optarg);
+				break;
+			case 'H':
+				gopts->metadata_heap_sz = atoi(optarg);
 				break;
 			case 'l':
 				gopts->min_lifetime = atoi(optarg);
@@ -215,10 +224,10 @@ int main(int argc, char **argv) {
 
 	print_params(gopts);
 
+	init_metadata_heap(gopts->metadata_heap_sz);
+
 	run_acdc(gopts);
 
-
-	free(gopts);
 	return (EXIT_SUCCESS);
 }
 
