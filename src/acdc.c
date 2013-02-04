@@ -16,12 +16,18 @@
 #include "memory.h"
 #include "barrier.h"
 #include "proc_status.h"
+#include "caches.h"
 
 #define QUOTE(name) #name
 #define STR(macro) QUOTE(macro)
 #define ALLOCATOR_NAME STR(ALLOCATOR)
 
 #define debug(...) _debug(__FILE__, __LINE__, __VA_ARGS__)
+
+struct thread_args {
+	GOptions *gopts;
+	int thread_id;
+};
 
 static LClass **shared_expiration_classes; //one expiration class per thread
 static pthread_mutex_t *shared_expiration_classes_locks; //one lock per expiration class
@@ -188,7 +194,8 @@ static void expiration_class_remove(MContext *mc, LClass *expiration_class) {
 //Mutator specific data
 static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 	
-	MContext *mc = malloc(sizeof(MContext));
+	MContext *mc;
+       	int r = posix_memalign((void**)&mc, L1_LINE_SZ, sizeof(MContext));
 	mc->gopts = gopts;
 	mc->time = 0;
 	
@@ -217,7 +224,7 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 	//no deallocation delay necessary here, we only distribute LSClasses 
 	//with lifetimes ranging from 1 to max_lifetime
 	
-	int r = pthread_mutex_init(&shared_expiration_classes_locks[thread_id], NULL);
+	r = pthread_mutex_init(&shared_expiration_classes_locks[thread_id], NULL);
 	if (r != 0) {
 		printf("unable to init mutex: %d\n", r);
 		exit(EXIT_FAILURE);
@@ -415,8 +422,8 @@ static volatile int fs_collection_bytes;
 static volatile int fs_allocation_thread;
 static volatile int fs_deallocation_thread;
 static void *false_sharing_thread(void *ptr) {
-
-	MContext *mc = (MContext*)ptr;
+	struct thread_args *targs = (struct thread_args*)ptr;
+	MContext *mc = create_mutator_context(targs->gopts, targs->thread_id);
 	my_mc = mc;
 	unsigned long time_counter = 0;
 	int runs = 0;
@@ -516,7 +523,8 @@ static void *false_sharing_thread(void *ptr) {
 
 //int allocators_alive = 1;
 static void *acdc_thread(void *ptr) {
-	MContext *mc = (MContext*)ptr;
+	struct thread_args *targs = (struct thread_args*)ptr;
+	MContext *mc = create_mutator_context(targs->gopts, targs->thread_id);
 	my_mc = mc;
 
 	unsigned long time_counter = 0;
@@ -647,8 +655,10 @@ void run_acdc(GOptions *gopts) {
 	}
 
 	for (i = 0; i < gopts->num_threads; ++i) {
-		MContext *mc = create_mutator_context(gopts, i);
-		r = pthread_create(&threads[i], NULL, thread_function, (void*)mc);
+		struct thread_args *targs = malloc(sizeof(struct thread_args));
+		targs->gopts = gopts;
+		targs->thread_id = i;
+		r = pthread_create(&threads[i], NULL, thread_function, (void*)targs);
 		if (r) {
 			printf("Unable to create thread_function: %d\n", r);
 			exit(EXIT_FAILURE);
