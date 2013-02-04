@@ -53,7 +53,7 @@ static unsigned int get_random_size(MContext *mc) {
 
 	return get_rand_int_range(mc,
 			1 << sc,
-			1 << (sc + 1));
+			(1 << (sc + 1)) -1);
 }
 
 unsigned int get_random_thread(MContext *mc) {
@@ -134,6 +134,11 @@ void get_random_object_props(MContext *mc,
 	*size = sz;
 	*lifetime = lt;
 	*num_objects = effect_of_sizeclass * effect_of_lifetime;
+
+	if (*num_objects == 0) {
+		printf("FOO");
+	}
+
 	//*num_objects = 10;
 	*type = get_random_collection_type(mc);
 	if (get_sharing_dist(mc)) {
