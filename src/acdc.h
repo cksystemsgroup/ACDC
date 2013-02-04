@@ -10,7 +10,6 @@
 
 #include <pthread.h>
 #include <sys/types.h>
-#include <glib.h>
 
 
 //global acdc options
@@ -52,12 +51,6 @@ struct global_options {
   pid_t pid;
 };
 
-//thread local mutator options
-typedef struct mutator_options MOptions;
-struct mutator_options {
-  //int thread_id;
-  GRand *rand; //GLib's Mersenne Twister PRNG
-};
 
 //mutator measurement data
 typedef struct mutator_stat MStat;
@@ -158,7 +151,7 @@ void traverse_LSClass(MContext *mc, LSClass *oc);
 struct mutator_context {
   GOptions *gopts; //pointer to global options. same for all threads
   int thread_id;
-  MOptions opt; //thread local options TODO: remove
+  int rand;
   MStat *stat; //mutator stats
   unsigned int time;
   LClass *expiration_class; // one LClass for each possible lifetime
@@ -175,8 +168,6 @@ void deallocate_aligned(MContext *mc, Object *o, size_t size, size_t alignment);
 void write_object(Object *o, size_t size, size_t offset);
 unsigned int get_sizeclass(size_t size);
 
-GRand *init_rand(unsigned int seed);
-void free_rand(GRand *rand);
 void get_random_object_props(MContext *mc, 
 		size_t *size, 
 		unsigned int *lifetime, 

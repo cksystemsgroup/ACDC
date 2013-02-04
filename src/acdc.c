@@ -9,7 +9,6 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include <glib.h>
 #include <assert.h>
 
 #include "acdc.h"
@@ -189,13 +188,10 @@ static void expiration_class_remove(MContext *mc, LClass *expiration_class) {
 //Mutator specific data
 static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 	
-	unsigned int seed = gopts->seed + thread_id;
-
 	MContext *mc = malloc(sizeof(MContext));
 	mc->gopts = gopts;
 	mc->time = 0;
 	
-	mc->opt.rand = init_rand(seed); //TODO: remove glib dependency
 	mc->thread_id = thread_id;
 
 	mc->stat = malloc(sizeof(MStat));
@@ -207,6 +203,7 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 	mc->stat->bytes_deallocated = 0;
 	mc->stat->objects_allocated = 0;
 	mc->stat->objects_deallocated = 0;
+	mc->rand = gopts->seed + thread_id; // different seeds for different threads
 	mc->stat->lt_histogram = calloc(gopts->max_lifetime + 1, 
 			sizeof(unsigned long));
 	mc->stat->sz_histogram = calloc(gopts->max_object_sc + 1, 
@@ -230,7 +227,6 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 }
 
 static void destroy_mutator_context(MContext *mc) {
-	free_rand(mc->opt.rand);
 	free(mc->stat->lt_histogram);
 	free(mc->stat->sz_histogram);
 	free(mc->stat);

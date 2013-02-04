@@ -6,57 +6,65 @@
  */
 
 
-#include <glib.h>
 #include <stdio.h>
+#include <assert.h>
 
 #include "acdc.h"
-#include "memory.h"
+//#include "memory.h"
 
 
-GRand *init_rand(unsigned int seed) {
-	return g_rand_new_with_seed(seed);
+
+//Schrage minimum standard PRNG. Assumes int to be 32 bits
+static void next_rand(MContext *mc) {
+	int hi = mc->rand / 127773;
+	int lo = mc->rand % 127773;
+	mc->rand = 16807 * lo - 2836 * hi;
+	if (mc->rand < 0)
+		mc->rand += 2147483647;
 }
-void free_rand(GRand *rand) {
-	g_rand_free(rand);
+
+
+static int get_rand_int_range(MContext *mc, int from, int to) {
+	assert(to > from);
+	next_rand(mc);
+	int range = (to - from) + 1;
+	int small_rand = mc->rand % range; //ok for small ranges
+	return from + small_rand;
 }
+
 
 static unsigned int get_sharing_dist(MContext *mc) {
-
 	if (!mc->gopts->share_objects) return 0;
-
-	unsigned int r = g_rand_int_range(mc->opt.rand,
-			0, 100);
+	int r = get_rand_int_range(mc, 0, 100);
 	if (r < mc->gopts->share_ratio) return 1;
 	return 0;
-
 }
 
 static unsigned int get_random_lifetime(MContext *mc) {
-
-	return g_rand_int_range(mc->opt.rand,
+	return get_rand_int_range(mc,
 			mc->gopts->min_lifetime,
-			mc->gopts->max_lifetime + 1);
+			mc->gopts->max_lifetime);
 }
-static unsigned int get_random_size(MContext *mc) {
-	unsigned int sc = g_rand_int_range(mc->opt.rand,
-			mc->gopts->min_object_sc,
-			mc->gopts->max_object_sc + 1);
 
-	return g_rand_int_range(mc->opt.rand,
+static unsigned int get_random_size(MContext *mc) {
+	int sc = get_rand_int_range(mc,
+			mc->gopts->min_object_sc,
+			mc->gopts->max_object_sc);
+
+	return get_rand_int_range(mc,
 			1 << sc,
 			1 << (sc + 1));
 }
 
 unsigned int get_random_thread(MContext *mc) {
-
-	return g_rand_int_range(mc->opt.rand,
+	return get_rand_int_range(mc,
 			0,
-			mc->gopts->num_threads);
+			mc->gopts->num_threads - 1);
 }
 
 static collection_type get_random_collection_type(MContext *mc) {
 
-	unsigned int r = g_rand_int_range(mc->opt.rand, 0, 100);
+	unsigned int r = get_rand_int_range(mc, 0, 100);
 
 	if (r < mc->gopts->list_ratio) {
 		return LIST;
@@ -64,11 +72,6 @@ static collection_type get_random_collection_type(MContext *mc) {
 	if (r < (mc->gopts->list_ratio + mc->gopts->btree_ratio)) {
 		return BTREE;
 	}
-	/*if (r < (mc->gopts->list_ratio + 
-				mc->gopts->btree_ratio +
-				mc->gopts->false_sharing_ratio)) {
-		return FALSE_SHARING;
-	}*/
 	
 	//default. never reached
 	return LIST;
