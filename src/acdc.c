@@ -67,7 +67,7 @@ static inline void unset_bit(u_int64_t *word, int bitpos) {
  */
 static LClass *allocate_expiration_class(unsigned int max_lifetime) {
 
-	LClass *ec = calloc(max_lifetime, sizeof(LClass));
+	LClass *ec = calloc_meta(max_lifetime, sizeof(LClass));
 	//calloc creates zeroed memory, i.e., the first and last
 	//pointers of each LClass are NULL
 	return ec;
@@ -212,30 +212,18 @@ static void expiration_class_remove(MContext *mc, LClass *expiration_class) {
 //Mutator specific data
 static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 	
-	MContext *mc;
-       	int r = posix_memalign((void**)&mc, L1_LINE_SZ, sizeof(MContext));
-	if (r != 0) {
-		printf("unable to align memory: %d\n", r);
-		exit(EXIT_FAILURE);
-	}
+	MContext *mc = calloc_meta_aligned(1, sizeof(MContext), L1_LINE_SZ);
 	mc->gopts = gopts;
 	mc->time = 0;
 	
 	mc->thread_id = thread_id;
 
-	mc->stat = malloc(sizeof(MStat));
-	mc->stat->running_time = 0;
-	mc->stat->allocation_time = 0;
-	mc->stat->deallocation_time = 0;
-	mc->stat->access_time = 0;
-	mc->stat->bytes_allocated = 0;
-	mc->stat->bytes_deallocated = 0;
-	mc->stat->objects_allocated = 0;
-	mc->stat->objects_deallocated = 0;
 	mc->rand = gopts->seed + thread_id; // different seeds for different threads
-	mc->stat->lt_histogram = calloc(gopts->max_lifetime + 1, 
+
+	mc->stat = calloc_meta(1, sizeof(MStat));
+	mc->stat->lt_histogram = calloc_meta(gopts->max_lifetime + 1, 
 			sizeof(unsigned long));
-	mc->stat->sz_histogram = calloc(gopts->max_object_sc + 1, 
+	mc->stat->sz_histogram = calloc_meta(gopts->max_object_sc + 1, 
 			sizeof(unsigned long));
 
 	mc->expiration_class = allocate_expiration_class(
@@ -246,31 +234,23 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 	//no deallocation delay necessary here, we only distribute LSClasses 
 	//with lifetimes ranging from 1 to max_lifetime
 	
-	r = pthread_mutex_init(&shared_expiration_classes_locks[thread_id], NULL);
+	int r = pthread_mutex_init(&shared_expiration_classes_locks[thread_id], NULL);
 	if (r != 0) {
 		printf("unable to init mutex: %d\n", r);
 		exit(EXIT_FAILURE);
 	}
 
-       	r = posix_memalign((void**)&mc->node_buffer_memory, 
-			L1_LINE_SZ, 
-			L1_LINE_SZ * gopts->node_buffer_size);
-	if (r != 0) {
-		printf("unable to align memory: %d\n", r);
-		exit(EXIT_FAILURE);
-	}
+	mc->node_buffer_memory = calloc_meta_aligned(1,
+			L1_LINE_SZ * gopts->node_buffer_size,
+			L1_LINE_SZ);
 	mc->node_buffer_counter = 0;
 	mc->node_cache.first = NULL;
 	mc->node_cache.last = NULL;
        	
 	assert(sizeof(LSClass) <= L1_LINE_SZ);
-	r = posix_memalign((void**)&mc->class_buffer_memory, 
-			L1_LINE_SZ, 
-			L1_LINE_SZ * gopts->node_buffer_size);
-	if (r != 0) {
-		printf("unable to align memory: %d\n", r);
-		exit(EXIT_FAILURE);
-	}
+	mc->class_buffer_memory = calloc_meta_aligned(1,
+			L1_LINE_SZ * gopts->class_buffer_size,
+			L1_LINE_SZ);
 	mc->class_buffer_counter = 0;
 	mc->class_cache.first = NULL;
 	mc->class_cache.last = NULL;
@@ -278,19 +258,6 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 	return mc;
 }
 
-/*
-static void destroy_mutator_context(MContext *mc) {
-	free(mc->stat->lt_histogram);
-	free(mc->stat->sz_histogram);
-	free(mc->stat);
-	free(mc->expiration_class);
-	free(shared_expiration_classes[mc->thread_id]);
-	pthread_mutex_destroy(&shared_expiration_classes_locks[mc->thread_id]);
-	free(mc->node_buffer_memory);
-	free(mc->class_buffer_memory);
-	free(mc);
-}
-*/
 
 static void get_and_print_memstats(MContext *mc) {
 
@@ -313,7 +280,6 @@ static void get_and_print_memstats(MContext *mc) {
 			mc->time,
 			mc->stat->current_rss
 	      );
-
 }
 
 static void print_runtime_stats(MContext *mc) {
@@ -470,8 +436,7 @@ static volatile int fs_collection_bytes;
 static volatile int fs_allocation_thread;
 static volatile int fs_deallocation_thread;
 static void *false_sharing_thread(void *ptr) {
-	struct thread_args *targs = (struct thread_args*)ptr;
-	MContext *mc = create_mutator_context(targs->gopts, targs->thread_id);
+	MContext *mc = (MContext*)ptr;
 	my_mc = mc;
 	unsigned long time_counter = 0;
 	int runs = 0;
@@ -571,8 +536,7 @@ static void *false_sharing_thread(void *ptr) {
 
 //int allocators_alive = 1;
 static void *acdc_thread(void *ptr) {
-	struct thread_args *targs = (struct thread_args*)ptr;
-	MContext *mc = create_mutator_context(targs->gopts, targs->thread_id);
+	MContext *mc = (MContext*)ptr;
 	my_mc = mc;
 
 	unsigned long time_counter = 0;
@@ -684,8 +648,8 @@ void run_acdc(GOptions *gopts) {
 	
 	//allocate shared data here. 
 	//init everything per-thread in create_mutator_context
-	shared_expiration_classes = calloc(gopts->num_threads, sizeof(LClass*));
-	shared_expiration_classes_locks = calloc(gopts->num_threads, 
+	shared_expiration_classes = calloc_meta(gopts->num_threads, sizeof(LClass*));
+	shared_expiration_classes_locks = calloc_meta(gopts->num_threads, 
 			sizeof(pthread_mutex_t));
 
 	r = spin_barrier_init(&false_sharing_barrier, gopts->num_threads);
@@ -703,10 +667,8 @@ void run_acdc(GOptions *gopts) {
 	}
 
 	for (i = 0; i < gopts->num_threads; ++i) {
-		struct thread_args *targs = malloc(sizeof(struct thread_args));
-		targs->gopts = gopts;
-		targs->thread_id = i;
-		r = pthread_create(&threads[i], NULL, thread_function, (void*)targs);
+		MContext *mc = create_mutator_context(gopts, i);
+		r = pthread_create(&threads[i], NULL, thread_function, (void*)mc);
 		if (r) {
 			printf("Unable to create thread_function: %d\n", r);
 			exit(EXIT_FAILURE);
@@ -799,7 +761,5 @@ void run_acdc(GOptions *gopts) {
 		//destroy_mutator_context(thread_results[i]);
 		pthread_mutex_destroy(&shared_expiration_classes_locks[i]);
 	}
-	free(shared_expiration_classes);
-	free(shared_expiration_classes_locks);
 }
 
