@@ -34,6 +34,7 @@ static void print_usage() {
 			"-L max. object lifetime\n"
 			"-D deallocation delay\n"
 			"-g max. time gap\n"
+			"-N node buffer size\n"
 			"-O share objects\n"
 			"-R share ratio\n"
 			"-T share thread ratio\n"
@@ -55,6 +56,7 @@ static void set_default_params(GOptions *gopts) {
 	gopts->deallocation_delay = 0;
 	gopts->min_object_sc = 4;
 	gopts->max_object_sc = 8;
+	gopts->node_buffer_size = 1000; //TODO estimate from other parameters
 	gopts->share_objects = 0;
 	gopts->share_ratio = 0;
 	gopts->share_thread_ratio = 100;
@@ -100,6 +102,7 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->deallocation_delay = %d\n", gopts->deallocation_delay);
 	printf("gopts->min_object_sc = %d\n", gopts->min_object_sc);
 	printf("gopts->max_object_sc = %d\n", gopts->max_object_sc);
+	printf("gopts->node_buffer_size = %d\n", gopts->node_buffer_size);
 	printf("gopts->list_ratio = %d\n", gopts->list_ratio);
 	printf("gopts->btree_ratio = %d\n", gopts->btree_ratio);
 	printf("gopts->write_iterations = %d\n", gopts->write_iterations);
@@ -121,7 +124,7 @@ int main(int argc, char **argv) {
 	gopts->pid = getpid();
 
 	set_default_params(gopts);
-	const char *optString = "afn:t:d:r:l:L:D:g:s:S:OR:T:b:q:i:w:kvh";
+	const char *optString = "afn:t:d:r:l:L:D:g:s:S:N:OR:T:b:q:i:w:kvh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
@@ -161,6 +164,9 @@ int main(int argc, char **argv) {
 				break;
 			case 'S':
 				gopts->max_object_sc = atoi(optarg);
+				break;
+			case 'N':
+				gopts->node_buffer_size = atoi(optarg);
 				break;
 			case 'O':
 				gopts->share_objects = 1;

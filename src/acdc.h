@@ -35,6 +35,7 @@ struct global_options {
   int max_object_sc; //-S: max sizeclass
   int list_ratio; //-q:
   int btree_ratio; //-b:
+  int node_buffer_size; //-N: used to recycle nodes for LSClasses
   
   //options for object access
   int write_iterations; //-i:
@@ -155,6 +156,9 @@ struct mutator_context {
   MStat *stat; //mutator stats
   unsigned int time;
   LClass *expiration_class; // one LClass for each possible lifetime
+  LSCNode *node_buffer_memory;
+  int node_buffer_counter;
+  LClass node_cache;
 };
 
 

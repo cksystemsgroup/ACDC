@@ -113,8 +113,8 @@ static void lclass_insert_end(LClass *list, LSCNode *c) {
 		lclass_insert_after(list, list->last, c);
 }
 
-/*
-static void lclass_remove(LClass *list, LSClass *c) {
+
+static void lclass_remove(LClass *list, LSCNode *c) {
 	if (c->prev == NULL)
 		list->first = c->next;
 	else
@@ -124,15 +124,34 @@ static void lclass_remove(LClass *list, LSClass *c) {
 	else
 		c->next->prev = c->prev;
 }
-*/
 
-static LSCNode *get_LSCNode() {
-	//TODO recycling system
-	return calloc(1, sizeof(LSCNode));
+//dst_tid tells us which thread will traverse the Node
+static LSCNode *get_LSCNode(MContext *mc) {
+
+	LSCNode *node = mc->node_cache.first;
+	if (node != NULL) {
+		lclass_remove(&mc->node_cache, node);
+		debug("reuse node %p\n", node);
+		node->next = NULL;
+		node->prev = NULL;
+		return node;
+	}
+
+	if (mc->node_buffer_counter >= mc->gopts->node_buffer_size) {
+		printf("node buffer overflow. increase -N option\n");
+		exit(EXIT_FAILURE);
+	}
+	node = (LSCNode*)(((char*)mc->node_buffer_memory) + 
+		(mc->node_buffer_counter * L1_LINE_SZ));
+	mc->node_buffer_counter++;
+	debug("node %p\n", node);
+	node->next = NULL;
+	node->prev = NULL;
+	return node;
 }
-static void recycle_LSCNode(LSCNode *node) {
-	//TODO implement
-	return;
+static void recycle_LSCNode(MContext *mc, LSCNode *node) {
+	debug("give back node %p\n", node);
+	lclass_insert_beginning(&mc->node_cache, node);
 }
 
 //Expiration class API
@@ -147,7 +166,7 @@ static void expiration_class_insert(MContext *mc, LClass *expiration_class,
 	LClass *target_lifetime_class = &expiration_class[insert_index];
 
 	//wrap LSClass in a LSCNode object
-	LSCNode *node = get_LSCNode();
+	LSCNode *node = get_LSCNode(mc);
 	node->ls_class = c;
 
 	lclass_insert_end(target_lifetime_class, node);
@@ -183,7 +202,7 @@ static void expiration_class_remove(MContext *mc, LClass *expiration_class) {
 		unreference_and_deallocate_LSClass(mc, iterator->ls_class);
 		LSCNode *tmp = iterator;
 		iterator = iterator->next;
-		recycle_LSCNode(tmp);
+		recycle_LSCNode(mc, tmp);
 	}
 	//reset list
 	expired_lifetime_class->first = NULL;
@@ -196,6 +215,10 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 	
 	MContext *mc;
        	int r = posix_memalign((void**)&mc, L1_LINE_SZ, sizeof(MContext));
+	if (r != 0) {
+		printf("unable to align memory: %d\n", r);
+		exit(EXIT_FAILURE);
+	}
 	mc->gopts = gopts;
 	mc->time = 0;
 	
@@ -230,6 +253,16 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 		exit(EXIT_FAILURE);
 	}
 
+       	r = posix_memalign((void**)&mc->node_buffer_memory, 
+			L1_LINE_SZ, 
+			L1_LINE_SZ * gopts->node_buffer_size);
+	if (r != 0) {
+		printf("unable to align memory: %d\n", r);
+		exit(EXIT_FAILURE);
+	}
+	mc->node_buffer_counter = 0;
+	
+
 	return mc;
 }
 
@@ -240,6 +273,7 @@ static void destroy_mutator_context(MContext *mc) {
 	free(mc->expiration_class);
 	free(shared_expiration_classes[mc->thread_id]);
 	pthread_mutex_destroy(&shared_expiration_classes_locks[mc->thread_id]);
+	free(mc->node_buffer_memory);
 	free(mc);
 }
 
@@ -342,7 +376,6 @@ static void access_live_LClasses(MContext *mc) {
 		LSCNode *iterator = lc->first;
 		while (iterator != NULL) {
 			//debug("iterator %p", iterator);
-			debug("traverse %p", iterator->ls_class);
 			traverse_LSClass(mc, iterator->ls_class);
 			iterator = iterator->next;
 		}
