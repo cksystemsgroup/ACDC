@@ -459,8 +459,8 @@ static void *false_sharing_thread(void *ptr) {
 			if (sz < (sizeof(SharedObject) + 2))
 				sz = sizeof(SharedObject) + 2;
 		
-			mc->stat->lt_histogram[lt] += num_objects;
-			mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
+			//mc->stat->lt_histogram[lt] += num_objects;
+			//mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
 		
 			allocation_start = rdtsc();
 			fs_collection = 

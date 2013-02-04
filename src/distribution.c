@@ -25,7 +25,7 @@ static void next_rand(MContext *mc) {
 
 
 static int get_rand_int_range(MContext *mc, int from, int to) {
-	assert(to > from);
+	assert(to >= from);
 	next_rand(mc);
 	int range = (to - from) + 1;
 	int small_rand = mc->rand % range; //ok for small ranges
