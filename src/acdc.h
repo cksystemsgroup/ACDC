@@ -116,7 +116,7 @@ struct lifetime_size_class {
   size_t num_objects;
   collection_type type;
 
-  //which threads should share an object sharing
+  //which threads should share an object
   volatile u_int64_t sharing_map;
 
   //mark which threads already have this OColelction

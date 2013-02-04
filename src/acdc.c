@@ -775,8 +775,9 @@ void run_acdc(GOptions *gopts) {
 			thread_results[thread_0_index]->stat->vm_peak, 
 			thread_results[thread_0_index]->stat->rss_hwm, 
 			thread_results[thread_0_index]->stat->resident_set_size_counter / 
-			gopts->benchmark_duration
+			(gopts->benchmark_duration - 2 * gopts->max_lifetime) /* warmup*/
 			);
+
 
 	//TODO: free mutator context
 	for (i = 0; i < gopts->num_threads; ++i) {
