@@ -1,7 +1,7 @@
 #/bin/bash
 
 OUTPUT_DIR=data/memcons-objsz
-OPTIONS="-a -d 20 -l 1 -L 1 -k -t 1000000 -b 50 -q 50 -n 1"
+OPTIONS="-a -d 20 -l 1 -L 1 -k -t 10000000 -n 1 -N 1000000 -C 1000000 -H 200000"
 FACTOR1="-s"
 FACTOR2="-S"
 REPS=3
@@ -54,8 +54,7 @@ do
 				ALLOC_VALUE[$REP]=$(echo "scale=1; ${RUNTIME_ARRAY[5]} / $XVALUE" | bc)
 				FREE_VALUE[$REP]=$(echo "scale=1; ${RUNTIME_ARRAY[7]} / $XVALUE" | bc)
 				ACCESS_VALUE[$REP]=$(echo "scale=1; ${RUNTIME_ARRAY[9]} / $XVALUE" | bc)
-				#MEMCONS_VALUE[$REP]=$(echo "scale=1; ${MEMSTAT_ARRAY[5]} / $XVALUE" | bc)
-				MEMCONS_VALUE[$REP]=${MEMSTAT_ARRAY[5]}
+				MEMCONS_VALUE[$REP]=$(echo "scale=1; ${MEMSTAT_ARRAY[5]} / $XVALUE" | bc)
 			else
 				ALLOC_VALUE[$REP]=${RUNTIME_ARRAY[5]}
 				FREE_VALUE[$REP]=${RUNTIME_ARRAY[7]}

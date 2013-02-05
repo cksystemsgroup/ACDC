@@ -1,11 +1,11 @@
 #/bin/bash
 
-OUTPUT_DIR=data/contention-shared-threads-noaccess
-OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 5 -k -t 1000000 -N 10000 -O -T 100 -R 100 -H 20000"
-FACTOR1="-n"
-FACTOR2=""
+OUTPUT_DIR=data/locality-lists-vs-trees
+OPTIONS="-a -t 100000 -d 100 -l 1 -L 10 -s 3 -S 4 -i 1 -w 0"
+FACTOR1="-q"
+FACTOR2="-b"
 REPS=5
-RELATIVE=1
+RELATIVE=0
 
 HEADLINE="#Created at: `date` on `hostname`"
 HEADLINE="$HEADLINE\n#Average on $REPS runs. ACDC Options: $OPTIONS"
@@ -19,7 +19,7 @@ echo -e $HEADLINE > $OUTPUT_DIR/free.dat
 echo -e $HEADLINE > $OUTPUT_DIR/access.dat
 echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
-for XVALUE in 1 2 4 8 12 16 20 24
+for XVALUE in {0..100..20}
 do
 	ALLOC_OUTPUT="$XVALUE"
 	FREE_OUTPUT="$XVALUE"
@@ -36,7 +36,7 @@ do
 		for (( REP=1; REP<=$REPS; REP++ ))
 		do
 			#maybe derive 2nd factor from first factor?
-			XVALUE2=""
+			let "XVALUE2=100 - $XVALUE"
 			OUTPUT=$(./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
 
 			RUNTIME=$(echo "$OUTPUT" | grep RUNTIME)

@@ -1,10 +1,10 @@
 #/bin/bash
 
 OUTPUT_DIR=data/memcons-threads
-OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 10 -i 0 -k -t 10000000 -b 50 -q 50 -O -R 100 -T 100"
+OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 10 -g 1 -i 0 -k -t 10000000 -O -R 100 -T 100 -N 10000 -C 10000 -H 100000"
 FACTOR1="-n"
 FACTOR2=""
-REPS=5
+REPS=3
 RELATIVE=1
 
 HEADLINE="#Created at: `date` on `hostname`"

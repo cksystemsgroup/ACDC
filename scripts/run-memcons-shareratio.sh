@@ -1,7 +1,7 @@
 #/bin/bash
 
 OUTPUT_DIR=data/memcons-shareratio-12
-OPTIONS="-a -s 3 -S 12 -d 30 -l 1 -L 1 -g 5 -i 0 -k -t 1000000 -b 50 -q 50 -O -n 12 -T 100"
+OPTIONS="-a -s 3 -S 12 -d 30 -l 1 -L 1 -g 1 -i 0 -k -t 10000000 -O -n 12 -T 100 -N 100000 -C 100000 -H 200000"
 FACTOR1="-R"
 FACTOR2=""
 REPS=5
@@ -27,7 +27,6 @@ do
 	MEMCONS_OUTPUT="$XVALUE"
 	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc
 	do
-
 		ALLOC_SUM=0
 		FREE_SUM=0
 		ACCESS_SUM=0
@@ -108,3 +107,4 @@ gnuplot plot_free.p && epstopdf free.eps
 gnuplot plot_access.p && epstopdf access.eps
 gnuplot plot_memcons.p && epstopdf memcons.eps
 cd $CWD
+
