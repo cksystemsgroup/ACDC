@@ -396,8 +396,8 @@ static BTObject *build_tree_recursion(MContext *mc, size_t sz,
 	--nelem;
 
 	int half = nelem / 2;
-	t->left = build_tree_recursion(mc, sz, half);
 	t->right = build_tree_recursion(mc, sz, nelem - half);
+	t->left = build_tree_recursion(mc, sz, half);
 	
 	return t;
 }
