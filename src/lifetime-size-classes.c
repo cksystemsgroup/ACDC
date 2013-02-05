@@ -45,16 +45,14 @@ static void recycle_LSClass(MContext *mc, LSClass *class) {
 	lclass_insert_beginning(&mc->class_cache, n);
 }
 
-static int *get_thread_ids(u_int64_t sharing_map) {
-	int num_threads = __builtin_popcountl(sharing_map);
-	int *thread_ids = calloc(num_threads, sizeof(int)); //TODO remove calloc
+static void get_thread_ids(int *thread_ids, u_int64_t sharing_map) {
+	//int *thread_ids = calloc(num_threads, sizeof(int)); //TODO remove calloc
 	int i, j;
 	for (i = 0, j = 0; i < sizeof(u_int64_t); ++i) {
 		if ( (1 << i) & sharing_map ) {
 			thread_ids[j++] = i;
 		}
 	}
-	return thread_ids;
 }
 /**
  * write_ratio determines how many objects are written. e.g., 
@@ -87,8 +85,8 @@ static void assign_optimal_fs_pool_objects(MContext *mc, LSClass *c,
 
 	//check which threads should participate
 	int num_threads = __builtin_popcountl(sharing_map);
-
-	int *thread_ids = get_thread_ids(sharing_map);
+	int *thread_ids = alloca(num_threads * sizeof(int));
+	get_thread_ids(thread_ids, sharing_map);
 
 	int cache_lines_per_element = (c->object_size / L1_LINE_SZ) + 1;
 	assert(cache_lines_per_element == 1);
@@ -101,7 +99,6 @@ static void assign_optimal_fs_pool_objects(MContext *mc, LSClass *c,
 	}
 
 	assert(i % num_threads == 0);
-	free(thread_ids);
 }
 
 
@@ -109,14 +106,14 @@ static void assign_fs_pool_objects(MContext *mc, LSClass *c, u_int64_t sharing_m
 
 	//check which threads should participate
 	int num_threads = __builtin_popcountl(sharing_map);
-	int *thread_ids = get_thread_ids(sharing_map);
+	int *thread_ids = alloca(num_threads * sizeof(int));
+	get_thread_ids(thread_ids, sharing_map);
 
 	int i;
 	for (i = 0; i < c->num_objects; ++i) {
 		SharedObject *o = ((SharedObject**)c->start)[i];
 		o->sharing_map = 1 << ( thread_ids[i % num_threads]  );	
 	}
-	free(thread_ids);
 }
 
 static LSClass *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem, 
