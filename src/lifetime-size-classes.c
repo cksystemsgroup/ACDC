@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <assert.h>
+#include <alloca.h>
 
 #include "acdc.h"
 #include "caches.h"
@@ -71,7 +72,6 @@ static int write_ith_element(MContext *mc, int i) {
 static LSClass *new_LSClass(MContext *mc, collection_type t, 
 		size_t sz, unsigned long nelem, u_int64_t sharing_map) {
 
-	//LSClass *c = malloc(sizeof(LSClass));
 	LSClass *c = get_LSClass(mc);
 	c->object_size = sz;
 	c->num_objects = nelem;
@@ -87,6 +87,7 @@ static void assign_optimal_fs_pool_objects(MContext *mc, LSClass *c,
 
 	//check which threads should participate
 	int num_threads = __builtin_popcountl(sharing_map);
+
 	int *thread_ids = get_thread_ids(sharing_map);
 
 	int cache_lines_per_element = (c->object_size / L1_LINE_SZ) + 1;
@@ -129,7 +130,7 @@ static LSClass *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
 	LSClass *c = new_LSClass(mc, FALSE_SHARING, sz, nelem, sharing_map);
 
 	//we store all objects on an array. one after the other
-	c->start = calloc(nelem, sizeof(SharedObject*));
+	c->start = allocate(mc, nelem * sizeof(SharedObject*));
 
 	int i;
 	for (i = 0; i < nelem; ++i) {
@@ -171,9 +172,8 @@ static void deallocate_fs_pool(MContext *mc, LSClass *c) {
 	for (i = 0; i < c->num_objects; ++i) {
 		 deallocate(mc, ((SharedObject**)c->start)[i], c->object_size);
 	}
-	free(c->start);
+	deallocate(mc, c->start, c->num_objects * sizeof(SharedObject*));
 	c->start = NULL;
-	//free(c);
 	recycle_LSClass(mc, c);
 }
 

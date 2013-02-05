@@ -436,6 +436,7 @@ static volatile int fs_collection_bytes;
 static volatile int fs_allocation_thread;
 static volatile int fs_deallocation_thread;
 static void *false_sharing_thread(void *ptr) {
+
 	MContext *mc = (MContext*)ptr;
 	my_mc = mc;
 	unsigned long time_counter = 0;
@@ -476,7 +477,7 @@ static void *false_sharing_thread(void *ptr) {
 #ifdef OPTIMAL_MODE
 			tp = OPTIMAL_FALSE_SHARING;
 #endif		
-			if (sz < (sizeof(SharedObject) + 2))
+			//if (sz < (sizeof(SharedObject) + 2))
 				sz = sizeof(SharedObject) + 2;
 		
 			//mc->stat->lt_histogram[lt] += num_objects;
@@ -641,6 +642,7 @@ void run_acdc(GOptions *gopts) {
 
 	int i, r;
 	pthread_t *threads = malloc_meta(sizeof(pthread_t) * gopts->num_threads);
+	MContext **thread_data = malloc_meta(sizeof(MContext*) * gopts->num_threads);
 	MContext **thread_results = malloc_meta(sizeof(MContext*) * gopts->num_threads);
 	int thread_0_index = 0;
 
@@ -664,11 +666,14 @@ void run_acdc(GOptions *gopts) {
 	} else {
 		printf("Mode not supported\n");
 		exit(EXIT_FAILURE);
+	}	
+	
+	for (i = 0; i < gopts->num_threads; ++i) {
+		thread_data[i] = create_mutator_context(gopts, i);
 	}
 
 	for (i = 0; i < gopts->num_threads; ++i) {
-		MContext *mc = create_mutator_context(gopts, i);
-		r = pthread_create(&threads[i], NULL, thread_function, (void*)mc);
+		r = pthread_create(&threads[i], NULL, thread_function, (void*)thread_data[i]);
 		if (r) {
 			printf("Unable to create thread_function: %d\n", r);
 			exit(EXIT_FAILURE);

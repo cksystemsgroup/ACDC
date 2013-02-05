@@ -23,6 +23,7 @@ static void *align_address(void *ptr, size_t alignment) {
 	return (void*)addr;
 }
 void init_metadata_heap(size_t heapsize) {
+	
 	metadata_heap_start = sbrk(heapsize * 1024); //parameter is in kB
 	if (metadata_heap_start == (void*)-1) {
 		printf("unable to allocate metadata heap\n");
@@ -32,12 +33,13 @@ void init_metadata_heap(size_t heapsize) {
 	metadata_heap_bump_pointer = metadata_heap_start;
 }
 static void *get_chunk(size_t size) {
+	void *ptr = metadata_heap_bump_pointer;
 	metadata_heap_bump_pointer += size;
 	if (metadata_heap_bump_pointer >= metadata_heap_end) {
 		printf("out of metadata space. Increase -H option\n");
 		exit(EXIT_FAILURE);
 	}
-	return metadata_heap_bump_pointer;
+	return ptr;
 }
 
 void *malloc_meta(size_t size) {

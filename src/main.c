@@ -125,6 +125,7 @@ int main(int argc, char **argv) {
 	//initial_break = sbrk(0);
 
 	GOptions *gopts = sbrk(sizeof(GOptions));	
+	//GOptions *gopts = malloc(sizeof(GOptions));	
 	if (gopts == (void*)-1) {
 		printf("unable to allocate global options\n");
 		exit(EXIT_FAILURE);
