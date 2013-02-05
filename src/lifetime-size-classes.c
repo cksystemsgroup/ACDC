@@ -59,6 +59,7 @@ static void get_thread_ids(int *thread_ids, u_int64_t sharing_map) {
  * write_ratio of 20 means that every 5th element is written
  */
 static int write_ith_element(MContext *mc, int i) {
+	if (mc->gopts->write_ratio == 0) return 0;
 	int ith = 100 / mc->gopts->write_ratio;
 	if ( i % ith == 0 ) return 1;
 	return 0;
