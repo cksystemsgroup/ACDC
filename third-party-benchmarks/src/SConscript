@@ -1,0 +1,56 @@
+bench_env = Environment()
+bench_conf = Configure(bench_env)
+
+if not bench_conf.CheckHeader('pthread.h'):
+	print "You need 'pthread.h'. Not Found!"
+	Exit(1)
+else:
+	bench_conf.env.Append(LIBS=['pthread'])
+
+bench_env = bench_conf.Finish()
+
+bench_env.Append(LIBS=['pthread'])
+#bench_env.Append(CPPFLAGS=['-Wall', '-Werror'])
+
+for build in ['release', 'debug']:
+	for config in ['ptmalloc2', 'ptmalloc3', 'tcmalloc', 'jemalloc', 'tbb', 'llalloc']:
+		e = bench_env.Clone()
+
+		if build == 'release':
+			e.Append(CPPFLAGS=['-O3'])
+		if build == 'debug':
+			e.Append(CPPFLAGS=['-g'])
+
+		if config == 'optimal':
+			e.Append(CPPFLAGS=['-DOPTIMAL_MODE'])
+			e.Append(CPPFLAGS=['-DALLOCATOR=optimal'])
+		if config == 'ptmalloc2':
+			e.Append(CPPFLAGS=['-DALLOCATOR=ptmalloc2'])
+		if config == 'ptmalloc3':
+			e.Append(LIBS=['ptmalloc3'], LIBPATH=['../../allocators'])
+			e.Append(CPPFLAGS=['-DALLOCATOR=ptmalloc3'])
+		if config == 'tcmalloc':
+			e.Append(LIBS=['tcmalloc_minimal'], LIBPATH=['/usr/lib'])
+			e.Append(CPPFLAGS=['-DALLOCATOR=tcmalloc'])
+		if config == 'jemalloc':
+			e.Append(LIBS=['jemalloc'], LIBPATH=['../../allocators'])
+			e.Append(CPPFLAGS=['-DALLOCATOR=jemalloc'])
+		if config == 'tbb':
+			e.Append(LIBS=['tbbmalloc_proxy', 'tbbmalloc'], LIBPATH=['../../allocators'])
+			e.Append(CPPFLAGS=['-DALLOCATOR=tbb'])
+		if config == 'llalloc':
+			e.Append(LIBS=['llalloc'], LIBPATH=['../../allocators'])
+			e.Append(CPPFLAGS=['-DALLOCATOR=llalloc'])
+
+		object_list = []
+		for obj in ['lever_boreham_bench1']:
+			obj_name = obj+"-"+config
+			if build == 'debug':
+				obj_name = obj_name+"-dbg"
+			e.Object(obj_name, obj+".c")
+			object_list.append(obj_name+".o")
+		
+		for prg in object_list:
+			e.Program(prg)
+		
+

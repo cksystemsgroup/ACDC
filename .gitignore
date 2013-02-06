@@ -11,3 +11,4 @@ results.txt
 ._.DS_Store
 log.txt
 runall.sh
+third-party-benchmarks/build
