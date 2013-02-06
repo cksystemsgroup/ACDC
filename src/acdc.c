@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <assert.h>
+#include <sys/time.h>
 
 #include "acdc.h"
 #include "arch.h"
@@ -261,16 +262,17 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 
 static void get_and_print_memstats(MContext *mc) {
 
-	//warmup phase: start memory measurements after max-lifetime
-	//units of time
-	if (mc->time < 2 * mc->gopts->max_lifetime) return;
-
 	update_proc_status(mc->gopts->pid);
 	mc->stat->current_rss = get_resident_set_size();
-	mc->stat->resident_set_size_counter +=
-		mc->stat->current_rss;
-	mc->stat->vm_peak = get_vm_peak();
-	mc->stat->rss_hwm = get_high_water_mark();
+	
+	//warmup phase: start memory measurements after max-lifetime
+	//units of time
+	if (mc->time >= 2 * mc->gopts->max_lifetime) {
+		mc->stat->resident_set_size_counter +=
+			mc->stat->current_rss;
+		mc->stat->vm_peak = get_vm_peak();
+		mc->stat->rss_hwm = get_high_water_mark();
+	}
 
 	if (mc->gopts->verbosity == 0) return;
 
@@ -561,7 +563,7 @@ static void *acdc_thread(void *ptr) {
 		collection_type tp;
 		u_int64_t sharing_map;
 
-		get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
+		//get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
 
 		//TODO: move to get_random_object...
 		//check if collections can be built with sz + min_payload
@@ -575,6 +577,16 @@ static void *acdc_thread(void *ptr) {
 
 		mc->stat->lt_histogram[lt] += num_objects;
 		mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
+
+		if (mc->gopts->fixed_number_of_objects > 0) {
+			num_objects = mc->gopts->fixed_number_of_objects;
+			sz = 1 << mc->gopts->min_object_sc;
+			lt = mc->gopts->min_lifetime;
+			sharing_map = 1 << mc->thread_id;
+			tp = LIST;
+		} else {
+			get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
+		}
 
 #ifdef OPTIMAL_MODE
 		if (tp == LIST) tp = OPTIMAL_LIST;
@@ -596,8 +608,14 @@ static void *acdc_thread(void *ptr) {
 		assert(__builtin_popcountl(c->sharing_map) <= mc->gopts->num_threads);
 		debug("created collection %p with lt %d", c, lt);
 
-		share_LSClass(mc, c);
-		get_shared_LClasses(mc);	
+		if (mc->gopts->share_objects) {
+			share_LSClass(mc, c);
+			get_shared_LClasses(mc);
+		} else {
+			//bypass sharing pool
+			c->reference_map = c->sharing_map;
+			expiration_class_insert(mc, mc->expiration_class, c);
+		}
 
 		access_start = rdtsc();
 		access_live_LClasses(mc);
@@ -641,6 +659,7 @@ static void *acdc_thread(void *ptr) {
 void run_acdc(GOptions *gopts) {
 
 	int i, r;
+	struct timeval start, end, elapsed;
 	pthread_t *threads = malloc_meta(sizeof(pthread_t) * gopts->num_threads);
 	MContext **thread_data = malloc_meta(sizeof(MContext*) * gopts->num_threads);
 	MContext **thread_results = malloc_meta(sizeof(MContext*) * gopts->num_threads);
@@ -672,6 +691,8 @@ void run_acdc(GOptions *gopts) {
 		thread_data[i] = create_mutator_context(gopts, i);
 	}
 
+	gettimeofday(&start, NULL);
+
 	for (i = 0; i < gopts->num_threads; ++i) {
 		r = pthread_create(&threads[i], NULL, thread_function, (void*)thread_data[i]);
 		if (r) {
@@ -689,6 +710,8 @@ void run_acdc(GOptions *gopts) {
 		if (thread_results[i]->thread_id == 0)
 			thread_0_index = i;
 	}
+
+	gettimeofday(&end, NULL);
 
 	//aggreagate info in first thread's MContext
 	int j;
@@ -749,6 +772,11 @@ void run_acdc(GOptions *gopts) {
 			((double)thread_results[0]->stat->access_time /
 			 (double)thread_results[0]->stat->running_time)*100.0
 			);
+	elapsed.tv_sec = end.tv_sec - start.tv_sec;
+	elapsed.tv_usec = end.tv_usec - start.tv_usec;
+	unsigned long time_in_ms = (elapsed.tv_sec * 1000000 + elapsed.tv_usec)/1000;
+
+	printf("WALLCLOCK\t%lu\n", time_in_ms);
 
 	//update_proc_status(gopts->pid);
 	printf("MEMORY\t%s\t%d\t%ld\t%ld\t%ld\n",
@@ -756,8 +784,9 @@ void run_acdc(GOptions *gopts) {
 			gopts->num_threads,
 			thread_results[thread_0_index]->stat->vm_peak, 
 			thread_results[thread_0_index]->stat->rss_hwm, 
-			thread_results[thread_0_index]->stat->resident_set_size_counter / 
-			(gopts->benchmark_duration - 2 * gopts->max_lifetime) /* warmup*/
+			(thread_results[thread_0_index]->stat->resident_set_size_counter / 
+			(gopts->benchmark_duration - 2 * gopts->max_lifetime))
+		       	- gopts->metadata_heap_sz	/* warmup*/
 			);
 
 

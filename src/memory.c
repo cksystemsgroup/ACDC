@@ -31,6 +31,14 @@ void init_metadata_heap(size_t heapsize) {
 	}
 	metadata_heap_end = sbrk(0);
 	metadata_heap_bump_pointer = metadata_heap_start;
+
+	//make heap hot
+	int i;
+	volatile void *ptr;
+	for (i = 1; i < heapsize * 1024; i = i + 64) {
+		ptr = (void*)((long)metadata_heap_start + i);
+		*(int*)ptr = i;
+	}
 }
 static void *get_chunk(size_t size) {
 	void *ptr = metadata_heap_bump_pointer;
