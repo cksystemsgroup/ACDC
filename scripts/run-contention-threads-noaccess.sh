@@ -1,7 +1,7 @@
 #/bin/bash
 
 OUTPUT_DIR=data/contention-threads-noaccess
-OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 5 -k -t 1000000 -N 10000 -H 20000"
+OPTIONS="-a -s 3 -S 12 -d 100 -l 1 -L 5 -k -t 1000000 -N 10000 -C 10000 -H 50000"
 FACTOR1="-n"
 FACTOR2=""
 REPS=5
@@ -37,6 +37,7 @@ do
 		do
 			#maybe derive 2nd factor from first factor?
 			XVALUE2=""
+			echo "./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2"
 			OUTPUT=$(./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
 
 			RUNTIME=$(echo "$OUTPUT" | grep RUNTIME)

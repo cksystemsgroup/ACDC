@@ -1,10 +1,10 @@
 #/bin/bash
 
 OUTPUT_DIR=data/memcons-threads
-OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 10 -g 1 -i 0 -k -t 10000000 -O -R 100 -T 100 -N 10000 -C 10000 -H 100000"
+OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 5 -g 1 -i 0 -k -t 10000000 -O -R 100 -T 100 -N 10000 -C 10000 -H 100000"
 FACTOR1="-n"
 FACTOR2=""
-REPS=3
+REPS=5
 RELATIVE=1
 
 HEADLINE="#Created at: `date` on `hostname`"
@@ -21,12 +21,14 @@ echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
 for XVALUE in 1 2 4 6 8 12 16 20 24
 do
+	echo $XVALUE
 	ALLOC_OUTPUT="$XVALUE"
 	FREE_OUTPUT="$XVALUE"
 	ACCESS_OUTPUT="$XVALUE"
 	MEMCONS_OUTPUT="$XVALUE"
 	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc
 	do
+		echo $CONF
 
 		ALLOC_SUM=0
 		FREE_SUM=0

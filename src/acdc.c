@@ -563,14 +563,25 @@ static void *acdc_thread(void *ptr) {
 		collection_type tp;
 		u_int64_t sharing_map;
 
-		//get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
+		get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
+
+		if (mc->gopts->fixed_number_of_objects > 0) {
+			num_objects = mc->gopts->fixed_number_of_objects;
+			sz = 1 << mc->gopts->min_object_sc;
+			lt = mc->gopts->min_lifetime;
+			sharing_map = 1 << mc->thread_id;
+			//tp = LIST;
+		} else {
+			//get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
+		}
 
 		//TODO: move to get_random_object...
 		//check if collections can be built with sz + min_payload
+		
 		if (tp == BTREE && sz < (sizeof(BTObject) + 4))
 			sz = sizeof(BTObject) + 4;
-		if (tp == LIST && sz < (sizeof(LObject) + 4))
-			sz = sizeof(LObject) + 4;
+		if (tp == LIST && sz < (sizeof(BTObject) + 4))
+			sz = sizeof(BTObject) + 4;
 		if (tp == FALSE_SHARING && sz < sizeof(SharedObject)) {
 			assert(0);
 		}
@@ -578,15 +589,6 @@ static void *acdc_thread(void *ptr) {
 		mc->stat->lt_histogram[lt] += num_objects;
 		mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
 
-		if (mc->gopts->fixed_number_of_objects > 0) {
-			num_objects = mc->gopts->fixed_number_of_objects;
-			sz = 1 << mc->gopts->min_object_sc;
-			lt = mc->gopts->min_lifetime;
-			sharing_map = 1 << mc->thread_id;
-			tp = LIST;
-		} else {
-			get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
-		}
 
 #ifdef OPTIMAL_MODE
 		if (tp == LIST) tp = OPTIMAL_LIST;

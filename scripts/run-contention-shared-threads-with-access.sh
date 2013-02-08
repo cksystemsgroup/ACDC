@@ -1,10 +1,10 @@
 #/bin/bash
 
 OUTPUT_DIR=data/contention-shared-threads-with-access
-OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 5 -i 1 -w 10 -t 1000000 -N 10000 -O -T 100 -R 100 -H 20000"
+OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 5 -i 1 -w 10 -t 1000000 -N 10000 -C 10000 -O -T 100 -R 100 -H 50000"
 FACTOR1="-n"
 FACTOR2=""
-REPS=3
+REPS=2
 RELATIVE=1
 
 HEADLINE="#Created at: `date` on `hostname`"
@@ -14,12 +14,13 @@ HEADLINE="$HEADLINE\n#x($FACTOR1)\tjemalloc\tstddev\tllalloc\tstddev\toptimal\ts
 rm -rf $OUTPUT_DIR
 mkdir -p $OUTPUT_DIR
 
-echo -e $HEADLINE > $OUTPUT_DIR/alloc.dat
-echo -e $HEADLINE > $OUTPUT_DIR/free.dat
-echo -e $HEADLINE > $OUTPUT_DIR/access.dat
-echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
+#echo -e $HEADLINE > $OUTPUT_DIR/alloc.dat
+#echo -e $HEADLINE > $OUTPUT_DIR/free.dat
+#echo -e $HEADLINE > $OUTPUT_DIR/access.dat
+#echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
-for XVALUE in 1 2 4 8 12 16 20 24
+#for XVALUE in 1 2 4 8 12 16 20 24
+for XVALUE in 20 24
 do
 	ALLOC_OUTPUT="$XVALUE"
 	FREE_OUTPUT="$XVALUE"
@@ -37,6 +38,7 @@ do
 		do
 			#maybe derive 2nd factor from first factor?
 			XVALUE2=""
+			echo "./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2"
 			OUTPUT=$(./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
 
 			RUNTIME=$(echo "$OUTPUT" | grep RUNTIME)

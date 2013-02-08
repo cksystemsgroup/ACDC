@@ -1,10 +1,10 @@
 #/bin/bash
 
 OUTPUT_DIR=data/locality-lists-vs-trees
-OPTIONS="-a -t 100000 -d 100 -l 1 -L 10 -s 3 -S 4 -i 1 -w 0"
+OPTIONS="-a -t 200000 -d 50 -l 1 -L 10 -s 4 -S 4 -i 1 -w 0 -N 10000 -C 10000"
 FACTOR1="-q"
 FACTOR2="-b"
-REPS=5
+REPS=3
 RELATIVE=0
 
 HEADLINE="#Created at: `date` on `hostname`"
@@ -37,6 +37,7 @@ do
 		do
 			#maybe derive 2nd factor from first factor?
 			let "XVALUE2=100 - $XVALUE"
+			echo "./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2"
 			OUTPUT=$(./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
 
 			RUNTIME=$(echo "$OUTPUT" | grep RUNTIME)

@@ -4,7 +4,7 @@ OUTPUT_DIR=data/memcons-shareratio-12
 OPTIONS="-a -s 3 -S 12 -d 30 -l 1 -L 1 -g 1 -i 0 -k -t 10000000 -O -n 12 -T 100 -N 100000 -C 100000 -H 200000"
 FACTOR1="-R"
 FACTOR2=""
-REPS=5
+REPS=6
 RELATIVE=0
 
 HEADLINE="#Created at: `date` on `hostname`"
@@ -21,12 +21,14 @@ echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
 for XVALUE in {0..100..20}
 do
+	echo $XVALUE
 	ALLOC_OUTPUT="$XVALUE"
 	FREE_OUTPUT="$XVALUE"
 	ACCESS_OUTPUT="$XVALUE"
 	MEMCONS_OUTPUT="$XVALUE"
 	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc
 	do
+		echo $CONF
 		ALLOC_SUM=0
 		FREE_SUM=0
 		ACCESS_SUM=0
@@ -36,6 +38,7 @@ do
 		do
 			#maybe derive 2nd factor from first factor?
 			XVALUE2=""
+			echo "./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2"
 			OUTPUT=$(./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
 
 			RUNTIME=$(echo "$OUTPUT" | grep RUNTIME)

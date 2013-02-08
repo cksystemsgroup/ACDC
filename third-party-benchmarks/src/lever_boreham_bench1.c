@@ -2,6 +2,7 @@
  * Adapted from
  * http://www.citi.umich.edu/projects/linux-scalability/reports/malloc.html
  * to compile on gcc 4.6.3
+ * added average computation over number of threads
  */
 
 
@@ -39,6 +40,8 @@ int main(int argc, char *argv[])
 	unsigned i;
 	unsigned thread_count = 1;
 	pthread_t thread[MAX_THREADS];
+	unsigned long thread_results[MAX_THREADS]; //maigner: added to sum/average thread results
+	unsigned long thread_execution_time_sum = 0.0;
 
 	/*
 	 * Parse our arguments
@@ -74,8 +77,12 @@ int main(int argc, char *argv[])
 	/*
 	 * Wait for tests to finish
 	 */
-	for (i=1; i<=thread_count; i++)
-		pthread_join(thread[i], NULL);
+	for (i=1; i<=thread_count; i++) {
+		pthread_join(thread[i], (void*)&thread_results[i]);
+		thread_execution_time_sum += thread_results[i];
+	}
+
+	printf("RUNTIME:\t%lu\n", thread_execution_time_sum);
 
 	exit(0);
 }
@@ -129,7 +136,7 @@ void run_test(void)
 	}
 
 	/*
-	 * Adjust elapsed time by null loop time
+	 * Adjust elapsed time by null loop times
 	 */
 	adjusted.tv_sec = elapsed.tv_sec - null.tv_sec;
 	adjusted.tv_usec = elapsed.tv_usec - null.tv_usec;
@@ -137,12 +144,14 @@ void run_test(void)
 		adjusted.tv_sec--;
 		adjusted.tv_usec += USECSPERSEC;
 	}
-	printf("Thread %d adjusted timing: %d.%06d seconds for %d requests"
-		" of %d bytes.\n", (int)pthread_self(),
+	printf("Thread %lu adjusted timing: %d.%06d seconds for %d requests"
+		" of %d bytes.\n", pthread_self(),
 		(int)adjusted.tv_sec, (int)adjusted.tv_usec, total_iterations,
 		request_size);
 
-	pthread_exit(NULL);
+	unsigned long time_in_ms = (adjusted.tv_sec * 1000000 + adjusted.tv_usec)/1000;
+
+	pthread_exit((void*)time_in_ms); //return time as a pointer value
 }
 
 void * dummy(unsigned i)

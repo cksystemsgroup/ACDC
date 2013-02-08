@@ -1,11 +1,11 @@
 #/bin/bash
 
-OUTPUT_DIR=data/contention-threads-with-access
-OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 5 -i 1 -w 10 -t 1000000 -N 10000 -C 10000 -H 40000"
-FACTOR1="-n"
+OUTPUT_DIR=data/deallocation-delay
+OPTIONS="-a -n 1 -d 50 -s 3 -S 13 -k -t 50000000 -C 10000 -N 10000 -l 1 -L 10"
+FACTOR1="-D"
 FACTOR2=""
-REPS=5
-RELATIVE=1
+REPS=2
+RELATIVE=0
 
 HEADLINE="#Created at: `date` on `hostname`"
 HEADLINE="$HEADLINE\n#Average on $REPS runs. ACDC Options: $OPTIONS"
@@ -19,7 +19,7 @@ echo -e $HEADLINE > $OUTPUT_DIR/free.dat
 echo -e $HEADLINE > $OUTPUT_DIR/access.dat
 echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
-for XVALUE in 1 2 4 6 8 10 12 14 16 20 24
+for XVALUE in 0 5 10 15
 do
 	ALLOC_OUTPUT="$XVALUE"
 	FREE_OUTPUT="$XVALUE"

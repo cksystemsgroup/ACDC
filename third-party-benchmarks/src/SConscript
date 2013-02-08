@@ -12,7 +12,8 @@ bench_env = bench_conf.Finish()
 bench_env.Append(LIBS=['pthread'])
 #bench_env.Append(CPPFLAGS=['-Wall', '-Werror'])
 
-for build in ['release', 'debug']:
+#for build in ['release', 'debug']:
+for build in ['release']:
 	for config in ['ptmalloc2', 'ptmalloc3', 'tcmalloc', 'jemalloc', 'tbb', 'llalloc']:
 		e = bench_env.Clone()
 
@@ -53,4 +54,7 @@ for build in ['release', 'debug']:
 		for prg in object_list:
 			e.Program(prg)
 		
+		larson_cfg = "larson-"+config
+		e.Object(larson_cfg, "larson.cpp")
+		e.Program(larson_cfg, larson_cfg+".o")
 
