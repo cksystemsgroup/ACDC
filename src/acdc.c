@@ -280,7 +280,7 @@ static void get_and_print_memstats(MContext *mc) {
 			ALLOCATOR_NAME,
 			mc->thread_id,
 			mc->time,
-			mc->stat->current_rss
+			mc->stat->current_rss - mc->gopts->metadata_heap_sz
 	      );
 }
 

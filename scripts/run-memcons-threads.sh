@@ -1,7 +1,7 @@
 #/bin/bash
 
 OUTPUT_DIR=data/memcons-threads
-OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 5 -g 1 -i 0 -k -t 10000000 -O -R 100 -T 100 -N 10000 -C 10000 -H 100000"
+OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 5 -g 1 -k -t 10000000 -O -R 100 -T 100 -N 20000 -C 20000 -H 200000 -v"
 FACTOR1="-n"
 FACTOR2=""
 REPS=5
@@ -39,10 +39,15 @@ do
 		do
 			#maybe derive 2nd factor from first factor?
 			XVALUE2=""
+			echo "./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2"
 			OUTPUT=$(./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
 
 			RUNTIME=$(echo "$OUTPUT" | grep RUNTIME)
 			MEMSTAT=$(echo "$OUTPUT" | grep MEMORY)
+			MEMGRAPH=$(echo "$OUTPUT" | grep MEMSTATS)
+
+			echo -e  "$MEMGRAPH" >> $OUTPUT_DIR/memgraph-$CONF-$XVALUE-$REP.dat
+			
 
 			#echo $RUNTIME
 			#echo $MEMSTAT
