@@ -1,10 +1,11 @@
 #/bin/bash
 
 OUTPUT_DIR=data/contention-shared-threads-noaccess
-OPTIONS="-a -s 3 -S 12 -d 100 -l 1 -L 5 -k -t 1000000 -N 10000 -C 10000 -O -T 100 -R 100 -H 50000"
+#OPTIONS="-a -s 3 -S 10 -d 100 -l 1 -L 5 -k -t 1000000 -N 10000 -C 10000 -O -T 100 -R 100 -H 50000"
+OPTIONS="-a -s 3 -S 10 -d 100 -l 1 -L 5 -k -t 1000000 -N 20000 -C 20000 -O -T 100 -R 100 -H 200000"
 FACTOR1="-n"
 FACTOR2=""
-REPS=5
+REPS=3
 RELATIVE=1
 
 HEADLINE="#Created at: `date` on `hostname`"
@@ -19,7 +20,7 @@ echo -e $HEADLINE > $OUTPUT_DIR/free.dat
 echo -e $HEADLINE > $OUTPUT_DIR/access.dat
 echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
-for XVALUE in 1 2 4 8 12 16 20 24
+for XVALUE in 1 2 4 8 16 32 64
 do
 	ALLOC_OUTPUT="$XVALUE"
 	FREE_OUTPUT="$XVALUE"
@@ -32,6 +33,18 @@ do
 		FREE_SUM=0
 		ACCESS_SUM=0
 		MEMCONS_SUM=0
+
+		if [ $CONF == "optimal" -o $CONF == "ptmalloc2" -o $CONF == "ptmalloc3" ]
+		then
+			echo "skipping $CONF..."
+			RUNTIME_OUTPUT="$RUNTIME_OUTPUT\t0\t0"p		
+			ALLOC_OUTPUT="$ALLOC_OUTPUT\t0\t0"
+			FREE_OUTPUT="$FREE_OUTPUT\t0\t0"
+			ACCESS_OUTPUT="$ACCESS_OUTPUT\t0\t0"
+			MEMCONS_OUTPUT="$MEMCONS_OUTPUT\t0\t0"
+			continue
+		fi
+
 
 		for (( REP=1; REP<=$REPS; REP++ ))
 		do
