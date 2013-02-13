@@ -1,8 +1,8 @@
 #/bin/bash
 
 OUTPUT_DIR=data/lever-boreham-emulation
-#OPTIONS="-a -s 9 -S 9 -t 1 -l 1 -L 1 -k -d 300000 -g 1000000 -F 20"
-OPTIONS="-a -s 9 -S 9 -t 1 -l 1 -L 1 -k -d 90000 -g 1000000 -F 100"
+#OPTIONS="-a -s 9 -S 9 -t 1 -l 1 -L 1 -k -d 90000 -g 1000000 -F 100"
+OPTIONS="-a -s 9 -S 9 -t 1 -l 1 -L 1 -k -d 100000 -g 1000000 -F 100"
 FACTOR1="-n"
 FACTOR2=""
 REPS=5
