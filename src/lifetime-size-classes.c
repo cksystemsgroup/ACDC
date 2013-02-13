@@ -49,7 +49,7 @@ static void get_thread_ids(int *thread_ids, u_int64_t sharing_map) {
 	//int *thread_ids = calloc(num_threads, sizeof(int)); //TODO remove calloc
 	int i, j;
 	for (i = 0, j = 0; i < sizeof(u_int64_t); ++i) {
-		if ( (1 << i) & sharing_map ) {
+		if ( (1UL << i) & sharing_map ) {
 			thread_ids[j++] = i;
 		}
 	}
@@ -97,7 +97,7 @@ static void assign_optimal_fs_pool_objects(MContext *mc, LSClass *c,
 	for (i = 0; i < c->num_objects; ++i) {
 		char *next = (char*)c->start + cache_lines_per_element * L1_LINE_SZ * i;
 		SharedObject *o = (SharedObject*)next;
-		o->sharing_map = 1 << ( thread_ids[i % num_threads] );
+		o->sharing_map = 1UL << ( thread_ids[i % num_threads] );
 	}
 
 	assert(i % num_threads == 0);
@@ -114,7 +114,7 @@ static void assign_fs_pool_objects(MContext *mc, LSClass *c, u_int64_t sharing_m
 	int i;
 	for (i = 0; i < c->num_objects; ++i) {
 		SharedObject *o = ((SharedObject**)c->start)[i];
-		o->sharing_map = 1 << ( thread_ids[i % num_threads]  );	
+		o->sharing_map = 1UL << ( thread_ids[i % num_threads]  );	
 	}
 }
 
@@ -190,7 +190,7 @@ static void deallocate_optimal_fs_pool(MContext *mc, LSClass *c) {
 
 static void traverse_fs_pool(MContext *mc, LSClass *c) {
 	//check if thread bit is set in sharing_map
-	u_int64_t my_bit = 1 << mc->thread_id;
+	u_int64_t my_bit = 1UL << mc->thread_id;
 
 	assert(c->reference_map != 0);
 	assert(c->start != NULL);
@@ -215,7 +215,7 @@ static void traverse_fs_pool(MContext *mc, LSClass *c) {
 static void traverse_optimal_fs_pool(MContext *mc, LSClass *c) {
 
 	//check if thread bit is set in sharing_map
-	u_int64_t my_bit = 1 << mc->thread_id;
+	u_int64_t my_bit = 1UL << mc->thread_id;
 
 	assert(c->reference_map != 0);
 	assert(c->start != NULL);

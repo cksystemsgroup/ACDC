@@ -52,8 +52,8 @@ static unsigned int get_random_size(MContext *mc) {
 			mc->gopts->max_object_sc);
 
 	return get_rand_int_range(mc,
-			1 << sc,
-			(1 << (sc + 1)) -1);
+			1UL << sc,
+			(1UL << (sc + 1)) -1);
 }
 
 unsigned int get_random_thread(MContext *mc) {
@@ -79,7 +79,7 @@ static collection_type get_random_collection_type(MContext *mc) {
 
 static u_int64_t get_random_thread_selection(MContext *mc) {
 
-	u_int64_t my_thread_bit = 1 << mc->thread_id;
+	u_int64_t my_thread_bit = 1UL << mc->thread_id;
 
 	if (mc->gopts->share_objects == 0 || 
 			mc->gopts->share_thread_ratio == 0) {
@@ -101,10 +101,10 @@ static u_int64_t get_random_thread_selection(MContext *mc) {
 	while (i < number_of_other_threads) {
 		int tid = get_random_thread(mc);
 		//check if we already haven't added this thread
-		if (!(tm & (1 << tid))) {
+		if (!(tm & (1UL << tid))) {
 	//		printf("adding thread %d\n", tid);
 			++i;
-			tm |= 1 << tid;
+			tm |= 1UL << tid;
 		}
 	}
 
@@ -135,17 +135,21 @@ void get_random_object_props(MContext *mc,
 	*lifetime = lt;
 	*num_objects = effect_of_sizeclass * effect_of_lifetime;
 
-	if (*num_objects == 0) {
-		printf("FOO");
-	}
+	assert(*num_objects > 0);
 
 	//*num_objects = 10;
 	*type = get_random_collection_type(mc);
 	if (get_sharing_dist(mc)) {
 		*sharing_map = get_random_thread_selection(mc); //shared objects
 	} else {
-		*sharing_map = 1 << mc->thread_id; //unshared
+		
+		*sharing_map = 1UL << mc->thread_id; //unshared
+
+		if (!(__builtin_popcountl(*sharing_map) == 1)) {
+			printf("sharing map for one thread is broken %lx\n", *sharing_map);
+		}
 	}
+	return;
 }
 
 

@@ -55,10 +55,10 @@ void _debug(char *filename, int linenum, const char *format, ...) {
 }
 
 static inline void set_bit(u_int64_t *word, int bitpos) {
-	*word |= (1 << bitpos);
+	*word |= (1UL << bitpos);
 }
 static inline void unset_bit(u_int64_t *word, int bitpos) {
-	*word &= ~(1 << bitpos);
+	*word &= ~(1UL << bitpos);
 }
 
 
@@ -138,7 +138,7 @@ static LSCNode *get_LSCNode(MContext *mc) {
 	}
 
 	if (mc->node_buffer_counter >= mc->gopts->node_buffer_size) {
-		printf("node buffer overflow. increase -N option\n");
+		printf("node buffer overflow. increase -N option: %d\n", mc->gopts->node_buffer_size);
 		exit(EXIT_FAILURE);
 	}
 	node = (LSCNode*)(((char*)mc->node_buffer_memory) + 
@@ -302,20 +302,20 @@ static void print_runtime_stats(MContext *mc) {
 
 static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 
-	assert((c->sharing_map & (1 << mc->thread_id)) != 0);
+	assert((c->sharing_map & (1UL << mc->thread_id)) != 0);
 	//I'm allowed to be here
 	
 	//unset reference bit and check if we can deallocate the class
 	while (1) {
 		//I got a reference
-		assert((c->reference_map & (1 << mc->thread_id )) != 0 );
+		assert((c->reference_map & (1UL << mc->thread_id )) != 0 );
 
 		//atomically unset my bit
 		u_int64_t old_rm = c->reference_map;
 		u_int64_t new_rm = old_rm;
 		unset_bit(&new_rm, mc->thread_id);
-		assert(__builtin_popcountl(new_rm) == 
-						__builtin_popcountl(old_rm) - 1);
+		assert(__builtin_popcountl(new_rm) <=
+						__builtin_popcountl(old_rm));
 
 		if (__sync_bool_compare_and_swap(
 					&c->reference_map, old_rm, new_rm)) {
@@ -326,7 +326,7 @@ static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 				debug("deleted %p", c);
 			} else {
 				//someone else will deallocate
-				assert((c->reference_map & (1 << mc->thread_id)) == 0);
+				assert((c->reference_map & (1UL << mc->thread_id)) == 0);
 				if (c->reference_map == 0) {
 					debug("%p still in distribution for %d others", 
 							c,
@@ -389,7 +389,7 @@ static void share_LSClass(MContext *mc, LSClass *c) {
 
 	int i;
 	for (i = 0; i < mc->gopts->num_threads; ++i) {
-		if (c->sharing_map & (1 << i)) {
+		if (c->sharing_map & (1UL << i)) {
 			//thread i will share this LSCLass
 			//it needs to get a reference
 			LClass *expiration_class = shared_expiration_classes[i];
@@ -567,9 +567,9 @@ static void *acdc_thread(void *ptr) {
 
 		if (mc->gopts->fixed_number_of_objects > 0) {
 			num_objects = mc->gopts->fixed_number_of_objects;
-			sz = 1 << mc->gopts->min_object_sc;
+			sz = 1UL << mc->gopts->min_object_sc;
 			lt = mc->gopts->min_lifetime;
-			sharing_map = 1 << mc->thread_id;
+			sharing_map = 1UL << mc->thread_id;
 			//tp = LIST;
 		} else {
 			//get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
@@ -607,6 +607,10 @@ static void *acdc_thread(void *ptr) {
 		assert(c->sharing_map != 0);
 		assert(c->sharing_map == sharing_map);
 		assert(c->reference_map == 0);
+
+		if (!(__builtin_popcountl(c->sharing_map) <= mc->gopts->num_threads)) {
+			printf("sharing map violation: %lx\n", c->sharing_map); 
+		}
 		assert(__builtin_popcountl(c->sharing_map) <= mc->gopts->num_threads);
 		debug("created collection %p with lt %d", c, lt);
 
