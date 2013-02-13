@@ -1,21 +1,7 @@
-#Dependency check methods
-#def CheckPKGConfig(context, version):
-#	context.Message( 'checking for pkg-config...' )
-#	ret = context.TryAction('pkg-config --atleast-pkgconfig-version=%s' % version)[0]
-#	context.Result( ret )
-#	return ret
-
-#def CheckPKG(context, name):
-#	context.Message( 'Checking for %s... ' % name )
-#	ret = context.TryAction('pkg-config --exists \'%s\'' % name)[0]
-#	context.Result( ret )
-#	return ret
-
 
 
 #ACDC
 acdc_env = Environment()
-#acdc_conf = Configure(acdc_env, custom_tests = { 'CheckPKGConfig' : CheckPKGConfig, 'CheckPKG' : CheckPKG })
 acdc_conf = Configure(acdc_env)
 
 if not acdc_conf.CheckHeader('pthread.h'):
@@ -30,18 +16,10 @@ if not acdc_conf.CheckHeader('math.h'):
 else:
 	acdc_conf.env.Append(LIBS=['m'])
 
-#if not acdc_conf.CheckPKGConfig('0.26'):
-#	print 'pkg-config >= 0.26 not found.'
-#	Exit(1)
-
-#if not acdc_conf.CheckPKG('glib-2.0 >= 2.32'):
-#	print 'glib-2.0 >= 2.32 not found'
-#	Exit(1)
 
 
 acdc_env = acdc_conf.Finish()
 
-acdc_env.ParseConfig('pkg-config --cflags --libs glib-2.0')
 acdc_env.Append(LIBS=['pthread'])
 acdc_env.Append(CPPFLAGS=['-Wall', '-Werror'])
 
@@ -95,6 +73,3 @@ for build in ['release', 'debug']:
 		e.Program(program_name, object_list)
 
 
-# Test programs
-#test_env = acdc_env.Clone()
-#test_env.Program('test-1', ['test-1.c', 'collections.c', 'memory.c', 'acdc.c', 'distribution.c', 'false-sharing.c'])
