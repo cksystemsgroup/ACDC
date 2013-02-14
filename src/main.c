@@ -17,32 +17,32 @@
 static void print_usage() {
 	printf("ACDC Benchmark usage:\n"
 			"\n"
-			"-a (run in ACDC MODE)\n"
-			"-f (run in FALSE_SHARING MODE)\n"
-			" Options for all modes:\n"
-			"-n number of threads\n"
+			"-a (run in ACDC mode)\n"
+			"-f (run in false-sharing mode)\n"
+			"-n: number of threads (default 1)\n"
+			"-F: (fixed) number of objects (default 0: ACDC decides)\n"
+			"-s: min. size (in 2^x bytes)\n"
+			"-S: max. size (in 2^x bytes)\n"		
+			"-l: min. lifetime\n"
+			"-L: max. lifetime\n"
+			"-D: deallocation delay\n"
+			"-t: time quantum\n"
 			"-d benchmark duration\n"
-			"-H meta data heap size in kB\n"
-			"-s min. sizeclass (1<<x)\n"
-			"-S max. sizeclass (1<<x)\n"		
+			"-g max. time drift\n"
+			"-q %% ratio of linked-list collections\n"
+			"-b %% ratio of btree collections\n"
+			
+			"-A access live objects\n"
+
 			"-r seed value\n"
 			"-w write ratio\n"
 			"-i write iterations.\n"
-			"-k skip traversal\n"
-			" Options for ACDC MODE:\n"
-			"-t time quantum\n"
-			"-F fixed number of objects\n"
-			"-l min. object lifetime\n"
-			"-L max. object lifetime\n"
-			"-D deallocation delay\n"
-			"-g max. time gap\n"
-			"-N node buffer size\n"
-			"-C class buffer size\n"
 			"-O share objects\n"
 			"-R share ratio\n"
 			"-T share thread ratio\n"
-			"-b %% ratio of btree collections\n"
-			"-q %% ratio of linked-list collections\n"
+			"-H meta data heap size in kB\n"
+			"-N node buffer size\n"
+			"-C class buffer size\n"
 			);
 	exit(EXIT_FAILURE);
 }
@@ -70,7 +70,7 @@ static void set_default_params(GOptions *gopts) {
 	gopts->btree_ratio = 0;
 	gopts->write_iterations = 1;
 	gopts->write_ratio = 10; // 10 percent of all traversed objects are accessed too
-	gopts->skip_traversal = 0;
+	gopts->access_live_objects = 0;
 	gopts->verbosity = 0;
 	//gopts->false_sharing_ratio = 100;
 }
@@ -89,7 +89,7 @@ static void check_params(GOptions *gopts) {
 		gopts->share_thread_ratio = 100;
 		gopts->share_objects = 1;
 		gopts->share_ratio = 100;
-		gopts->skip_traversal = 0;
+		gopts->access_live_objects = 0;
 		gopts->write_ratio = 100;
 	}
 	if (gopts->max_time_gap < 0) gopts->max_time_gap = gopts->max_lifetime;
@@ -116,7 +116,7 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->btree_ratio = %d\n", gopts->btree_ratio);
 	printf("gopts->write_iterations = %d\n", gopts->write_iterations);
 	printf("gopts->write_ratio = %d\n", gopts->write_ratio);
-	printf("gopts->skip_traversal = %d\n", gopts->skip_traversal);
+	printf("gopts->access_live_objects = %d\n", gopts->access_live_objects);
 	printf("gopts->share_objects = %d\n", gopts->share_objects);
 	printf("gopts->share_ratio = %d\n", gopts->share_ratio);
 	printf("gopts->share_thread_ratio = %d\n", gopts->share_thread_ratio);
@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
 	gopts->pid = getpid();
 
 	set_default_params(gopts);
-	const char *optString = "afn:t:d:r:H:l:L:D:g:s:S:F:N:C:OR:T:b:q:i:w:kvh";
+	const char *optString = "afn:t:d:r:H:l:L:D:g:s:S:F:N:C:OR:T:b:q:i:w:Avh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
@@ -211,8 +211,8 @@ int main(int argc, char **argv) {
 			case 'w':
 				gopts->write_ratio = atoi(optarg);
 				break;
-			case 'k':
-				gopts->skip_traversal = 1;
+			case 'A':
+				gopts->access_live_objects = 1;
 				break;
 			case 'v':
 				gopts->verbosity++;

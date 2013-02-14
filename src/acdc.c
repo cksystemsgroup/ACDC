@@ -348,7 +348,7 @@ static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 //runs in O(number of live objects)
 static void access_live_LClasses(MContext *mc) {
 
-	if (mc->gopts->skip_traversal == 1) return;
+	if (mc->gopts->access_live_objects == 0) return;
 
 	int i;
 	for (i = 0; i < mc->gopts->max_lifetime; ++i) {

@@ -44,7 +44,7 @@ struct global_options {
   
   //options for object access
   int write_iterations; //-i:
-  int skip_traversal; //-k
+  int access_live_objects; //-A
   int write_ratio; //-w: 
 
   //sharing options
