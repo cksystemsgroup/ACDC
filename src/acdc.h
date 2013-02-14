@@ -48,9 +48,9 @@ struct global_options {
   int write_access_ratio; //-w: 
 
   //sharing options
-  int share_objects; //-O:
-  int share_ratio; //-R: share_ratio% of all objects will be shared
-  int share_thread_ratio; //-T: share_thread_ratio% of all threads will be involved
+  int shared_objects; //-O:
+  int shared_objects_ratio; //-R: share_ratio% of all objects will be shared
+  int receiving_threads_ratio; //-T: share_thread_ratio% of all threads will be involved
 
   //misc options
   int verbosity; //-v

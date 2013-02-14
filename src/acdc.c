@@ -614,7 +614,7 @@ static void *acdc_thread(void *ptr) {
 		assert(__builtin_popcountl(c->sharing_map) <= mc->gopts->num_threads);
 		debug("created collection %p with lt %d", c, lt);
 
-		if (mc->gopts->share_objects) {
+		if (mc->gopts->shared_objects) {
 			share_LSClass(mc, c);
 			get_shared_LClasses(mc);
 		} else {

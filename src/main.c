@@ -60,9 +60,9 @@ static void set_default_params(GOptions *gopts) {
 	gopts->fixed_number_of_objects = 0;
 	gopts->node_buffer_size = 1000; //TODO estimate from other parameters
 	gopts->class_buffer_size = 1000; //TODO estimate from other parameters
-	gopts->share_objects = 0;
-	gopts->share_ratio = 0;
-	gopts->share_thread_ratio = 100;
+	gopts->shared_objects = 0;
+	gopts->shared_objects_ratio = 0;
+	gopts->receiving_threads_ratio = 100;
 	gopts->list_based_ratio = 100;
 	gopts->btree_based_ratio = 0;
 	gopts->write_iterations = 1;
@@ -81,9 +81,9 @@ static void check_params(GOptions *gopts) {
 	gopts->btree_based_ratio = 100 - gopts->list_based_ratio;
 
 	if (gopts->mode == FS) {
-		gopts->share_thread_ratio = 100;
-		gopts->share_objects = 1;
-		gopts->share_ratio = 100;
+		gopts->receiving_threads_ratio = 100;
+		gopts->shared_objects = 1;
+		gopts->shared_objects_ratio = 100;
 		gopts->access_live_objects = 0;
 		gopts->write_access_ratio = 100;
 	}
@@ -111,9 +111,9 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->write_iterations = %d\n", gopts->write_iterations);
 	printf("gopts->write_access_ratio = %d\n", gopts->write_access_ratio);
 	printf("gopts->access_live_objects = %d\n", gopts->access_live_objects);
-	printf("gopts->share_objects = %d\n", gopts->share_objects);
-	printf("gopts->share_ratio = %d\n", gopts->share_ratio);
-	printf("gopts->share_thread_ratio = %d\n", gopts->share_thread_ratio);
+	printf("gopts->shared_objects = %d\n", gopts->shared_objects);
+	printf("gopts->shared_objects_ratio = %d\n", gopts->shared_objects_ratio);
+	printf("gopts->receiving_threads_ratio = %d\n", gopts->receiving_threads_ratio);
 	printf("gopts->verbosity = %d\n", gopts->verbosity);
 }
 
@@ -185,13 +185,13 @@ int main(int argc, char **argv) {
 				gopts->class_buffer_size = atoi(optarg);
 				break;
 			case 'O':
-				gopts->share_objects = 1;
+				gopts->shared_objects = 1;
 				break;
 			case 'R':
-				gopts->share_ratio = atoi(optarg);
+				gopts->shared_objects_ratio = atoi(optarg);
 				break;
 			case 'T':
-				gopts->share_thread_ratio = atoi(optarg);
+				gopts->receiving_threads_ratio = atoi(optarg);
 				break;
 			case 'q':
 				gopts->list_based_ratio = atoi(optarg);

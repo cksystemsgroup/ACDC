@@ -33,9 +33,9 @@ static int get_rand_int_range(MContext *mc, int from, int to) {
 //determines if a lifetime-size-class should be shared
 //based on "shared objects" and "shared objects ratio"
 static unsigned int get_sharing_dist(MContext *mc) {
-	if (!mc->gopts->share_objects) return 0;
+	if (!mc->gopts->shared_objects) return 0;
 	int r = get_rand_int_range(mc, 0, 100);
-	if (r < mc->gopts->share_ratio) return 1;
+	if (r < mc->gopts->shared_objects_ratio) return 1;
 	return 0;
 }
 
@@ -79,15 +79,15 @@ static u_int64_t get_random_thread_selection(MContext *mc) {
 
 	u_int64_t my_thread_bit = 1UL << mc->thread_id;
 
-	if (mc->gopts->share_objects == 0 || 
-			mc->gopts->share_thread_ratio == 0) {
+	if (mc->gopts->shared_objects == 0 || 
+			mc->gopts->receiving_threads_ratio == 0) {
 		//only this thread is interested
 		return my_thread_bit;
 	}
 
 	//threads except me, times share ratio
 	int number_of_other_threads = 
-		(mc->gopts->num_threads - 1) / (100 / mc->gopts->share_thread_ratio);
+		(mc->gopts->num_threads - 1) / (100 / mc->gopts->receiving_threads_ratio);
 
 
 	//get number_of_other_threads random thread id's (except mine)
