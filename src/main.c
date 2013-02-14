@@ -30,18 +30,16 @@ static void print_usage() {
 			"-d: benchmark duration\n"
 			"-g: max. time drift\n"
 			"-q: list-based ratio in %%\n"
-			
 			"-A access live objects\n"
-
-			"-r seed value\n"
-			"-w write ratio\n"
-			"-i write iterations.\n"
-			"-O share objects\n"
-			"-R share ratio\n"
-			"-T share thread ratio\n"
-			"-H meta data heap size in kB\n"
-			"-N node buffer size\n"
-			"-C class buffer size\n"
+			"-w: write access ratio in %%\n"
+			"-O shared objects\n"
+			"-R: shared objects ratio\n"
+			"-T: receiving threads ratio\n"
+			"-r: seed value\n"
+			"-i: write iterations.\n"
+			"-H: meta data heap size in kB\n"
+			"-N: node buffer size\n"
+			"-C: class buffer size\n"
 			);
 	exit(EXIT_FAILURE);
 }
