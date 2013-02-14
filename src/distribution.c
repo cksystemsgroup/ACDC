@@ -61,7 +61,7 @@ unsigned int get_random_thread(MContext *mc) {
 			mc->gopts->num_threads - 1);
 }
 
-static collection_type get_random_collection_type(MContext *mc) {
+static lifetime_size_class_type get_random_lifetime_size_class_type(MContext *mc) {
 
 	unsigned int r = get_rand_int_range(mc, 0, 100);
 
@@ -110,7 +110,7 @@ void get_random_object_props(MContext *mc,
 		size_t *size, 
 		unsigned int *lifetime, 
 		unsigned int *num_objects,
-		collection_type *type,
+		lifetime_size_class_type *type,
 		u_int64_t *sharing_map) {
 
 	unsigned int lt = get_random_lifetime(mc);
@@ -132,7 +132,7 @@ void get_random_object_props(MContext *mc,
 
 	assert(*num_objects > 0);
 
-	*type = get_random_collection_type(mc);
+	*type = get_random_lifetime_size_class_type(mc);
 	if (get_sharing_dist(mc)) {
 		*sharing_map = get_random_thread_selection(mc); //shared objects
 	} else {

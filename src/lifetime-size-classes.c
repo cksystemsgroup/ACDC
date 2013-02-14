@@ -66,7 +66,7 @@ static int write_ith_element(MContext *mc, int i) {
 /**
  * allocates memory for a new LSCLass
  */
-static LSClass *new_LSClass(MContext *mc, collection_type t, 
+static LSClass *new_LSClass(MContext *mc, lifetime_size_class_type t, 
 		size_t sz, unsigned long nelem, u_int64_t sharing_map) {
 
 	LSClass *c = get_LSClass(mc);
@@ -448,7 +448,7 @@ static void traverse_btree_preorder(MContext *mc, LSClass *c) {
 
 
 // public methods
-LSClass *allocate_LSClass(MContext *mc, collection_type ctype, size_t sz, 
+LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type ctype, size_t sz, 
 		unsigned long nelem, u_int64_t sharing_map) {
 
 	LSClass *c;

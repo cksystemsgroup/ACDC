@@ -458,7 +458,7 @@ static void *false_sharing_thread(void *ptr) {
 		size_t sz = 0;
 		unsigned int lt;
 		unsigned int num_objects;
-		collection_type tp;
+		lifetime_size_class_type tp;
 		u_int64_t sharing_map;
 	
 		//one thread allocates and tells the others how much it allocated
@@ -558,7 +558,7 @@ static void *acdc_thread(void *ptr) {
 		size_t sz = 0;
 		unsigned int lt;
 		unsigned int num_objects;
-		collection_type tp;
+		lifetime_size_class_type tp;
 		u_int64_t sharing_map;
 
 		get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);

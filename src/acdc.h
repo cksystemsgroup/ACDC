@@ -79,9 +79,7 @@ struct mutator_stat {
 };
 
 
-//memory object abstraction
-
-//object header for every allocated object
+//memory objects
 //the min. size for an object must be sizeof(Object)
 typedef void Object;
 typedef struct shared_mem_object SharedObject;
@@ -100,7 +98,7 @@ struct mem_object_btnode {
 };
 
 
-//Collection stuff
+//implementation types for lifetime-size-classes
 typedef enum {
   LIST,
   BTREE,
@@ -108,7 +106,7 @@ typedef enum {
   OPTIMAL_LIST, 
   OPTIMAL_BTREE,
   OPTIMAL_FALSE_SHARING
-} collection_type;
+} lifetime_size_class_type;
 
 //set of objects with common size and lifetime
 typedef struct lifetime_size_class LSClass;
@@ -116,7 +114,7 @@ struct lifetime_size_class {
   size_t object_size;
   unsigned int lifetime;
   size_t num_objects;
-  collection_type type;
+  lifetime_size_class_type type;
 
   //which threads should share an object
   volatile u_int64_t sharing_map;
@@ -142,7 +140,7 @@ typedef struct lifetime_class {
 } LClass;
 
 
-LSClass *allocate_LSClass(MContext *mc, collection_type ctype, size_t sz,
+LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type ctype, size_t sz,
 		unsigned long nelem, u_int64_t sharing_map);
 
 void deallocate_LSClass(MContext *mc, LSClass *oc); 
@@ -193,7 +191,7 @@ void get_random_object_props(MContext *mc,
 		size_t *size, 
 		unsigned int *lifetime, 
 		unsigned int *num_objects,
-    collection_type *type,
+    lifetime_size_class_type *type,
     u_int64_t *sharing_map
     );
 
