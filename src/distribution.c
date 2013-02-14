@@ -10,8 +10,6 @@
 #include <assert.h>
 
 #include "acdc.h"
-//#include "memory.h"
-
 
 
 //Schrage minimum standard PRNG. Assumes int to be 32 bits
@@ -23,7 +21,7 @@ static void next_rand(MContext *mc) {
 		mc->rand += 2147483647;
 }
 
-
+//returns a random integer in [from, to]
 static int get_rand_int_range(MContext *mc, int from, int to) {
 	assert(to >= from);
 	next_rand(mc);
@@ -32,7 +30,8 @@ static int get_rand_int_range(MContext *mc, int from, int to) {
 	return from + small_rand;
 }
 
-
+//determines if a lifetime-size-class should be shared
+//based on "shared objects" and "shared objects ratio"
 static unsigned int get_sharing_dist(MContext *mc) {
 	if (!mc->gopts->share_objects) return 0;
 	int r = get_rand_int_range(mc, 0, 100);
@@ -72,11 +71,10 @@ static collection_type get_random_collection_type(MContext *mc) {
 	if (r < (mc->gopts->list_ratio + mc->gopts->btree_ratio)) {
 		return BTREE;
 	}
-	
-	//default. never reached
-	return LIST;
+	return LIST; //default
 }
 
+//returns a sharing bitmap based on the "receiving threads ratio" 
 static u_int64_t get_random_thread_selection(MContext *mc) {
 
 	u_int64_t my_thread_bit = 1UL << mc->thread_id;
@@ -91,8 +89,6 @@ static u_int64_t get_random_thread_selection(MContext *mc) {
 	int number_of_other_threads = 
 		(mc->gopts->num_threads - 1) / (100 / mc->gopts->share_thread_ratio);
 
-	//printf("%d will share with %d threads\n", mc->opt.thread_id, 
-	//		number_of_other_threads);
 
 	//get number_of_other_threads random thread id's (except mine)
 	//and set their bits in tm
@@ -102,15 +98,14 @@ static u_int64_t get_random_thread_selection(MContext *mc) {
 		int tid = get_random_thread(mc);
 		//check if we already haven't added this thread
 		if (!(tm & (1UL << tid))) {
-	//		printf("adding thread %d\n", tid);
 			++i;
 			tm |= 1UL << tid;
 		}
 	}
-
 	return tm;
 }
 
+//creates random object properties and stores them in call-by-reference arguments
 void get_random_object_props(MContext *mc, 
 		size_t *size, 
 		unsigned int *lifetime, 
@@ -137,23 +132,12 @@ void get_random_object_props(MContext *mc,
 
 	assert(*num_objects > 0);
 
-	//*num_objects = 10;
 	*type = get_random_collection_type(mc);
 	if (get_sharing_dist(mc)) {
 		*sharing_map = get_random_thread_selection(mc); //shared objects
 	} else {
-		
 		*sharing_map = 1UL << mc->thread_id; //unshared
-
-		if (!(__builtin_popcountl(*sharing_map) == 1)) {
-			printf("sharing map for one thread is broken %lx\n", *sharing_map);
-		}
 	}
 	return;
 }
-
-
-
-
-
 
