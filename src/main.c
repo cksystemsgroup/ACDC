@@ -27,10 +27,9 @@ static void print_usage() {
 			"-L: max. lifetime\n"
 			"-D: deallocation delay\n"
 			"-t: time quantum\n"
-			"-d benchmark duration\n"
-			"-g max. time drift\n"
-			"-q %% ratio of linked-list collections\n"
-			"-b %% ratio of btree collections\n"
+			"-d: benchmark duration\n"
+			"-g: max. time drift\n"
+			"-q: list-based ratio in %%\n"
 			
 			"-A access live objects\n"
 
@@ -75,15 +74,16 @@ static void set_default_params(GOptions *gopts) {
 	//gopts->false_sharing_ratio = 100;
 }
 
+
 static void check_params(GOptions *gopts) {
 	//TODO; exit on wrong parameter settings
 	
-	if (gopts->list_ratio + 
-			gopts->btree_ratio  != 100) {
-		printf("If using -b and -q, their arguments must add"
-				" up to 100%%\n");
+	if (gopts->list_ratio < 0 || 
+			gopts->list_ratio  > 100) {
+		printf("Parameter error: -q value must be between 0 and 100\n");
 		exit(EXIT_FAILURE);
 	}
+	gopts->btree_ratio = 100 - gopts->list_ratio;
 
 	if (gopts->mode == FS) {
 		gopts->share_thread_ratio = 100;
@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
 	gopts->pid = getpid();
 
 	set_default_params(gopts);
-	const char *optString = "afn:t:d:r:H:l:L:D:g:s:S:F:N:C:OR:T:b:q:i:w:Avh";
+	const char *optString = "afn:t:d:r:H:l:L:D:g:s:S:F:N:C:OR:T:q:i:w:Avh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
@@ -198,9 +198,6 @@ int main(int argc, char **argv) {
 				break;
 			case 'T':
 				gopts->share_thread_ratio = atoi(optarg);
-				break;
-			case 'b':
-				gopts->btree_ratio = atoi(optarg);
 				break;
 			case 'q':
 				gopts->list_ratio = atoi(optarg);
