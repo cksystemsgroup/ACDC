@@ -38,14 +38,14 @@ struct global_options {
   int min_object_sc; //-s: minimal sizeclass
   int max_object_sc; //-S: max sizeclass
   int list_ratio; //-q:
-  int btree_ratio; //-b:
+  int btree_ratio; //derived from -q
   int node_buffer_size; //-N: used to recycle nodes for LSClasses
   int class_buffer_size; //-C: used to recycle nodes for LSClasses
   
   //options for object access
   int write_iterations; //-i:
   int access_live_objects; //-A
-  int write_ratio; //-w: 
+  int write_access_ratio; //-w: 
 
   //sharing options
   int share_objects; //-O:
