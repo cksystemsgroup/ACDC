@@ -37,8 +37,8 @@ struct global_options {
   int max_time_gap; //-g: defaults to max_lifetime
   int min_object_sc; //-s: minimal sizeclass
   int max_object_sc; //-S: max sizeclass
-  int list_ratio; //-q:
-  int btree_ratio; //derived from -q
+  int list_based_ratio; //-q:
+  int btree_based_ratio; //derived from -q
   int node_buffer_size; //-N: used to recycle nodes for LSClasses
   int class_buffer_size; //-C: used to recycle nodes for LSClasses
   

@@ -65,10 +65,10 @@ static collection_type get_random_collection_type(MContext *mc) {
 
 	unsigned int r = get_rand_int_range(mc, 0, 100);
 
-	if (r < mc->gopts->list_ratio) {
+	if (r < mc->gopts->list_based_ratio) {
 		return LIST;
 	}
-	if (r < (mc->gopts->list_ratio + mc->gopts->btree_ratio)) {
+	if (r < (mc->gopts->list_based_ratio + mc->gopts->btree_based_ratio)) {
 		return BTREE;
 	}
 	return LIST; //default

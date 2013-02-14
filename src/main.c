@@ -63,8 +63,8 @@ static void set_default_params(GOptions *gopts) {
 	gopts->share_objects = 0;
 	gopts->share_ratio = 0;
 	gopts->share_thread_ratio = 100;
-	gopts->list_ratio = 100;
-	gopts->btree_ratio = 0;
+	gopts->list_based_ratio = 100;
+	gopts->btree_based_ratio = 0;
 	gopts->write_iterations = 1;
 	gopts->write_access_ratio = 10; // 10 percent of all traversed objects are accessed too
 	gopts->access_live_objects = 0;
@@ -73,12 +73,12 @@ static void set_default_params(GOptions *gopts) {
 
 static void check_params(GOptions *gopts) {
 	//TODO:check missing parameters
-	if (gopts->list_ratio < 0 || 
-			gopts->list_ratio  > 100) {
+	if (gopts->list_based_ratio < 0 || 
+			gopts->list_based_ratio  > 100) {
 		printf("Parameter error: -q value must be between 0 and 100\n");
 		exit(EXIT_FAILURE);
 	}
-	gopts->btree_ratio = 100 - gopts->list_ratio;
+	gopts->btree_based_ratio = 100 - gopts->list_based_ratio;
 
 	if (gopts->mode == FS) {
 		gopts->share_thread_ratio = 100;
@@ -107,7 +107,7 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->fixed_number_of_objects = %d\n", gopts->fixed_number_of_objects);
 	printf("gopts->node_buffer_size = %d\n", gopts->node_buffer_size);
 	printf("gopts->class_buffer_size = %d\n", gopts->class_buffer_size);
-	printf("gopts->list_ratio = %d\n", gopts->list_ratio);
+	printf("gopts->list_based_ratio = %d\n", gopts->list_based_ratio);
 	printf("gopts->write_iterations = %d\n", gopts->write_iterations);
 	printf("gopts->write_access_ratio = %d\n", gopts->write_access_ratio);
 	printf("gopts->access_live_objects = %d\n", gopts->access_live_objects);
@@ -194,7 +194,7 @@ int main(int argc, char **argv) {
 				gopts->share_thread_ratio = atoi(optarg);
 				break;
 			case 'q':
-				gopts->list_ratio = atoi(optarg);
+				gopts->list_based_ratio = atoi(optarg);
 				break;
 			case 'i':
 				gopts->write_iterations = atoi(optarg);
