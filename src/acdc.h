@@ -160,7 +160,7 @@ struct mutator_context {
   int rand;
   MStat *stat; //mutator stats
   unsigned int time;
-  LClass *expiration_class; // one LClass for each possible lifetime
+  LClass *heap_class; // one LClass for each possible lifetime
 
   LSCNode *node_buffer_memory;
   int node_buffer_counter;
