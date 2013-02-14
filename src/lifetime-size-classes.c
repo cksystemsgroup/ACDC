@@ -20,7 +20,6 @@ static LSClass *get_LSClass(MContext *mc) {
 	LSCNode *node = mc->class_cache.first;
 	if (node != NULL) {
 		lclass_remove(&mc->class_cache, node);
-		debug("reuse class %p\n", node);
 		node->next = NULL;
 		node->prev = NULL;
 		return (LSClass*)node;
@@ -34,13 +33,11 @@ static LSClass *get_LSClass(MContext *mc) {
 		(mc->class_buffer_counter * L1_LINE_SZ));
 
 	mc->class_buffer_counter++;
-	debug("class %p\n", node);
 	node->next = NULL;
 	node->prev = NULL;
 	return (LSClass*)node;
 }
 static void recycle_LSClass(MContext *mc, LSClass *class) {
-	debug("give back class %p\n", class);
 	LSCNode *n = (LSCNode*)class;
 	lclass_insert_beginning(&mc->class_cache, n);
 }

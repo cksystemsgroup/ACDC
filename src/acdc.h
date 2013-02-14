@@ -11,8 +11,9 @@
 #include <pthread.h>
 #include <sys/types.h>
 
-#define debug(...) _debug(__FILE__, __LINE__, __VA_ARGS__)
-void _debug(char *filename, int linenum, const char *format, ...);
+typedef struct mutator_context MContext;
+#define debug(__mc, ...) _debug(__mc, __FILE__, __LINE__, __VA_ARGS__)
+void _debug(MContext *mc, char *filename, int linenum, const char *format, ...);
 
 //global acdc options
 typedef enum {
@@ -144,7 +145,6 @@ typedef struct lifetime_class {
   LSCNode *last;
 } LClass;
 
-typedef struct mutator_context MContext;
 
 LSClass *allocate_LSClass(MContext *mc, collection_type ctype, size_t sz,
 		unsigned long nelem, u_int64_t sharing_map);

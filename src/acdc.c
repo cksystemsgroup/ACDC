@@ -33,20 +33,19 @@ static LClass **shared_expiration_classes; //one expiration class per thread
 static pthread_mutex_t *shared_expiration_classes_locks; //one lock per expiration class
 static volatile spin_barrier_t false_sharing_barrier;
 static volatile spin_barrier_t acdc_barrier;
-static __thread MContext *my_mc; //TODO: refactor in _debug call
 static pthread_mutex_t debug_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c);
 
-void _debug(char *filename, int linenum, const char *format, ...) {
-	if (my_mc->gopts->verbosity < 2) return;
+void _debug(MContext *mc, char *filename, int linenum, const char *format, ...) {
+	if (mc->gopts->verbosity < 2) return;
 	va_list args;
 	pthread_mutex_lock(&debug_lock);
 	fprintf(stdout, "[Debug] %s %4d T%2d @ %4d ", 
 			filename,
 			linenum,
-			my_mc->thread_id, 
-			my_mc->time);
+			mc->thread_id, 
+			mc->time);
 	va_start(args, format);
 	vfprintf(stdout, format, args);
 	va_end(args);
@@ -131,7 +130,7 @@ static LSCNode *get_LSCNode(MContext *mc) {
 	LSCNode *node = mc->node_cache.first;
 	if (node != NULL) {
 		lclass_remove(&mc->node_cache, node);
-		debug("reuse node %p\n", node);
+		debug(mc, "reuse node %p\n", node);
 		node->next = NULL;
 		node->prev = NULL;
 		return node;
@@ -144,13 +143,13 @@ static LSCNode *get_LSCNode(MContext *mc) {
 	node = (LSCNode*)(((char*)mc->node_buffer_memory) + 
 		(mc->node_buffer_counter * L1_LINE_SZ));
 	mc->node_buffer_counter++;
-	debug("node %p\n", node);
+	debug(mc, "node %p\n", node);
 	node->next = NULL;
 	node->prev = NULL;
 	return node;
 }
 static void recycle_LSCNode(MContext *mc, LSCNode *node) {
-	debug("give back node %p\n", node);
+	debug(mc, "give back node %p\n", node);
 	lclass_insert_beginning(&mc->node_cache, node);
 }
 
@@ -193,7 +192,7 @@ static void expiration_class_remove(MContext *mc, LClass *expiration_class) {
 
 	LClass *expired_lifetime_class = &expiration_class[delete_index];
 
-	debug("delete from index %d", delete_index);
+	debug(mc, "delete from index %d", delete_index);
 
 	//forall LSClasses in this LClass: 
 	//         decrement reference map and maybe deallocate LSClass
@@ -323,17 +322,17 @@ static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 			//if (c->reference_map == 0 && c->sharing_map == 0) {
 			if (c->reference_map == 0) {
 				deallocate_LSClass(mc, (LSClass*)c);
-				debug("deleted %p", c);
+				debug(mc, "deleted %p", c);
 			} else {
 				//someone else will deallocate
 				assert((c->reference_map & (1UL << mc->thread_id)) == 0);
 				if (c->reference_map == 0) {
-					debug("%p still in distribution for %d others", 
+					debug(mc, "%p still in distribution for %d others", 
 							c,
 							__builtin_popcountl(c->sharing_map)
 					     );
 				} else {
-					debug("%p can be deleted by %d others", c,
+					debug(mc, "%p can be deleted by %d others", c,
 						__builtin_popcountl(c->reference_map)
 						);
 				}
@@ -358,7 +357,6 @@ static void access_live_LClasses(MContext *mc) {
 		//traverse all LSClasses in lc
 		LSCNode *iterator = lc->first;
 		while (iterator != NULL) {
-			//debug("iterator %p", iterator);
 			traverse_LSClass(mc, iterator->ls_class);
 			iterator = iterator->next;
 		}
@@ -440,7 +438,6 @@ static volatile int fs_deallocation_thread;
 static void *false_sharing_thread(void *ptr) {
 
 	MContext *mc = (MContext*)ptr;
-	my_mc = mc;
 	unsigned long time_counter = 0;
 	int runs = 0;
 	unsigned long long allocation_start, allocation_end;
@@ -540,7 +537,6 @@ static void *false_sharing_thread(void *ptr) {
 //int allocators_alive = 1;
 static void *acdc_thread(void *ptr) {
 	MContext *mc = (MContext*)ptr;
-	my_mc = mc;
 
 	unsigned long time_counter = 0;
 	int runs = 0;
@@ -612,7 +608,7 @@ static void *acdc_thread(void *ptr) {
 			printf("sharing map violation: %lx\n", c->sharing_map); 
 		}
 		assert(__builtin_popcountl(c->sharing_map) <= mc->gopts->num_threads);
-		debug("created collection %p with lt %d", c, lt);
+		debug(mc, "created collection %p with lt %d", c, lt);
 
 		if (mc->gopts->shared_objects) {
 			share_LSClass(mc, c);
