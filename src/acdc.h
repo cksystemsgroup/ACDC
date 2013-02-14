@@ -83,7 +83,6 @@ struct mutator_stat {
 
 //object header for every allocated object
 //the min. size for an object must be sizeof(Object)
-//typedef struct mem_object Object;
 typedef void Object;
 typedef struct shared_mem_object SharedObject;
 struct shared_mem_object {
@@ -92,16 +91,13 @@ struct shared_mem_object {
 };
 typedef struct mem_object_lnode LObject;
 struct mem_object_lnode {
-  //Object o;
   LObject *next;
 };
 typedef struct mem_object_btnode BTObject;
 struct mem_object_btnode {
-  //Object o;
   BTObject *left;
   BTObject *right;
 };
-
 
 
 //Collection stuff
