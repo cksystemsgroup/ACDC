@@ -1,5 +1,3 @@
-
-
 #ACDC
 acdc_env = Environment()
 acdc_conf = Configure(acdc_env)
@@ -15,7 +13,6 @@ if not acdc_conf.CheckHeader('math.h'):
 	Exit(1)
 else:
 	acdc_conf.env.Append(LIBS=['m'])
-
 
 
 acdc_env = acdc_conf.Finish()
@@ -60,7 +57,7 @@ for build in ['release', 'debug']:
 			e.Append(CPPFLAGS=['-DALLOCATOR=llalloc'])
 
 		object_list = []
-		for obj in ['main', 'memory', 'acdc', 'distribution', 'lifetime-size-classes', 'barrier', 'proc_status']:
+		for obj in ['main', 'memory', 'acdc', 'distribution', 'lifetime-class', 'lifetime-size-classes', 'barrier', 'proc_status']:
 			obj_name = obj+"-"+config
 			if build == 'debug':
 				obj_name = obj_name+"-dbg"

@@ -12,6 +12,9 @@
 #include <sys/types.h>
 
 typedef struct mutator_context MContext;
+typedef struct lifetime_class LClass;
+typedef struct lifetime_size_class_node LSCNode;
+
 #define debug(__mc, ...) _debug(__mc, __FILE__, __LINE__, __VA_ARGS__)
 void _debug(MContext *mc, char *filename, int linenum, const char *format, ...);
 
@@ -79,6 +82,9 @@ struct mutator_stat {
 };
 
 
+
+
+
 //memory objects
 //the min. size for an object must be sizeof(Object)
 typedef void Object;
@@ -126,7 +132,7 @@ struct lifetime_size_class {
   Object *start;
 };
 
-typedef struct lifetime_size_class_node LSCNode;
+
 struct lifetime_size_class_node {
   LSCNode *prev;
   LSCNode *next;
@@ -134,17 +140,11 @@ struct lifetime_size_class_node {
 };
 
 //list of LSClasses with the same lifetime
-typedef struct lifetime_class {
+struct lifetime_class {
   LSCNode *first;
   LSCNode *last;
-} LClass;
+};
 
-
-LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type ctype, size_t sz,
-		unsigned long nelem, u_int64_t sharing_map);
-
-void deallocate_LSClass(MContext *mc, LSClass *oc); 
-void traverse_LSClass(MContext *mc, LSClass *oc);
 
 
 //thread context specific data
@@ -166,11 +166,36 @@ struct mutator_context {
 };
 
 
+/*
+ * allocates a lifetime-size-class, i.e., a set of objects with
+ * the same size and lifetime.
+ * type defines the implementation type (e.g. list-based)
+ */
+LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type type, size_t sz, 
+		unsigned long nelem, u_int64_t sharing_map);
+void deallocate_LSClass(MContext *mc, LSClass *oc); 
+void traverse_LSClass(MContext *mc, LSClass *oc);
+
+
+
+/*
+ * allocates a heap-class, i.e., an array of lifetime-classes
+ * where we have one lifetime-class for each lifetime in
+ * [min. lifetime, max. lifetime]
+ */
+LClass *allocate_heap_class(unsigned int max_lifetime);
+
+/*
+ * lifetime-classes are doubly-linked lists of lifetime-size-classes.
+ * more specifically, lists of LSCNodes that represent lifetime-size-classes
+ */
 void lclass_insert_after(LClass *list, LSCNode *after, LSCNode *c);
 void lclass_insert_before(LClass *list, LSCNode *before, LSCNode *c);
 void lclass_insert_beginning(LClass *list, LSCNode *c);
 void lclass_insert_end(LClass *list, LSCNode *c);
 void lclass_remove(LClass *list, LSCNode *c);
+
+
 
 void run_acdc(GOptions *gopts);
 

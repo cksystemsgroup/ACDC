@@ -448,12 +448,12 @@ static void traverse_btree_preorder(MContext *mc, LSClass *c) {
 
 
 // public methods
-LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type ctype, size_t sz, 
+LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type type, size_t sz, 
 		unsigned long nelem, u_int64_t sharing_map) {
 
 	LSClass *c;
 
-	switch (ctype) {
+	switch (type) {
 		case LIST:
 			return allocate_list(mc, sz, nelem, sharing_map);
 		case OPTIMAL_LIST:
