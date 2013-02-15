@@ -11,9 +11,33 @@
 #include <pthread.h>
 #include <sys/types.h>
 
+// Global options from command line
+typedef struct global_options GOptions;
+
+// thread local meta data and statistics
 typedef struct mutator_context MContext;
+// measurement data. part of MContext
+typedef struct mutator_stat MStat;
+
+// lifetime-size-class
+typedef struct lifetime_size_class LSClass;
+// lifetime-class
 typedef struct lifetime_class LClass;
+// node to organize lifetime-size-classes in a lifetime-class
 typedef struct lifetime_size_class_node LSCNode;
+
+// We have different types of memory objects. Based on how they are
+// used, they get different types. Usually, an object comes with
+// a payload, i.e., the memory right after it is also allocated.
+// Object is a regular object.
+typedef void Object;
+// objects including ownership information
+typedef struct shared_mem_object SharedObject;
+// Objects that build up list-based lifetime-size-classes
+typedef struct mem_object_lnode LObject;
+// Objects that build up tree-based lifetime-size-classes
+typedef struct mem_object_btnode BTObject;
+
 
 #define debug(__mc, ...) _debug(__mc, __FILE__, __LINE__, __VA_ARGS__)
 void _debug(MContext *mc, char *filename, int linenum, const char *format, ...);
@@ -23,7 +47,6 @@ typedef enum {
   ACDC, //default mode
   FS
 } benchmark_mode_t;
-typedef struct global_options GOptions;
 struct global_options {
   //benchmark options
   benchmark_mode_t mode; //-m: acdc, false-sharing, ...
@@ -63,7 +86,6 @@ struct global_options {
 
 
 //mutator measurement data
-typedef struct mutator_stat MStat;
 struct mutator_stat {
   unsigned long long running_time;
   unsigned long long allocation_time;
@@ -81,28 +103,19 @@ struct mutator_stat {
   long resident_set_size_counter;
 };
 
-
-
-
-
 //memory objects
 //the min. size for an object must be sizeof(Object)
-typedef void Object;
-typedef struct shared_mem_object SharedObject;
 struct shared_mem_object {
   u_int64_t sharing_map; 
   //a bit at pos i indicates that thread i may access this object
 };
-typedef struct mem_object_lnode LObject;
 struct mem_object_lnode {
   LObject *next;
 };
-typedef struct mem_object_btnode BTObject;
 struct mem_object_btnode {
   BTObject *left;
   BTObject *right;
 };
-
 
 //implementation types for lifetime-size-classes
 typedef enum {
@@ -115,7 +128,6 @@ typedef enum {
 } lifetime_size_class_type;
 
 //set of objects with common size and lifetime
-typedef struct lifetime_size_class LSClass;
 struct lifetime_size_class {
   size_t object_size;
   unsigned int lifetime;
@@ -132,7 +144,6 @@ struct lifetime_size_class {
   Object *start;
 };
 
-
 struct lifetime_size_class_node {
   LSCNode *prev;
   LSCNode *next;
@@ -144,8 +155,6 @@ struct lifetime_class {
   LSCNode *first;
   LSCNode *last;
 };
-
-
 
 //thread context specific data
 struct mutator_context {
@@ -166,6 +175,10 @@ struct mutator_context {
 };
 
 
+
+
+
+
 /*
  * allocates a lifetime-size-class, i.e., a set of objects with
  * the same size and lifetime.
@@ -175,8 +188,6 @@ LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type type, size_t sz
 		unsigned long nelem, u_int64_t sharing_map);
 void deallocate_LSClass(MContext *mc, LSClass *oc); 
 void traverse_LSClass(MContext *mc, LSClass *oc);
-
-
 
 /*
  * allocates a heap-class, i.e., an array of lifetime-classes
@@ -196,8 +207,6 @@ void lclass_insert_end(LClass *list, LSCNode *c);
 void lclass_remove(LClass *list, LSCNode *c);
 
 
-
-void run_acdc(GOptions *gopts);
 
 void init_metadata_heap(size_t heapsize);
 void *malloc_meta(size_t size);
@@ -222,5 +231,9 @@ void get_random_object_props(MContext *mc,
 
 unsigned int get_random_thread(MContext *mc);
 
+/*
+ * benchmark invocation
+ */
+void run_acdc(GOptions *gopts);
 
 #endif
