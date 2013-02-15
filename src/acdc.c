@@ -15,6 +15,7 @@
 #include "acdc.h"
 #include "arch.h"
 #include "memory.h"
+#include "metadata-allocator.h"
 #include "barrier.h"
 #include "proc_status.h"
 #include "caches.h"

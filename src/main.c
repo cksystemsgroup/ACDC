@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 #include "acdc.h"
-#include "memory.h"
+#include "metadata-allocator.h"
 #include "proc_status.h"
 
 static void print_usage() {

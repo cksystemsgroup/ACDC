@@ -208,11 +208,6 @@ void lclass_remove(LClass *list, LSCNode *c);
 
 
 
-void init_metadata_heap(size_t heapsize);
-void *malloc_meta(size_t size);
-void *calloc_meta(size_t nelem, size_t size);
-void *malloc_meta_aligned(size_t size, size_t alignment);
-void *calloc_meta_aligned(size_t nelem, size_t size, size_t alignment);
 
 Object *allocate(MContext *mc, size_t size);
 void deallocate(MContext *mc, Object *o, size_t size);

@@ -57,7 +57,7 @@ for build in ['release', 'debug']:
 			e.Append(CPPFLAGS=['-DALLOCATOR=llalloc'])
 
 		object_list = []
-		for obj in ['main', 'memory', 'acdc', 'distribution', 'lifetime-class', 'lifetime-size-classes', 'barrier', 'proc_status']:
+		for obj in ['main', 'memory', 'acdc', 'distribution', 'lifetime-class', 'lifetime-size-classes', 'metadata-allocator', 'barrier', 'proc_status']:
 			obj_name = obj+"-"+config
 			if build == 'debug':
 				obj_name = obj_name+"-dbg"

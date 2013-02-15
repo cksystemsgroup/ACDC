@@ -6,6 +6,7 @@
  */
 
 #include "acdc.h"
+#include "metadata-allocator.h"
 
 LClass *allocate_heap_class(unsigned int max_lifetime) {
 
