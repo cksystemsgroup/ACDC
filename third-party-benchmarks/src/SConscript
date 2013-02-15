@@ -54,7 +54,4 @@ for build in ['release']:
 		for prg in object_list:
 			e.Program(prg)
 		
-		larson_cfg = "larson-"+config
-		e.Object(larson_cfg, "larson.cpp")
-		e.Program(larson_cfg, larson_cfg+".o")
 
