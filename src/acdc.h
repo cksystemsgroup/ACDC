@@ -144,6 +144,7 @@ struct lifetime_size_class {
   Object *start;
 };
 
+//nodes to build lists of lifetime-size-classes
 struct lifetime_size_class_node {
   LSCNode *prev;
   LSCNode *next;
@@ -174,11 +175,6 @@ struct mutator_context {
   LClass class_cache;
 };
 
-
-
-
-
-
 /*
  * allocates a lifetime-size-class, i.e., a set of objects with
  * the same size and lifetime.
@@ -208,13 +204,16 @@ void lclass_remove(LClass *list, LSCNode *c);
 
 
 
-
+/*
+ * abstractions of allocator and memory access
+ */
 Object *allocate(MContext *mc, size_t size);
 void deallocate(MContext *mc, Object *o, size_t size);
 Object *allocate_aligned(MContext *mc, size_t size, size_t alignment);
 void deallocate_aligned(MContext *mc, Object *o, size_t size, size_t alignment);
 void write_object(Object *o, size_t size, size_t offset);
 unsigned int get_sizeclass(size_t size);
+
 
 void get_random_object_props(MContext *mc, 
 		size_t *size, 
