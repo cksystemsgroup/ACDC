@@ -25,11 +25,6 @@
 #define ALLOCATOR_NAME STR(ALLOCATOR)
 
 
-struct thread_args {
-	GOptions *gopts;
-	int thread_id;
-};
-
 //distribution pool consisting of one heap class per thread
 //and a lock for each heap class
 static LClass **shared_heap_classes;
@@ -59,14 +54,15 @@ void _debug(MContext *mc, char *filename, int linenum, const char *format, ...) 
 static inline void set_bit(u_int64_t *word, int bitpos) {
 	*word |= (1UL << bitpos);
 }
+
 static inline void unset_bit(u_int64_t *word, int bitpos) {
 	*word &= ~(1UL << bitpos);
 }
 
-
-
-
-
+/*
+ * returns an unused LSCNode either from a thread-local node cache
+ * of from the node_buffer_memory until it's out of space
+ */
 static LSCNode *get_LSCNode(MContext *mc) {
 
 	LSCNode *node = mc->node_cache.first;
@@ -79,7 +75,8 @@ static LSCNode *get_LSCNode(MContext *mc) {
 	}
 
 	if (mc->node_buffer_counter >= mc->gopts->node_buffer_size) {
-		printf("node buffer overflow. increase -N option: %d\n", mc->gopts->node_buffer_size);
+		printf("node buffer overflow. increase -N option: %d\n", 
+				mc->gopts->node_buffer_size);
 		exit(EXIT_FAILURE);
 	}
 	node = (LSCNode*)(((char*)mc->node_buffer_memory) + 
@@ -90,12 +87,21 @@ static LSCNode *get_LSCNode(MContext *mc) {
 	node->prev = NULL;
 	return node;
 }
+
+/*
+ * put a LSCNode back to the thread-local node cache
+ */
 static void recycle_LSCNode(MContext *mc, LSCNode *node) {
 	debug(mc, "give back node %p\n", node);
 	lclass_insert_beginning(&mc->node_cache, node);
 }
 
-//Expiration class API
+/* 
+ * heap class API
+ * inserts a lifetime-size-class 'c' in the proper lifetime-class
+ * of the heap-class 'heap_class'. The index for insertion is
+ * determined from the lifetime of 'c' and the thread clock in 'mc'
+ */
 static void heap_class_insert(MContext *mc, LClass *heap_class, 
 		LSClass *c) {
 
@@ -113,6 +119,10 @@ static void heap_class_insert(MContext *mc, LClass *heap_class,
 	lclass_insert_end(target_lifetime_class, node);
 }
 
+/*
+ * returns a pointer to the lifetime-class that corresponds to
+ * 'remaining_lifetime' in 'heap_class'
+ */
 static LClass *heap_class_get_LClass(MContext *mc, LClass *heap_class,
 		unsigned int remaining_lifetime) {
 
@@ -123,6 +133,11 @@ static LClass *heap_class_get_LClass(MContext *mc, LClass *heap_class,
 	return &heap_class[index];
 }
 
+/*
+ * removes the expired lifetime-class from 'heap_class' and
+ * deallocates (or just unreferences) the objects in each lifetime-size-class
+ * that belong to the expired lifetime-class
+ */
 static void heap_class_remove(MContext *mc, LClass *heap_class) {
 
 	int delete_index = (mc->time) % 
@@ -150,8 +165,9 @@ static void heap_class_remove(MContext *mc, LClass *heap_class) {
 	expired_lifetime_class->last = NULL;
 }
 
-
-//Mutator specific data
+/*
+ * setup the space and initial state of the thread-local meta data
+ */
 static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
 	
 	MContext *mc = calloc_meta_aligned(1, sizeof(MContext), L1_LINE_SZ);
@@ -200,7 +216,9 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 	return mc;
 }
 
-
+/*
+ * record memory usage 
+ */
 static void get_and_print_memstats(MContext *mc) {
 
 	update_proc_status(mc->gopts->pid);
@@ -225,6 +243,9 @@ static void get_and_print_memstats(MContext *mc) {
 	      );
 }
 
+/*
+ * print runtime statistics
+ */
 static void print_runtime_stats(MContext *mc) {
 
 	if (mc->gopts->verbosity == 0) return;
@@ -240,7 +261,11 @@ static void print_runtime_stats(MContext *mc) {
 		);
 }
 
-
+/*
+ * process the objects of a lifetime-size-class of an expired lifetime-class.
+ * Shared objects have their bitmap decremented and
+ * unshared objects are deallocated
+ */
 static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 
 	assert((c->sharing_map & (1UL << mc->thread_id)) != 0);
@@ -286,7 +311,11 @@ static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 	}
 }
 
-//runs in O(number of live objects)
+/*
+ * traverses all lifetime-size-classes in all live lifetime-classes
+ * and access the objects.
+ * runs in O(number of live objects)
+ */
 static void access_live_LClasses(MContext *mc) {
 
 	if (mc->gopts->access_live_objects == 0) return;
@@ -312,7 +341,11 @@ static void unlock_shared_heap_class(int thread_id) {
 	pthread_mutex_unlock(&shared_heap_classes_locks[thread_id]);
 }
 
-// runs in O(number of threads)
+/*
+ * puts a shared lifetime-size-class 'c' in the shared heap class of each
+ * receiving thread.
+ * runs in O(number of threads)
+ */
 static void share_LSClass(MContext *mc, LSClass *c) {
 
 	assert(c->reference_map == 0);
@@ -325,7 +358,6 @@ static void share_LSClass(MContext *mc, LSClass *c) {
 	//The last thread to unset its bit can actually deallocate the LSCLass
 	c->reference_map = c->sharing_map;
 	//reference_map is volatile. We can start to distribute the reference to c
-	//TODO: this should be doable with only sharing_map.
 
 	int i;
 	for (i = 0; i < mc->gopts->num_threads; ++i) {
@@ -333,7 +365,7 @@ static void share_LSClass(MContext *mc, LSClass *c) {
 			//thread i will share this LSCLass
 			//it needs to get a reference
 			LClass *heap_class = shared_heap_classes[i];
-			//lock the shared expiration class of this thread
+			//lock the shared heap class of this thread
 			lock_shared_heap_class(i);
 			//insert LSClass
 			heap_class_insert(mc, heap_class, c);
@@ -344,8 +376,10 @@ static void share_LSClass(MContext *mc, LSClass *c) {
 
 
 
-// returns the number of bytes of all LSClasss that we got from the distr. pool
-// this method runs in O(max_lifetime)
+/* a thread can call this function to fetch all lifetime-classes from its
+ * shared heap-class to its local heap-class.
+ *  this method runs in O(max_lifetime)
+ */
 static void get_shared_LClasses(MContext *mc) {
 
 	int tid = mc->thread_id;
@@ -373,6 +407,9 @@ static void get_shared_LClasses(MContext *mc) {
 	unlock_shared_heap_class(mc->thread_id);
 }
 
+/*
+ * special case of ACDC to run false-sharing mode
+ */
 static volatile LSClass *fs_collection = NULL;
 static volatile int fs_collection_bytes;
 static volatile int fs_allocation_thread;
@@ -392,7 +429,6 @@ static void *false_sharing_thread(void *ptr) {
 
 	mc->stat->running_time = rdtsc();
 
-	//while (runs < mc->gopts->benchmark_duration && allocators_alive == 1) {
 	while (runs < mc->gopts->benchmark_duration) {
 
 		size_t sz = 0;
@@ -418,8 +454,7 @@ static void *false_sharing_thread(void *ptr) {
 #ifdef OPTIMAL_MODE
 			tp = OPTIMAL_FALSE_SHARING;
 #endif		
-			//if (sz < (sizeof(SharedObject) + 2))
-				sz = sizeof(SharedObject) + 2;
+			sz = sizeof(SharedObject) + 2;
 		
 			//mc->stat->lt_histogram[lt] += num_objects;
 			//mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
@@ -476,7 +511,9 @@ static void *false_sharing_thread(void *ptr) {
 	return (void*)mc;
 }
 
-//int allocators_alive = 1;
+/*
+ * ACDC main loop
+ */
 static void *acdc_thread(void *ptr) {
 	MContext *mc = (MContext*)ptr;
 
@@ -513,7 +550,6 @@ static void *acdc_thread(void *ptr) {
 			//get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
 		}
 
-		//TODO: move to get_random_object...
 		//check if collections can be built with sz + min_payload
 		
 		if (tp == BTREE && sz < (sizeof(BTObject) + 4))
@@ -537,7 +573,7 @@ static void *acdc_thread(void *ptr) {
 		LSClass *c = 
 			allocate_LSClass(mc, tp, sz, num_objects, sharing_map);
 
-		c->lifetime = lt; //TODO refactor to allocateLSClass
+		c->lifetime = lt;
 
 		allocation_end = rdtsc();
 		mc->stat->allocation_time += allocation_end - allocation_start;
@@ -566,7 +602,6 @@ static void *acdc_thread(void *ptr) {
 		access_end = rdtsc();
 		mc->stat->access_time += access_end - access_start;
 		
-		//time_counter += bytes_from_dist_pool;
 		time_counter += sz * num_objects;
 
 		if (time_counter >= mc->gopts->time_quantum) {
@@ -600,6 +635,9 @@ static void *acdc_thread(void *ptr) {
 	return (void*)mc;
 }
 
+/*
+ * setup benchmark system and spawn ACDC threads
+ */
 void run_acdc(GOptions *gopts) {
 
 	int i, r;
@@ -734,7 +772,7 @@ void run_acdc(GOptions *gopts) {
 			);
 
 
-	//TODO: free mutator context
+	//TODO: free mutator context. Benchmark terminates anyways
 	for (i = 0; i < gopts->num_threads; ++i) {
 		//destroy_mutator_context(thread_results[i]);
 		pthread_mutex_destroy(&shared_heap_classes_locks[i]);
