@@ -394,8 +394,8 @@ static BTObject *build_tree_recursion(MContext *mc, size_t sz,
 	--nelem;
 
 	int half = nelem / 2;
-	t->right = build_tree_recursion(mc, sz, nelem - half);
 	t->left = build_tree_recursion(mc, sz, half);
+	t->right = build_tree_recursion(mc, sz, nelem - half);
 	
 	return t;
 }
@@ -430,6 +430,21 @@ static void deallocate_btree(MContext *mc, LSClass *c) {
 }
 
 
+static void btree_inverse_preorder_recursion(MContext *mc, BTObject *t, size_t sz) {
+	if (t == NULL) return;
+	int access_counter = 0;
+	int i;
+	if (write_ith_element(mc, access_counter++))
+		for (i = 0; i < mc->gopts->write_iterations; ++i)
+			write_object((Object*)t, sz, sizeof(BTObject));
+
+	btree_inverse_preorder_recursion(mc, t->right, sz);
+	btree_inverse_preorder_recursion(mc, t->left, sz);
+}
+
+static void traverse_btree_inverse_preorder(MContext *mc, LSClass *c) {
+	btree_inverse_preorder_recursion(mc, (BTObject*)c->start, c->object_size);
+}
 static void btree_preorder_recursion(MContext *mc, BTObject *t, size_t sz) {
 	if (t == NULL) return;
 	int access_counter = 0;
@@ -438,8 +453,8 @@ static void btree_preorder_recursion(MContext *mc, BTObject *t, size_t sz) {
 		for (i = 0; i < mc->gopts->write_iterations; ++i)
 			write_object((Object*)t, sz, sizeof(BTObject));
 
-	btree_preorder_recursion(mc, t->left, sz);
 	btree_preorder_recursion(mc, t->right, sz);
+	btree_preorder_recursion(mc, t->left, sz);
 }
 
 static void traverse_btree_preorder(MContext *mc, LSClass *c) {
@@ -514,7 +529,7 @@ void traverse_LSClass(MContext *mc, LSClass *c) {
 			traverse_list(mc, c);
 			return;
 		case BTREE:
-			traverse_btree_preorder(mc, c);
+			traverse_btree_inverse_preorder(mc, c);
 			return;
 		case OPTIMAL_BTREE:
 			traverse_btree_preorder(mc, c);
