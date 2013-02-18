@@ -8,6 +8,8 @@
 #ifndef METADATA_ALLOCATOR_H
 #define METADATA_ALLOCATOR_H
 
+#include <stdlib.h>
+
 void init_metadata_heap(size_t heapsize);
 void *malloc_meta(size_t size);
 void *calloc_meta(size_t nelem, size_t size);
