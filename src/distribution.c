@@ -48,11 +48,19 @@ static unsigned int get_random_lifetime(MContext *mc) {
 static unsigned int get_random_size(MContext *mc) {
 	int sc = get_rand_int_range(mc,
 			mc->gopts->min_object_sc,
-			mc->gopts->max_object_sc);
+			mc->gopts->max_object_sc - 1);
 
-	return get_rand_int_range(mc,
+	assert(sc >= mc->gopts->min_object_sc);
+	assert(sc <= mc->gopts->max_object_sc - 1);
+
+	unsigned int sz = get_rand_int_range(mc,
 			1UL << sc,
 			(1UL << (sc + 1)) -1);
+
+	assert(sz >= (1UL << mc->gopts->min_object_sc));
+	assert(sz <= (1UL << mc->gopts->max_object_sc));
+
+	return sz;
 }
 
 unsigned int get_random_thread(MContext *mc) {
@@ -131,6 +139,7 @@ void get_random_object_props(MContext *mc,
 	*num_objects = effect_of_sizeclass * effect_of_lifetime;
 
 	assert(*num_objects > 0);
+	assert(sz <= (1UL << mc->gopts->max_object_sc));
 
 	*type = get_random_lifetime_size_class_type(mc);
 	if (get_sharing_dist(mc)) {
