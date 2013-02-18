@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <pthread.h>
 #include <assert.h>
 #include <sys/time.h>
@@ -79,7 +80,7 @@ static LSCNode *get_LSCNode(MContext *mc) {
 				mc->gopts->node_buffer_size);
 		exit(EXIT_FAILURE);
 	}
-	node = (LSCNode*)(((char*)mc->node_buffer_memory) + 
+	node = (LSCNode*)(((uint64_t)mc->node_buffer_memory) + 
 		(mc->node_buffer_counter * L1_LINE_SZ));
 	mc->node_buffer_counter++;
 	debug(mc, "node %p\n", node);
@@ -474,7 +475,6 @@ static void *false_sharing_thread(void *ptr) {
 		spin_barrier_wait(&false_sharing_barrier);
 
 		//all theads access the fs collection
-		assert(fs_collection != NULL);
 		access_start = rdtsc();
 		traverse_LSClass(mc, (LSClass*)fs_collection);
 		access_end = rdtsc();
@@ -541,13 +541,11 @@ static void *acdc_thread(void *ptr) {
 		get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
 
 		if (mc->gopts->fixed_number_of_objects > 0) {
+			//override random properties
 			num_objects = mc->gopts->fixed_number_of_objects;
 			sz = 1UL << mc->gopts->min_object_sc;
 			lt = mc->gopts->min_lifetime;
 			sharing_map = 1UL << mc->thread_id;
-			//tp = LIST;
-		} else {
-			//get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
 		}
 
 		//check if collections can be built with sz + min_payload
@@ -556,9 +554,6 @@ static void *acdc_thread(void *ptr) {
 			sz = sizeof(BTObject) + 4;
 		if (tp == LIST && sz < (sizeof(BTObject) + 4))
 			sz = sizeof(BTObject) + 4;
-		if (tp == FALSE_SHARING && sz < sizeof(SharedObject)) {
-			assert(0);
-		}
 
 		mc->stat->lt_histogram[lt] += num_objects;
 		mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
@@ -578,14 +573,10 @@ static void *acdc_thread(void *ptr) {
 		allocation_end = rdtsc();
 		mc->stat->allocation_time += allocation_end - allocation_start;
 
-		assert(c->sharing_map != 0);
-		assert(c->sharing_map == sharing_map);
-		assert(c->reference_map == 0);
 
 		if (!(__builtin_popcountl(c->sharing_map) <= mc->gopts->num_threads)) {
 			printf("sharing map violation: %lx\n", c->sharing_map); 
 		}
-		assert(__builtin_popcountl(c->sharing_map) <= mc->gopts->num_threads);
 		debug(mc, "created collection %p with lt %d", c, lt);
 
 		if (mc->gopts->shared_objects) {

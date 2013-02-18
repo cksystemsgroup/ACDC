@@ -7,6 +7,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <pthread.h>
 #include <assert.h>
 #include <alloca.h>
@@ -28,7 +29,7 @@ static LSClass *get_LSClass(MContext *mc) {
 		printf("class buffer overflow. increase -C option\n");
 		exit(EXIT_FAILURE);
 	}
-	node = (LSCNode*)(((char*)mc->class_buffer_memory) + 
+	node = (LSCNode*)(((uint64_t)mc->class_buffer_memory) + 
 		(mc->class_buffer_counter * L1_LINE_SZ));
 
 	mc->class_buffer_counter++;
@@ -36,7 +37,9 @@ static LSClass *get_LSClass(MContext *mc) {
 	node->prev = NULL;
 	return (LSClass*)node;
 }
+
 static void recycle_LSClass(MContext *mc, LSClass *class) {
+	assert(class->reference_map == 0);
 	//treat Classes as Nodes. They are big enough. Just cast
 	LSCNode *n = (LSCNode*)class;
 	lclass_insert_beginning(&mc->class_cache, n);
@@ -70,6 +73,7 @@ static LSClass *new_LSClass(MContext *mc, lifetime_size_class_type t,
 		size_t sz, unsigned long nelem, u_int64_t sharing_map) {
 
 	LSClass *c = get_LSClass(mc);
+	c->wm = 0xAAAAAAAAAAAAAAAA;
 	c->object_size = sz;
 	c->num_objects = nelem;
 	c->type = t;
@@ -272,12 +276,13 @@ static void deallocate_optimal_list_unaligned(MContext *mc, LSClass *c) {
 	recycle_LSClass(mc, c);
 }
 
-static LSClass *allocate_list(MContext *mc, size_t sz, unsigned long nelem, u_int64_t sharing_map) {
+static LSClass *allocate_list(MContext *mc, size_t sz, unsigned long nelem, 
+		u_int64_t sharing_map) {
 
 	//check if size is sufficient for building a list
 	//i.e., to contain an Object and an pointer to the next Object
 	if (sz < sizeof(LObject)) {
-		printf("Unable to allocate list. Config error. Min. object size too small.\n");
+		printf("Unable to allocate list. Min. object size too small.\n");
 		exit(EXIT_FAILURE);
 	}
 	
@@ -426,6 +431,10 @@ static void traverse_btree_preorder(MContext *mc, LSClass *c) {
 LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type type, size_t sz, 
 		unsigned long nelem, u_int64_t sharing_map) {
 
+	assert(sz > 0);
+	assert(sz < (1UL << mc->gopts->max_object_sc));
+	assert(nelem > 0);
+
 	LSClass *c;
 
 	switch (type) {
@@ -452,7 +461,11 @@ LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type type, size_t sz
 
 void deallocate_LSClass(MContext *mc, LSClass *c) {
 
+	assert(c->wm == 0xAAAAAAAAAAAAAAAA);
 	assert(c->reference_map == 0);
+	assert(c->object_size > 0);
+	assert(c->object_size < (1UL << mc->gopts->max_object_sc));
+	assert(c->num_objects > 0);
 
 	switch (c->type) {
 		case LIST:

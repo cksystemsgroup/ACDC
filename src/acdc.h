@@ -129,6 +129,7 @@ typedef enum {
 
 //set of objects with common size and lifetime
 struct lifetime_size_class {
+  unsigned long wm;
   size_t object_size;
   unsigned int lifetime;
   size_t num_objects;
