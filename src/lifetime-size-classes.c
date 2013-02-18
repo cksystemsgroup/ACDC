@@ -16,7 +16,6 @@
 
 
 static LSClass *get_LSClass(MContext *mc) {
-	//treat Classes as Nodes. They are big enough. Just cast
 	LSCNode *node = mc->class_cache.first;
 	if (node != NULL) {
 		lclass_remove(&mc->class_cache, node);
@@ -38,12 +37,12 @@ static LSClass *get_LSClass(MContext *mc) {
 	return (LSClass*)node;
 }
 static void recycle_LSClass(MContext *mc, LSClass *class) {
+	//treat Classes as Nodes. They are big enough. Just cast
 	LSCNode *n = (LSCNode*)class;
 	lclass_insert_beginning(&mc->class_cache, n);
 }
 
 static void get_thread_ids(int *thread_ids, u_int64_t sharing_map) {
-	//int *thread_ids = calloc(num_threads, sizeof(int)); //TODO remove calloc
 	int i, j;
 	for (i = 0, j = 0; i < sizeof(u_int64_t); ++i) {
 		if ( (1UL << i) & sharing_map ) {
@@ -51,6 +50,7 @@ static void get_thread_ids(int *thread_ids, u_int64_t sharing_map) {
 		}
 	}
 }
+
 /**
  * write_access_ratio determines how many objects are written. e.g., 
  * write_access_ratio of 20 means that every 5th element is written
@@ -78,7 +78,7 @@ static LSClass *new_LSClass(MContext *mc, lifetime_size_class_type t,
 	return c;
 }
 
-// false sharing ---------------------
+// lifetime-size-class handling for false sharing ---------------------
 static void assign_optimal_fs_pool_objects(MContext *mc, LSClass *c, 
 		u_int64_t sharing_map) {
 
@@ -99,7 +99,6 @@ static void assign_optimal_fs_pool_objects(MContext *mc, LSClass *c,
 
 	assert(i % num_threads == 0);
 }
-
 
 static void assign_fs_pool_objects(MContext *mc, LSClass *c, u_int64_t sharing_map) {
 
@@ -181,7 +180,6 @@ static void deallocate_optimal_fs_pool(MContext *mc, LSClass *c) {
 			c->num_objects * cache_lines_per_element * L1_LINE_SZ,
 			L1_LINE_SZ);
 
-	//free(c);
 	recycle_LSClass(mc, c);
 }
 
@@ -194,24 +192,19 @@ static void traverse_fs_pool(MContext *mc, LSClass *c) {
 
 	int i;
 	for (i = 0; i < c->num_objects; ++i) {
-		//check out what are my objects
+		//check authorization on object
 		SharedObject *so = ((SharedObject**)c->start)[i];
 		if (so->sharing_map & my_bit) {
-			//printf("ACCESS\n");
 			int j;
 			assert(c->reference_map != 0);
-			//long long access_start = rdtsc();
 			for (j = 0; j < mc->gopts->write_iterations; ++j)
 				write_object(so, c->object_size, sizeof(SharedObject));
-			//long long access_end = rdtsc();
-			//mc->stat->access_time += access_end - access_start;
 		}
 	}
 }
 
 static void traverse_optimal_fs_pool(MContext *mc, LSClass *c) {
 
-	//check if thread bit is set in sharing_map
 	u_int64_t my_bit = 1UL << mc->thread_id;
 
 	assert(c->reference_map != 0);
@@ -228,19 +221,15 @@ static void traverse_optimal_fs_pool(MContext *mc, LSClass *c) {
 		assert(c->reference_map != 0);
 		
 		if (so->sharing_map & my_bit) {
-			//printf("ACCESS\n");
 			int j;
 			assert(c->reference_map != 0);
-			//long long access_start = rdtsc();
 			for (j = 0; j < mc->gopts->write_iterations; ++j)
 				write_object(so, c->object_size, sizeof(SharedObject));
-			//long long access_end = rdtsc();
-			//mc->stat->access_time += access_end - access_start;
 		}
 	}
 }
 
-// linked list ----------------------------
+// list-based implementation of lifetime-size-classes  ------------
 static void traverse_list(MContext *mc, LSClass *c) {
 	
 	int access_counter = 0;
@@ -250,7 +239,6 @@ static void traverse_list(MContext *mc, LSClass *c) {
 	LObject *list = (LObject*)c->start;
 	
 	while (list != NULL) {
-		//printf("access object\n");
 		int i;
 		if (write_ith_element(mc, access_counter++))
 			for (i = 0; i < mc->gopts->write_iterations; ++i)
@@ -260,27 +248,8 @@ static void traverse_list(MContext *mc, LSClass *c) {
 	}
 }
 
-/*
-static size_t get_aligned_optimal_list_sz(size_t sz, unsigned long nelem, size_t alignment) {
-	int objects_per_line = L1_LINE_SZ / sz;
-	int lines_required = 0;
-	if (objects_per_line > 0) {
-		//allocate one extra cache line in case nelem % objects_per_line != 0
-		lines_required = (nelem / objects_per_line);
-		if (nelem % objects_per_line != 0) lines_required++;
-	} else {
-		//object is larger than a cache line
-		int lines_per_object = sz / L1_LINE_SZ;
-		if (sz % L1_LINE_SZ != 0) lines_per_object++;
-		lines_required = nelem * lines_per_object;
-	}
-	return lines_required * L1_LINE_SZ;
-}
-*/
-
 LSClass *allocate_optimal_list_unaligned(MContext *mc, size_t sz, 
 		unsigned long nelem, u_int64_t sharing_map) {
-
 
 	LSClass *list = new_LSClass(mc, OPTIMAL_LIST, sz, nelem, sharing_map);
 
@@ -298,17 +267,14 @@ LSClass *allocate_optimal_list_unaligned(MContext *mc, size_t sz,
 	return list;
 }
 
-
 static void deallocate_optimal_list_unaligned(MContext *mc, LSClass *c) {
 	deallocate(mc, c->start, c->object_size * c->num_objects);
-	//free(c);
 	recycle_LSClass(mc, c);
 }
 
-
 static LSClass *allocate_list(MContext *mc, size_t sz, unsigned long nelem, u_int64_t sharing_map) {
 
-	//check of size is sufficient for building a list
+	//check if size is sufficient for building a list
 	//i.e., to contain an Object and an pointer to the next Object
 	if (sz < sizeof(LObject)) {
 		printf("Unable to allocate list. Config error. Min. object size too small.\n");
@@ -336,17 +302,13 @@ static void deallocate_list(MContext *mc, LSClass *c) {
 		LObject *n = l->next;
 		deallocate(mc, (Object*)l, c->object_size);
 		l = n;
-		//printf("delete\n");
 	}
-	//free(c);
 	recycle_LSClass(mc, c);
 }
 
-//binary tree -----------------------
+//binary tree-based implemenation of lifetime-size-classes ---------------
 static void deallocate_optimal_btree(MContext *mc, LSClass *c) {
 	deallocate(mc, (Object*)(c->start), c->object_size * c->num_objects);
-	//free(c);
-	
 	recycle_LSClass(mc, c);
 }
 
@@ -425,10 +387,8 @@ static void deallocate_subtree_recursion(MContext *mc, BTObject *t, size_t node_
 
 static void deallocate_btree(MContext *mc, LSClass *c) {
 	deallocate_subtree_recursion(mc, (BTObject*)c->start, c->object_size);
-	//free(c);
 	recycle_LSClass(mc, c);
 }
-
 
 static void btree_inverse_preorder_recursion(MContext *mc, BTObject *t, size_t sz) {
 	if (t == NULL) return;
@@ -445,6 +405,7 @@ static void btree_inverse_preorder_recursion(MContext *mc, BTObject *t, size_t s
 static void traverse_btree_inverse_preorder(MContext *mc, LSClass *c) {
 	btree_inverse_preorder_recursion(mc, (BTObject*)c->start, c->object_size);
 }
+
 static void btree_preorder_recursion(MContext *mc, BTObject *t, size_t sz) {
 	if (t == NULL) return;
 	int access_counter = 0;
@@ -461,7 +422,6 @@ static void traverse_btree_preorder(MContext *mc, LSClass *c) {
 	btree_preorder_recursion(mc, (BTObject*)c->start, c->object_size);
 }
 
-
 // public methods
 LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type type, size_t sz, 
 		unsigned long nelem, u_int64_t sharing_map) {
@@ -472,18 +432,17 @@ LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type type, size_t sz
 		case LIST:
 			return allocate_list(mc, sz, nelem, sharing_map);
 		case OPTIMAL_LIST:
-			return allocate_optimal_list_unaligned(mc, sz, nelem, sharing_map);
+			return allocate_optimal_list_unaligned(
+					mc, sz, nelem, sharing_map);
 		case BTREE:
 			return allocate_btree(mc, sz, nelem, sharing_map);
 		case OPTIMAL_BTREE:
 			return allocate_optimal_btree(mc, sz, nelem, sharing_map);
 		case FALSE_SHARING:
 			c = allocate_fs_pool(mc, sz, nelem, sharing_map);
-			//assign_fs_pool_objects(mc, c, sharing_map);
 			return c;
 		case OPTIMAL_FALSE_SHARING:
 			c = allocate_optimal_fs_pool(mc, sz, nelem, sharing_map);
-			//assign_optimal_fs_pool_objects(mc, c, sharing_map);
 			return c;
 		default:
 			printf("Allocate: Collection Type not supported\n");
@@ -519,6 +478,7 @@ void deallocate_LSClass(MContext *mc, LSClass *c) {
 			exit(EXIT_FAILURE);
 	}
 }
+
 void traverse_LSClass(MContext *mc, LSClass *c) {
 
 	switch (c->type) {
