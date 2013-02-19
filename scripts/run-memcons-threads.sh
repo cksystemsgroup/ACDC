@@ -4,7 +4,7 @@ OUTPUT_DIR=data/memcons-threads
 OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 5 -g 1 -t 10000000 -O -R 100 -T 100 -N 20000 -C 20000 -H 200000 -v"
 FACTOR1="-n"
 FACTOR2=""
-REPS=2
+REPS=5
 RELATIVE=1
 
 HEADLINE="#Created at: `date` on `hostname`"
@@ -20,7 +20,7 @@ echo -e $HEADLINE > $OUTPUT_DIR/access.dat
 echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
 #for XVALUE in 1 2 4 6 8 12 16 20 24
-for XVALUE in 24
+for XVALUE in 20 24
 do
 	echo $XVALUE
 	ALLOC_OUTPUT="$XVALUE"
