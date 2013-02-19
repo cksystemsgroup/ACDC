@@ -2,7 +2,7 @@
 
 OUTPUT_DIR=data/contention-shared-threads-noaccess
 #OPTIONS="-a -s 3 -S 10 -d 100 -l 1 -L 5 -k -t 1000000 -N 10000 -C 10000 -O -T 100 -R 100 -H 50000"
-OPTIONS="-a -s 3 -S 10 -d 100 -l 1 -L 5 -k -t 1000000 -N 20000 -C 20000 -O -T 100 -R 100 -H 200000"
+OPTIONS="-a -s 3 -S 10 -d 100 -l 1 -L 5 -t 1000000 -N 20000 -C 20000 -O -T 100 -R 100 -H 200000"
 FACTOR1="-n"
 FACTOR2=""
 REPS=3
@@ -10,7 +10,7 @@ RELATIVE=1
 
 HEADLINE="#Created at: `date` on `hostname`"
 HEADLINE="$HEADLINE\n#Average on $REPS runs. ACDC Options: $OPTIONS"
-HEADLINE="$HEADLINE\n#x($FACTOR1)\tjemalloc\tstddev\tllalloc\tstddev\toptimal\tstddev\tptmalloc2\tstddev\tptmalloc3\tstddev\ttbb\tstddev\ttcmalloc\tstddev"
+HEADLINE="$HEADLINE\n#x($FACTOR1)\tjemalloc\tstddev\tllalloc\tstddev\toptimal\tstddev\tptmalloc2\tstddev\tptmalloc3\tstddev\ttbb\tstddev\ttcmalloc\tstddev\tscalloc\tstddev"
 	
 rm -rf $OUTPUT_DIR
 mkdir -p $OUTPUT_DIR
@@ -26,7 +26,7 @@ do
 	FREE_OUTPUT="$XVALUE"
 	ACCESS_OUTPUT="$XVALUE"
 	MEMCONS_OUTPUT="$XVALUE"
-	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc
+	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc scalloc
 	do
 
 		ALLOC_SUM=0

@@ -16,5 +16,6 @@ plot "access.dat" using 1:($2/2100000):($3/2100000):xticlabel(1) with errorlines
 "access.dat" using 1:(($8)/2100000):($9/2100000):xticlabel(1) with errorlines   lt 4 lw 3 title 'ptmalloc2', \
 "access.dat" using 1:(($10)/2100000):($11/2100000):xticlabel(1) with errorlines   lt 8 lw 3 title 'ptmalloc3', \
 "access.dat" using 1:(($12)/2100000):($13/2100000):xticlabel(1) with errorlines   lt 9 lw 3 title 'tbb', \
-"access.dat" using 1:(($14)/2100000):($15/2100000):xticlabel(1) with errorlines   lt 7 lw 3 title 'tcmalloc'
+"access.dat" using 1:(($14)/2100000):($15/2100000):xticlabel(1) with errorlines   lt 7 lw 3 title 'tcmalloc', \
+"access.dat" using 1:(($14)/2100000):($15/2100000):xticlabel(1) with errorlines   lt 10 lw 3 title 'scalloc'
 

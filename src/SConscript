@@ -21,7 +21,7 @@ acdc_env.Append(LIBS=['pthread'])
 acdc_env.Append(CPPFLAGS=['-Wall', '-Werror'])
 
 for build in ['release', 'debug']:
-	for config in ['optimal', 'ptmalloc2', 'ptmalloc3', 'tcmalloc', 'jemalloc', 'tbb', 'llalloc']:
+	for config in ['optimal', 'ptmalloc2', 'ptmalloc3', 'tcmalloc', 'jemalloc', 'tbb', 'llalloc', 'scalloc']:
 		e = acdc_env.Clone()
 
 		if build == 'release':
@@ -55,6 +55,9 @@ for build in ['release', 'debug']:
 		if config == 'llalloc':
 			e.Append(LIBS=['llalloc'], LIBPATH=['../allocators'])
 			e.Append(CPPFLAGS=['-DALLOCATOR=llalloc'])
+		if config == 'scalloc':
+			e.Append(LIBS=['scalloc'], LIBPATH=['/home/mlippautz/work/scalloc/.libs'])
+			e.Append(CPPFLAGS=['-DALLOCATOR=scalloc'])
 
 		object_list = []
 		for obj in ['main', 'memory', 'acdc', 'distribution', 'lifetime-class', 'lifetime-size-classes', 'metadata-allocator', 'barrier', 'proc_status']:
