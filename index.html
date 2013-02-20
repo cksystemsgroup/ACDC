@@ -1,49 +1,141 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
   <head>
-    <meta charset='utf-8' />
-    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="Acdc : Universal Mutator for profiling and benchmarking heap management systems" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACDC: Towards a Universal Mutator for Benchmarking Heap Management Systems</title>
+    <meta name="author" content="Computational Systems Group">
 
-    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+    <!-- HTML5 support for IE6-8 of HTML elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
 
-    <title>Acdc</title>
+    <link href="assets/css/bootstrap.min.css" type="text/css" rel="stylesheet" media="all">
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+      .sidebar-nav {
+        padding: 9px 0;
+      }
+
+      @media (max-width: 980px) {
+        /* Enable use of floated navbar text */
+        .navbar-text.pull-right {
+          float: none;
+          padding-left: 5px;
+          padding-right: 5px;
+        }
+      }
+    </style>
+    <link href="assets/css/bootstrap-responsive.min.css" type="text/css" rel="stylesheet" media="all">
+    <link href="assets/css/main.css" type="text/css" rel="stylesheet" media="all">
+
+    <script src="http://code.jquery.com/jquery-latest.js"></script>
+    <script src="assets/js/bootstrap.min.js"></script>
+    <script language="javascript" type="text/javascript">
+      $(document).ready(function () {
+        $("#pubs").load("acdc.html");
+      });
+
+    </script>
   </head>
-
   <body>
 
-    <!-- HEADER -->
-    <div id="header_wrap" class="outer">
-        <header class="inner">
-          <a id="forkme_banner" href="https://github.com/cksystemsgroup/acdc">View on GitHub</a>
-
-          <h1 id="project_title">Acdc</h1>
-          <h2 id="project_tagline">Universal Mutator for profiling and benchmarking heap management systems</h2>
-
-            <section id="downloads">
-              <a class="zip_download_link" href="https://github.com/cksystemsgroup/acdc/zipball/master">Download this project as a .zip file</a>
-              <a class="tar_download_link" href="https://github.com/cksystemsgroup/acdc/tarball/master">Download this project as a tar.gz file</a>
-            </section>
-        </header>
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="brand" href="#">Scal</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="active"><a href="#"><i class="icon-home icon-white"></i> Home</a></li>
+              <li><a href="#people">People</a></li>
+              <li><a href="#code">Code</a></li>
+              <li><a href="#publications">Publications</a></li>
+            </ul>
+            <ul class="nav pull-right">
+              <ul class="nav">
+                <li><a href="http://cs.uni-salzburg.at/~ck">Computational Systems Group</a></li>
+              </ul>
+              <li class="dropdown">
+                <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                  Other Projects
+                  <b class="caret"></b>
+                </a>
+                <ul class="dropdown-menu">
+                  <li><a tabindex="-1" href="http://cksystemsgroup.github.com/scal">Scal</a></li>
+		  <li><a tabindex="-1" href="http://cksystemsgroup.github.com/libscm">libscm</a></li>
+                  <li class="divider"></li>
+                  <li><a tabindex="-1" href="http://github.com/cksystemsgroup">cksystemsgroup</a></li>
+                </ul>
+              </li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
     </div>
 
-    <!-- MAIN CONTENT -->
-    <div id="main_content_wrap" class="outer">
-      <section id="main_content" class="inner">
-        <h3>Welcome to ACDC</h3>
-      </section>
-    </div>
+    <div class="container">
+      <div class="content">
+        <div class="page-header">
+          <h1>ACDC: Towards a Universal Mutator for Benchmarking Heap Management Systems</h1>
+        </div>
 
-    <!-- FOOTER  -->
-    <div id="footer_wrap" class="outer">
-      <footer class="inner">
-        <p class="copyright">Acdc maintained by <a href="https://github.com/cksystemsgroup">cksystemsgroup</a></p>
-        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+	<p> We present ACDC, an open-source benchmark that may be configured
+	to emulate virtually any realistic single- and multi-threaded memory
+	allocation, sharing, access, and deallocation behavior. ACDC mimics
+	periodic memory allocation and deallocation (AC) as well as persistent
+	memory (DC). Memory may be allocated thread-locally and shared among
+	multiple threads to study multi-core scalability and even false
+	sharing. Memory may be deallocated by threads other than the allocating
+	threads to study blowup memory fragmentation. Memory may be accessed
+	and deallocated sequentially in allocation order or in tree-like
+	traversals to expose allocator deficiencies in exploiting spatial
+	locality. We demonstrate ACDC’s capabilities with six state-of-the-art
+	allocators for C/C++ in an empirical study which also reveals
+	interesting performance differences of the allocators. </p>
+        
+        <a name="people"><h2>People</h2></a>
+        <div style="z-index:900; position:relative;">
+        <h3>University of Salzburg</h3>
+        <ul>
+          <li><a href="//cs.uni-salzburg.at/~maigner">Martin Aigner</a>
+          <li><a href="//cs.uni-salzburg.at/~ck">Christoph Kirsch</a>
+        </ul>
+        </div>
+
+        <a name="code">
+          <h2>Code
+          </h2>
+        </a>
+        <p> All code is released under a <a
+          href="https://github.com/cksystemsgroup/acdc/blob/master/LICENSE">BSD
+          style license</a> and can be found on <a
+          href="https://github.com/cksystemsgroup/acdc">github</a>. Consult the
+        <a
+          href="https://github.com/cksystemsgroup/acdc/blob/master/README.md">README</a>
+        file for instructions on how to build and run ACDC.</p>
+	
+	<!--
+        <a name="publications"><h2>Publications&nbsp;<small><a href="scal.bib">bibtex</a></small></h2></a>
+        <div id="pubs"></div>
+	-->
+
+      </div>
+      <footer>
+        <p> &copy; <a href="http://cs.uni-salzburg.at/~ck">Computational Systems
+          Group</a> 2013. Website built with <a
+          href="http://twitter.github.com/bootstrap/" target="_blank">Twitter
+          Bootstrap</a> and <a href="http://jquery.com/"
+          target="_blank">jQuery</a>.  </p>
       </footer>
     </div>
-
-    
-
   </body>
 </html>
