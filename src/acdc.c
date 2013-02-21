@@ -520,7 +520,6 @@ static void *acdc_thread(void *ptr) {
 	unsigned long time_counter = 0;
 	int runs = 0;
 	unsigned long long allocation_start, allocation_end;
-	unsigned long long deallocation_start, deallocation_end;
 	unsigned long long access_start, access_end;
 
 	printf("running thread %d\n", mc->thread_id);
@@ -606,13 +605,8 @@ static void *acdc_thread(void *ptr) {
 			time_counter = 0;
 			runs++;
 
-			deallocation_start = rdtsc();
 			//remove the just-expired LClass
 			heap_class_remove(mc, mc->heap_class);	
-			deallocation_end = rdtsc();
-
-			mc->stat->deallocation_time += 
-				deallocation_end - deallocation_start;
 
 			print_runtime_stats(mc);
 

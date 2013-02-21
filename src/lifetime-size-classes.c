@@ -13,8 +13,8 @@
 #include <alloca.h>
 
 #include "acdc.h"
+#include "arch.h"
 #include "caches.h"
-
 
 static LSClass *get_LSClass(MContext *mc) {
 	LSCNode *node = mc->class_cache.first;
@@ -461,35 +461,52 @@ LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type type, size_t sz
 
 void deallocate_LSClass(MContext *mc, LSClass *c) {
 
-	assert(c->wm == 0xAAAAAAAAAAAAAAAA);
+	unsigned long long start, end;
+
 	assert(c->reference_map == 0);
 	assert(c->object_size > 0);
 	assert(c->object_size < (1UL << mc->gopts->max_object_sc));
 	assert(c->num_objects > 0);
 
+	start = rdtsc();
+
 	switch (c->type) {
 		case LIST:
 			deallocate_list(mc, c);
+			end = rdtsc();
+			mc->stat->deallocation_time += end - start;
 			return;
 		case OPTIMAL_LIST:
 			deallocate_optimal_list_unaligned(mc, c);
+			end = rdtsc();
+			mc->stat->deallocation_time += end - start;
 			return;
 		case BTREE:
 			deallocate_btree(mc, c);
+			end = rdtsc();
+			mc->stat->deallocation_time += end - start;
 			return;
 		case OPTIMAL_BTREE:
 			deallocate_optimal_btree(mc, c);
+			end = rdtsc();
+			mc->stat->deallocation_time += end - start;
 			return;
 		case FALSE_SHARING:
 			deallocate_fs_pool(mc, c);
+			end = rdtsc();
+			mc->stat->deallocation_time += end - start;
 			return;
 		case OPTIMAL_FALSE_SHARING:
 			deallocate_optimal_fs_pool(mc, c);
+			end = rdtsc();
+			mc->stat->deallocation_time += end - start;
 			return;
 		default:
 			printf("Deallocate: Collection Type not supported\n");
 			exit(EXIT_FAILURE);
 	}
+
+	
 }
 
 void traverse_LSClass(MContext *mc, LSClass *c) {
