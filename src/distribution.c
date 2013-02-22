@@ -7,9 +7,11 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 
 #include "acdc.h"
+#include "arch.h"
 
 
 //Schrage minimum standard PRNG. Assumes int to be 32 bits
@@ -54,11 +56,11 @@ static unsigned int get_random_size(MContext *mc) {
 	assert(sc <= mc->gopts->max_object_sc - 1);
 
 	unsigned int sz = get_rand_int_range(mc,
-			1UL << sc,
-			(1UL << (sc + 1)) -1);
+			BIT_ZERO << sc,
+			(BIT_ZERO << (sc + 1)) -1);
 
-	assert(sz >= (1UL << mc->gopts->min_object_sc));
-	assert(sz <= (1UL << mc->gopts->max_object_sc));
+	assert(sz >= (BIT_ZERO << mc->gopts->min_object_sc));
+	assert(sz <= (BIT_ZERO << mc->gopts->max_object_sc));
 
 	return sz;
 }
@@ -83,31 +85,28 @@ static lifetime_size_class_type get_random_lifetime_size_class_type(MContext *mc
 }
 
 //returns a sharing bitmap based on the "receiving threads ratio" 
-static u_int64_t get_random_thread_selection(MContext *mc) {
+static reference_map_t get_random_thread_selection(MContext *mc) {
 
-	u_int64_t my_thread_bit = 1UL << mc->thread_id;
+	reference_map_t my_thread_bit = BIT_ZERO << mc->thread_id;
 
-	if (mc->gopts->shared_objects == 0 || 
-			mc->gopts->receiving_threads_ratio == 0) {
+	if (mc->gopts->shared_objects == 0 || mc->gopts->receiving_threads_ratio == 0) {
 		//only this thread is interested
 		return my_thread_bit;
 	}
 
 	//threads except me, times share ratio
-	int number_of_other_threads = 
-		(mc->gopts->num_threads - 1) / (100 / mc->gopts->receiving_threads_ratio);
-
+	int number_of_other_threads = (mc->gopts->num_threads - 1) / (100 / mc->gopts->receiving_threads_ratio);
 
 	//get number_of_other_threads random thread id's (except mine)
 	//and set their bits in tm
 	int i = 0;
-	u_int64_t tm = my_thread_bit;
+	reference_map_t tm = my_thread_bit;
 	while (i < number_of_other_threads) {
 		int tid = get_random_thread(mc);
-		//check if we already haven't added this thread
-		if (!(tm & (1UL << tid))) {
+
+		if (!(tm & (BIT_ZERO << tid))) {
 			++i;
-			tm |= 1UL << tid;
+			tm |= BIT_ZERO << tid;
 		}
 	}
 	return tm;
@@ -119,7 +118,7 @@ void get_random_object_props(MContext *mc,
 		unsigned int *lifetime, 
 		unsigned int *num_objects,
 		lifetime_size_class_type *type,
-		u_int64_t *sharing_map) {
+		reference_map_t *reference_map) {
 
 	unsigned int lt = get_random_lifetime(mc);
 	unsigned int sz = get_random_size(mc);
@@ -139,14 +138,13 @@ void get_random_object_props(MContext *mc,
 	*num_objects = effect_of_sizeclass * effect_of_lifetime;
 
 	assert(*num_objects > 0);
-	assert(sz <= (1UL << mc->gopts->max_object_sc));
+	assert(sz <= (BIT_ZERO << mc->gopts->max_object_sc));
 
 	*type = get_random_lifetime_size_class_type(mc);
 	if (get_sharing_dist(mc)) {
-		*sharing_map = get_random_thread_selection(mc); //shared objects
+		*reference_map = get_random_thread_selection(mc); //shared objects
 	} else {
-		*sharing_map = 1UL << mc->thread_id; //unshared
+		*reference_map = BIT_ZERO << mc->thread_id; //unshared
 	}
-	return;
 }
 

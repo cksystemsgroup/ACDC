@@ -18,7 +18,7 @@ else:
 acdc_env = acdc_conf.Finish()
 
 acdc_env.Append(LIBS=['pthread'])
-acdc_env.Append(CPPFLAGS=['-Wall', '-Werror'])
+acdc_env.Append(CPPFLAGS=['-Wall', '-Werror', '-mcx16', '-m64'])
 
 for build in ['release', 'debug']:
 	for config in ['optimal', 'ptmalloc2', 'ptmalloc3', 'tcmalloc', 'jemalloc', 'tbb', 'llalloc', 'scalloc']:

@@ -88,6 +88,18 @@ static void check_params(GOptions *gopts) {
 		gopts->write_access_ratio = 100;
 	}
 	if (gopts->max_time_gap < 0) gopts->max_time_gap = gopts->max_lifetime;
+
+
+#ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
+	int max_threads = 128;
+#else
+	int max_threads = 64;
+#endif
+	if (gopts->num_threads > max_threads) {
+		printf("Parameter error: -n value must be between 0 and %d\n",
+				max_threads);
+		exit(EXIT_FAILURE);
+	}
 }
 
 
@@ -118,8 +130,6 @@ static void print_params(GOptions *gopts) {
 }
 
 int main(int argc, char **argv) {
-
-	//initial_break = sbrk(0);
 
 	GOptions *gopts = sbrk(sizeof(GOptions));	
 	//GOptions *gopts = malloc(sizeof(GOptions));	

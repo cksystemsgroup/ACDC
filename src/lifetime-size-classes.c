@@ -45,10 +45,10 @@ static void recycle_LSClass(MContext *mc, LSClass *class) {
 	lclass_insert_beginning(&mc->class_cache, n);
 }
 
-static void get_thread_ids(int *thread_ids, u_int64_t sharing_map) {
+static void get_thread_ids(int *thread_ids, reference_map_t reference_map) {
 	int i, j;
-	for (i = 0, j = 0; i < sizeof(u_int64_t); ++i) {
-		if ( (1UL << i) & sharing_map ) {
+	for (i = 0, j = 0; i < sizeof(reference_map_t); ++i) {
+		if ( (BIT_ZERO << i) & reference_map ) {
 			thread_ids[j++] = i;
 		}
 	}
@@ -70,26 +70,24 @@ static int write_ith_element(MContext *mc, int i) {
  * allocates memory for a new LSCLass
  */
 static LSClass *new_LSClass(MContext *mc, lifetime_size_class_type t, 
-		size_t sz, unsigned long nelem, u_int64_t sharing_map) {
+		size_t sz, unsigned long nelem, reference_map_t reference_map) {
 
 	LSClass *c = get_LSClass(mc);
-	c->wm = 0xAAAAAAAAAAAAAAAA;
 	c->object_size = sz;
 	c->num_objects = nelem;
 	c->type = t;
-	c->sharing_map = sharing_map;
-	c->reference_map = 0;
+	c->reference_map = reference_map;
 	return c;
 }
 
 // lifetime-size-class handling for false sharing ---------------------
 static void assign_optimal_fs_pool_objects(MContext *mc, LSClass *c, 
-		u_int64_t sharing_map) {
+		reference_map_t reference_map) {
 
 	//check which threads should participate
-	int num_threads = __builtin_popcountl(sharing_map);
+	int num_threads = map_bits(reference_map);
 	int *thread_ids = alloca(num_threads * sizeof(int));
-	get_thread_ids(thread_ids, sharing_map);
+	get_thread_ids(thread_ids, reference_map);
 
 	int cache_lines_per_element = (c->object_size / L1_LINE_SZ) + 1;
 	assert(cache_lines_per_element == 1);
@@ -98,35 +96,35 @@ static void assign_optimal_fs_pool_objects(MContext *mc, LSClass *c,
 	for (i = 0; i < c->num_objects; ++i) {
 		char *next = (char*)c->start + cache_lines_per_element * L1_LINE_SZ * i;
 		SharedObject *o = (SharedObject*)next;
-		o->sharing_map = 1UL << ( thread_ids[i % num_threads] );
+		o->reference_map = BIT_ZERO << ( thread_ids[i % num_threads] );
 	}
 
 	assert(i % num_threads == 0);
 }
 
-static void assign_fs_pool_objects(MContext *mc, LSClass *c, u_int64_t sharing_map) {
+static void assign_fs_pool_objects(MContext *mc, LSClass *c, reference_map_t reference_map) {
 
 	//check which threads should participate
-	int num_threads = __builtin_popcountl(sharing_map);
+	int num_threads = map_bits(reference_map);
 	int *thread_ids = alloca(num_threads * sizeof(int));
-	get_thread_ids(thread_ids, sharing_map);
+	get_thread_ids(thread_ids, reference_map);
 
 	int i;
 	for (i = 0; i < c->num_objects; ++i) {
 		SharedObject *o = ((SharedObject**)c->start)[i];
-		o->sharing_map = 1UL << ( thread_ids[i % num_threads]  );	
+		o->reference_map = BIT_ZERO << ( thread_ids[i % num_threads]  );	
 	}
 }
 
 static LSClass *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem, 
-		u_int64_t sharing_map) {
+		reference_map_t reference_map) {
 	
-	int num_threads = __builtin_popcountl(sharing_map);
+	int num_threads = map_bits(reference_map);
 	//make sure that nelem is a multiple of num_threads
 	if (nelem % num_threads != 0)
 		nelem += num_threads - (nelem % num_threads);
 
-	LSClass *c = new_LSClass(mc, FALSE_SHARING, sz, nelem, sharing_map);
+	LSClass *c = new_LSClass(mc, FALSE_SHARING, sz, nelem, reference_map);
 
 	//we store all objects on an array. one after the other
 	c->start = allocate(mc, nelem * sizeof(SharedObject*));
@@ -136,28 +134,28 @@ static LSClass *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
 		((SharedObject**)c->start)[i] = allocate(mc, sz);
 	}
 		
-	assign_fs_pool_objects(mc, c, sharing_map);
+	assign_fs_pool_objects(mc, c, reference_map);
 	return c;
 }
 
 static LSClass *allocate_optimal_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
-		u_int64_t sharing_map) {
+		reference_map_t reference_map) {
 	
-	int num_threads = __builtin_popcountl(sharing_map);
+	int num_threads = map_bits(reference_map);
 	//make sure that nelem is a multiple of num_threads
 	if (nelem % num_threads != 0)
 		nelem += num_threads - (nelem % num_threads);
 
 	assert(nelem % num_threads == 0);
 	
-	LSClass *c = new_LSClass(mc, OPTIMAL_FALSE_SHARING, sz, nelem, sharing_map);
+	LSClass *c = new_LSClass(mc, OPTIMAL_FALSE_SHARING, sz, nelem, reference_map);
 
 	int cache_lines_per_element = (sz / L1_LINE_SZ) + 1;
 
 	c->start = allocate_aligned(mc, 
 			nelem * cache_lines_per_element * L1_LINE_SZ, L1_LINE_SZ);
 	
-	assign_optimal_fs_pool_objects(mc, c, sharing_map);
+	assign_optimal_fs_pool_objects(mc, c, reference_map);
 
 	return c;
 }
@@ -188,8 +186,8 @@ static void deallocate_optimal_fs_pool(MContext *mc, LSClass *c) {
 }
 
 static void traverse_fs_pool(MContext *mc, LSClass *c) {
-	//check if thread bit is set in sharing_map
-	u_int64_t my_bit = 1UL << mc->thread_id;
+	//check if thread bit is set in reference_map
+	reference_map_t my_bit = BIT_ZERO << mc->thread_id;
 
 	assert(c->reference_map != 0);
 	assert(c->start != NULL);
@@ -198,7 +196,7 @@ static void traverse_fs_pool(MContext *mc, LSClass *c) {
 	for (i = 0; i < c->num_objects; ++i) {
 		//check authorization on object
 		SharedObject *so = ((SharedObject**)c->start)[i];
-		if (so->sharing_map & my_bit) {
+		if (so->reference_map & my_bit) {
 			int j;
 			assert(c->reference_map != 0);
 			for (j = 0; j < mc->gopts->write_iterations; ++j)
@@ -209,7 +207,7 @@ static void traverse_fs_pool(MContext *mc, LSClass *c) {
 
 static void traverse_optimal_fs_pool(MContext *mc, LSClass *c) {
 
-	u_int64_t my_bit = 1UL << mc->thread_id;
+	reference_map_t my_bit = BIT_ZERO << mc->thread_id;
 
 	assert(c->reference_map != 0);
 	assert(c->start != NULL);
@@ -224,7 +222,7 @@ static void traverse_optimal_fs_pool(MContext *mc, LSClass *c) {
 		
 		assert(c->reference_map != 0);
 		
-		if (so->sharing_map & my_bit) {
+		if (so->reference_map & my_bit) {
 			int j;
 			assert(c->reference_map != 0);
 			for (j = 0; j < mc->gopts->write_iterations; ++j)
@@ -253,9 +251,9 @@ static void traverse_list(MContext *mc, LSClass *c) {
 }
 
 LSClass *allocate_optimal_list_unaligned(MContext *mc, size_t sz, 
-		unsigned long nelem, u_int64_t sharing_map) {
+		unsigned long nelem, reference_map_t reference_map) {
 
-	LSClass *list = new_LSClass(mc, OPTIMAL_LIST, sz, nelem, sharing_map);
+	LSClass *list = new_LSClass(mc, OPTIMAL_LIST, sz, nelem, reference_map);
 
 	//allocate whole memory at once
 	list->start = allocate(mc, sz * nelem);
@@ -277,7 +275,7 @@ static void deallocate_optimal_list_unaligned(MContext *mc, LSClass *c) {
 }
 
 static LSClass *allocate_list(MContext *mc, size_t sz, unsigned long nelem, 
-		u_int64_t sharing_map) {
+		reference_map_t reference_map) {
 
 	//check if size is sufficient for building a list
 	//i.e., to contain an Object and an pointer to the next Object
@@ -286,7 +284,7 @@ static LSClass *allocate_list(MContext *mc, size_t sz, unsigned long nelem,
 		exit(EXIT_FAILURE);
 	}
 	
-	LSClass *list = new_LSClass(mc, LIST, sz, nelem, sharing_map);
+	LSClass *list = new_LSClass(mc, LIST, sz, nelem, reference_map);
 
 	list->start = allocate(mc, sz);
 	LObject *tmp = (LObject*)list->start;
@@ -318,7 +316,7 @@ static void deallocate_optimal_btree(MContext *mc, LSClass *c) {
 }
 
 static LSClass *allocate_optimal_btree(MContext *mc, size_t sz, 
-		unsigned long nelem, u_int64_t sharing_map) {
+		unsigned long nelem, reference_map_t reference_map) {
 
 	if (sz < sizeof(BTObject)) {
 		printf("Unable to allocate btree. Config error. "
@@ -326,7 +324,7 @@ static LSClass *allocate_optimal_btree(MContext *mc, size_t sz,
 		exit(EXIT_FAILURE);
 	}
 
-	LSClass *c = new_LSClass(mc, OPTIMAL_BTREE, sz, nelem, sharing_map);
+	LSClass *c = new_LSClass(mc, OPTIMAL_BTREE, sz, nelem, reference_map);
 	c->start = allocate(mc, sz * nelem);
 
 	char *arr = (char*)(c->start);
@@ -368,7 +366,7 @@ static BTObject *build_tree_recursion(MContext *mc, size_t sz,
 }
 
 static LSClass *allocate_btree(MContext *mc, size_t sz, unsigned long nelem, 
-		u_int64_t sharing_map) {
+		reference_map_t reference_map) {
 	
 	if (sz < sizeof(BTObject)) {
 		printf("Unable to allocate btree. Config error. "
@@ -376,7 +374,7 @@ static LSClass *allocate_btree(MContext *mc, size_t sz, unsigned long nelem,
 		exit(EXIT_FAILURE);
 	}
 
-	LSClass *btree = new_LSClass(mc, BTREE, sz, nelem, sharing_map);
+	LSClass *btree = new_LSClass(mc, BTREE, sz, nelem, reference_map);
 
 	btree->start = (Object*)build_tree_recursion(mc, sz, nelem);
 
@@ -429,29 +427,29 @@ static void traverse_btree_preorder(MContext *mc, LSClass *c) {
 
 // public methods
 LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type type, size_t sz, 
-		unsigned long nelem, u_int64_t sharing_map) {
+		unsigned long nelem, reference_map_t reference_map) {
 
 	assert(sz > 0);
-	assert(sz < (1UL << mc->gopts->max_object_sc));
+	assert(sz < (BIT_ZERO << mc->gopts->max_object_sc));
 	assert(nelem > 0);
 
 	LSClass *c;
 
 	switch (type) {
 		case LIST:
-			return allocate_list(mc, sz, nelem, sharing_map);
+			return allocate_list(mc, sz, nelem, reference_map);
 		case OPTIMAL_LIST:
 			return allocate_optimal_list_unaligned(
-					mc, sz, nelem, sharing_map);
+					mc, sz, nelem, reference_map);
 		case BTREE:
-			return allocate_btree(mc, sz, nelem, sharing_map);
+			return allocate_btree(mc, sz, nelem, reference_map);
 		case OPTIMAL_BTREE:
-			return allocate_optimal_btree(mc, sz, nelem, sharing_map);
+			return allocate_optimal_btree(mc, sz, nelem, reference_map);
 		case FALSE_SHARING:
-			c = allocate_fs_pool(mc, sz, nelem, sharing_map);
+			c = allocate_fs_pool(mc, sz, nelem, reference_map);
 			return c;
 		case OPTIMAL_FALSE_SHARING:
-			c = allocate_optimal_fs_pool(mc, sz, nelem, sharing_map);
+			c = allocate_optimal_fs_pool(mc, sz, nelem, reference_map);
 			return c;
 		default:
 			printf("Allocate: Collection Type not supported\n");
@@ -465,7 +463,7 @@ void deallocate_LSClass(MContext *mc, LSClass *c) {
 
 	assert(c->reference_map == 0);
 	assert(c->object_size > 0);
-	assert(c->object_size < (1UL << mc->gopts->max_object_sc));
+	assert(c->object_size < (BIT_ZERO << mc->gopts->max_object_sc));
 	assert(c->num_objects > 0);
 
 	start = rdtsc();
