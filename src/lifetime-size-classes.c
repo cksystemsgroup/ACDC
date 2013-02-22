@@ -73,7 +73,6 @@ static LSClass *new_LSClass(MContext *mc, lifetime_size_class_type t,
 		size_t sz, unsigned long nelem, u_int64_t sharing_map) {
 
 	LSClass *c = get_LSClass(mc);
-	c->wm = 0xAAAAAAAAAAAAAAAA;
 	c->object_size = sz;
 	c->num_objects = nelem;
 	c->type = t;
