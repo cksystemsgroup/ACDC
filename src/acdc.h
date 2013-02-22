@@ -106,7 +106,7 @@ struct mutator_stat {
 //memory objects
 //the min. size for an object must be sizeof(Object)
 struct shared_mem_object {
-  u_int64_t sharing_map; 
+  u_int64_t reference_map; 
   //a bit at pos i indicates that thread i may access this object
 };
 struct mem_object_lnode {
@@ -134,10 +134,7 @@ struct lifetime_size_class {
   size_t num_objects;
   lifetime_size_class_type type;
 
-  //which threads should share an object
-  volatile u_int64_t sharing_map;
-
-  //mark which threads already have this OColelction
+  //mark which threads share this LSClass
   volatile u_int64_t reference_map;
   
   //pointer to the start of the objects

@@ -269,9 +269,6 @@ static void print_runtime_stats(MContext *mc) {
  */
 static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 
-	assert((c->sharing_map & (1UL << mc->thread_id)) != 0);
-	//I'm allowed to be here
-	
 	//unset reference bit and check if we can deallocate the class
 	while (1) {
 		//I got a reference
@@ -287,23 +284,16 @@ static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 		if (__sync_bool_compare_and_swap(
 					&c->reference_map, old_rm, new_rm)) {
 			//worked
-			//if (c->reference_map == 0 && c->sharing_map == 0) {
 			if (c->reference_map == 0) {
 				deallocate_LSClass(mc, (LSClass*)c);
 				debug(mc, "deleted %p", c);
 			} else {
-				//someone else will deallocate
+				// my bit is zero
 				assert((c->reference_map & (1UL << mc->thread_id)) == 0);
-				if (c->reference_map == 0) {
-					debug(mc, "%p still in distribution for %d others", 
-							c,
-							__builtin_popcountl(c->sharing_map)
-					     );
-				} else {
-					debug(mc, "%p can be deleted by %d others", c,
-						__builtin_popcountl(c->reference_map)
-						);
-				}
+				//someone else will deallocate
+				debug(mc, "%p can be deleted by %d others", c,
+					__builtin_popcountl(c->reference_map)
+					);
 			}
 			break;
 		} else {
@@ -349,20 +339,11 @@ static void unlock_shared_heap_class(int thread_id) {
  */
 static void share_LSClass(MContext *mc, LSClass *c) {
 
-	assert(c->reference_map == 0);
-	assert(__builtin_popcountl(c->sharing_map) <= mc->gopts->num_threads);
-
-	//the threads specified in sharing_map will receive a 
-	//reference to this LSClass. We have to prepare the reference map
-	//accordingy. Later, when a thread wants to deallocate the LSClass,
-	//it atomically removes its bit from the reference map.
-	//The last thread to unset its bit can actually deallocate the LSCLass
-	c->reference_map = c->sharing_map;
-	//reference_map is volatile. We can start to distribute the reference to c
+	assert(__builtin_popcountl(c->reference_map) <= mc->gopts->num_threads);
 
 	int i;
 	for (i = 0; i < mc->gopts->num_threads; ++i) {
-		if (c->sharing_map & (1UL << i)) {
+		if (c->reference_map & (1UL << i)) {
 			//thread i will share this LSCLass
 			//it needs to get a reference
 			LClass *heap_class = shared_heap_classes[i];
@@ -436,7 +417,7 @@ static void *false_sharing_thread(void *ptr) {
 		unsigned int lt;
 		unsigned int num_objects;
 		lifetime_size_class_type tp;
-		u_int64_t sharing_map;
+		u_int64_t reference_map;
 	
 		//one thread allocates and tells the others how much it allocated
 		//sho allocates?
@@ -447,7 +428,7 @@ static void *false_sharing_thread(void *ptr) {
 
 		if (mc->thread_id == fs_allocation_thread) {
 		
-			get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
+			get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &reference_map);
 			// for false sharing we only use num_threads objects for one time slot
 			tp = FALSE_SHARING;
 			num_objects = mc->gopts->num_threads;
@@ -462,9 +443,9 @@ static void *false_sharing_thread(void *ptr) {
 		
 			allocation_start = rdtsc();
 			fs_collection = 
-				allocate_LSClass(mc, tp, sz, num_objects, sharing_map);
+				allocate_LSClass(mc, tp, sz, num_objects, reference_map);
 
-			fs_collection->reference_map = sharing_map;
+			fs_collection->reference_map = reference_map;
 
 			allocation_end = rdtsc();
 			mc->stat->allocation_time += allocation_end - allocation_start;
@@ -535,16 +516,16 @@ static void *acdc_thread(void *ptr) {
 		unsigned int lt;
 		unsigned int num_objects;
 		lifetime_size_class_type tp;
-		u_int64_t sharing_map;
+		u_int64_t reference_map;
 
-		get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &sharing_map);
+		get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &reference_map);
 
 		if (mc->gopts->fixed_number_of_objects > 0) {
 			//override random properties
 			num_objects = mc->gopts->fixed_number_of_objects;
 			sz = 1UL << mc->gopts->min_object_sc;
 			lt = mc->gopts->min_lifetime;
-			sharing_map = 1UL << mc->thread_id;
+			reference_map = 1UL << mc->thread_id;
 		}
 
 		//check if collections can be built with sz + min_payload
@@ -565,7 +546,7 @@ static void *acdc_thread(void *ptr) {
 					
 		allocation_start = rdtsc();
 		LSClass *c = 
-			allocate_LSClass(mc, tp, sz, num_objects, sharing_map);
+			allocate_LSClass(mc, tp, sz, num_objects, reference_map);
 
 		c->lifetime = lt;
 
@@ -573,8 +554,8 @@ static void *acdc_thread(void *ptr) {
 		mc->stat->allocation_time += allocation_end - allocation_start;
 
 
-		if (!(__builtin_popcountl(c->sharing_map) <= mc->gopts->num_threads)) {
-			printf("sharing map violation: %lx\n", c->sharing_map); 
+		if (!(__builtin_popcountl(c->reference_map) <= mc->gopts->num_threads)) {
+			printf("sharing map violation: %lx\n", c->reference_map); 
 		}
 		debug(mc, "created collection %p with lt %d", c, lt);
 
@@ -583,7 +564,6 @@ static void *acdc_thread(void *ptr) {
 			get_shared_LClasses(mc);
 		} else {
 			//bypass sharing pool
-			c->reference_map = c->sharing_map;
 			heap_class_insert(mc, mc->heap_class, c);
 		}
 
