@@ -5,10 +5,10 @@
  * can be found in the LICENSE file.
  */
 
-#include <sys/types.h>
+#include <stdint.h>
 
 struct spin_barrier {
-  u_int64_t count __attribute__ ((aligned(64)));
+  uint64_t count __attribute__ ((aligned(64)));
   unsigned int max __attribute__ ((aligned(64)));
 };
 typedef struct spin_barrier spin_barrier_t;
