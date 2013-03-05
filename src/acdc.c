@@ -281,7 +281,7 @@ static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 
 		if (__sync_bool_compare_and_swap(&c->reference_map, old_rm, new_rm)) {
 			//worked
-			if (c->reference_map == 0) {
+			if (new_rm == 0) {
 				deallocate_LSClass(mc, (LSClass*)c);
 				debug(mc, "deleted %p", c);
 			} else {
