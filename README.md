@@ -16,7 +16,7 @@ performance differences of the allocators.
 ## Compiling ACDC
 * Use a recent version of gcc. ACDC is known to work with gcc 4.6.3 on Linux x86-64
 * You need the SCons software construction tool (www.scons.org)
-* You need to put the allocator libraries in the allocators sub directory of acdc.
+* You need to put the allocator libraries in the allocators sub directory of acdc. Check and run the install\_allocators.sh scripts for some default allocators
 * Check src/SConscript to select the allocators you are interested in
 * run scons in the ACDC base directory
 * add the allocators directory to your library path, e.g., export LIBRARY\_PATH=./allocators
