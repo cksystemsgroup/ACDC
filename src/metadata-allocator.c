@@ -18,6 +18,7 @@ static void *align_address(void *ptr, size_t alignment) {
 	addr = addr & ~(alignment-1);
 	return (void*)addr;
 }
+
 void init_metadata_heap(size_t heapsize) {
 	
 	metadata_heap_start = sbrk(heapsize * 1024); //parameter is in kB
@@ -36,6 +37,7 @@ void init_metadata_heap(size_t heapsize) {
 		*(int*)ptr = i;
 	}
 }
+
 static void *get_chunk(size_t size) {
 	void *ptr = metadata_heap_bump_pointer;
 	metadata_heap_bump_pointer += size;
@@ -63,6 +65,7 @@ void *calloc_meta(size_t nelem, size_t size) {
 void *malloc_meta_aligned(size_t size, size_t alignment) {
 	return align_address(get_chunk(size + alignment - 1), alignment);
 }
+
 void *calloc_meta_aligned(size_t nelem, size_t size, size_t alignment) {
 	void *ptr = malloc_meta_aligned(nelem * size, alignment);
 	int i;
