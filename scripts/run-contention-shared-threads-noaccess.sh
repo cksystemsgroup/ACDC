@@ -2,7 +2,8 @@
 
 OUTPUT_DIR=data/contention-shared-threads-noaccess
 #OPTIONS="-a -s 3 -S 10 -d 100 -l 1 -L 5 -k -t 1000000 -N 10000 -C 10000 -O -T 100 -R 100 -H 50000"
-OPTIONS="-a -s 3 -S 10 -d 100 -l 1 -L 5 -t 1000000 -N 20000 -C 20000 -O -T 100 -R 100 -H 200000"
+#OPTIONS="-a -s 3 -S 10 -d 100 -l 1 -L 5 -t 1000000 -N 20000 -C 20000 -O -T 100 -R 100 -H 200000"
+OPTIONS="-a -s 3 -S 10 -d 100 -l 1 -L 5 -t 1000000 -O -T 100 -R 100"
 FACTOR1="-n"
 FACTOR2=""
 REPS=3
@@ -34,7 +35,7 @@ do
 		ACCESS_SUM=0
 		MEMCONS_SUM=0
 
-		if [ $CONF == "optimal" -o $CONF == "ptmalloc2" -o $CONF == "ptmalloc3" ]
+		if [ $CONF == "optimal" -o $CONF == "ptmalloc3" -o $CONF == "scalloc" ]
 		then
 			echo "skipping $CONF..."
 			RUNTIME_OUTPUT="$RUNTIME_OUTPUT\t0\t0"p		
