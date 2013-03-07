@@ -166,6 +166,19 @@ static void heap_class_remove(MContext *mc, LClass *heap_class) {
 }
 
 /*
+ * allocates a heap-class, i.e., an array of lifetime-classes
+ * where we have one lifetime-class for each lifetime in
+ * [min. lifetime, max. lifetime]
+ */
+static LClass *allocate_heap_class(unsigned int max_lifetime) {
+
+	LClass *ec = calloc_meta(max_lifetime, sizeof(LClass));
+	//calloc creates zeroed memory, i.e., the first and last
+	//pointers of each LClass are NULL
+	return ec;
+}
+
+/*
  * setup the space and initial state of the thread-local meta data
  */
 static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {

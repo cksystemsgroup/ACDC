@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include "acdc.h"
+#include "caches.h"
 #include "metadata-allocator.h"
 #include "proc_status.h"
 
@@ -50,7 +51,7 @@ static void set_default_params(GOptions *gopts) {
 	gopts->time_quantum = 1<<18;
 	gopts->benchmark_duration = 100;
 	gopts->seed = 1;
-	gopts->metadata_heap_sz = 4096; //4MB
+	gopts->metadata_heap_sz = 0; //0 means that the user did not give that option
 	gopts->min_lifetime = 1;
 	gopts->max_lifetime = 10;
 	gopts->max_time_gap = -1;
@@ -58,8 +59,8 @@ static void set_default_params(GOptions *gopts) {
 	gopts->min_object_sc = 4;
 	gopts->max_object_sc = 8;
 	gopts->fixed_number_of_objects = 0;
-	gopts->node_buffer_size = 1000; //TODO estimate from other parameters
-	gopts->class_buffer_size = 1000; //TODO estimate from other parameters
+	gopts->node_buffer_size = 0; //0 means that the user did not give that option
+	gopts->class_buffer_size = 0; //0 means that the user did not give that option
 	gopts->shared_objects = 0;
 	gopts->shared_objects_ratio = 0;
 	gopts->receiving_threads_ratio = 100;
@@ -69,6 +70,81 @@ static void set_default_params(GOptions *gopts) {
 	gopts->write_access_ratio = 10; // 10 percent of all traversed objects are accessed too
 	gopts->access_live_objects = 0;
 	gopts->verbosity = 0;
+}
+
+/* 
+ * this function takes the expected values of the random variables lifetime
+ *  and object size to estimate the space required for the metadata
+ */
+static void autodetect_metadata_parameters(GOptions *gopts) {
+
+	double expected_lt = (double)(gopts->max_lifetime + gopts->min_lifetime) / 2.0;
+	double expected_sc = (double)(gopts->max_object_sc + gopts->min_object_sc) / 2.0;
+	double expected_sz = (double)((1 << (int)expected_sc) + 
+				(1 << (int)(expected_sc + 1))) / 2.0;
+
+	double expected_num_obj = (double)(gopts->max_lifetime - expected_lt + 1);
+	expected_num_obj *= (gopts->max_lifetime - expected_lt + 1);
+	expected_num_obj *= (gopts->max_object_sc - expected_sc + 1);
+	expected_num_obj *= (gopts->max_object_sc - expected_sc + 1);
+
+	double expected_lifetime_size_classes = 
+		(expected_lt * (double)gopts->time_quantum) / 
+		 (expected_num_obj * expected_sz);
+
+	if (gopts->shared_objects) {
+		//mind the gap :)
+		expected_lifetime_size_classes *=
+			((double)gopts->max_time_gap + expected_lt) / expected_lt;
+	}
+
+	gopts->class_buffer_size = (int)expected_lifetime_size_classes * 10;
+
+	if (gopts->shared_objects) {
+		double receiving_threads_num = 
+			(double)(gopts->num_threads * gopts->receiving_threads_ratio) 
+			/ 100.0;
+		
+		gopts->node_buffer_size = gopts->class_buffer_size + (int)(
+			(double)gopts->class_buffer_size * receiving_threads_num);
+	} else {
+		gopts->node_buffer_size = gopts->class_buffer_size;
+	}
+	
+	//in the metadata heap we allocate:
+	//the mutator contexts
+	/*
+	gopts->metadata_heap_sz = sizeof(MContext) * gopts->num_threads;
+	// pointers to the mutator contexts and the results
+	gopts->metadata_heap_sz += 2 * sizeof(MContext*) * gopts->num_threads;
+	//the threads
+	gopts->metadata_heap_sz += sizeof(pthread_t) * gopts->num_threads;
+	//pointers to shared heap classes
+	gopts->metadata_heap_sz += sizeof(LClass*) * gopts->num_threads;
+	//and their locks
+	gopts->metadata_heap_sz += sizeof(pthread_mutex_t) * gopts->num_threads;
+	//and the shared heap classes themselves
+	gopts->metadata_heap_sz += sizeof(LClass) * gopts->num_threads * gopts->max_lifetime;
+	//and the local heap classes
+	gopts->metadata_heap_sz += sizeof(LClass) * gopts->num_threads * gopts->max_lifetime;	
+	//Reserve space for the stats objects
+	gopts->metadata_heap_sz += sizeof(MStat) * gopts->num_threads;
+	//and the histograms for lifetime and size class
+	gopts->metadata_heap_sz += sizeof(unsigned long) * gopts->num_threads * (gopts->max_lifetime + 1);
+	gopts->metadata_heap_sz += sizeof(unsigned long) * gopts->num_threads * (gopts->max_object_sc + 1);
+	
+	gopts->metadata_heap_sz *= 2; //make double for alignment and some reserve
+	//its only an overapproximation
+	*/
+
+	//16MB per thread for bookkeeping
+	gopts->metadata_heap_sz = gopts->num_threads * (1 << 14);
+	
+	//TODO: INCREASE
+	//add the buffers for nodes and classes
+	gopts->metadata_heap_sz += (
+		2 * gopts->class_buffer_size * L1_LINE_SZ +
+		2 * gopts->node_buffer_size * L1_LINE_SZ) / 1024;
 }
 
 static void check_params(GOptions *gopts) {
@@ -100,6 +176,24 @@ static void check_params(GOptions *gopts) {
 				max_threads);
 		exit(EXIT_FAILURE);
 	}
+
+	if (gopts->metadata_heap_sz == 0 ||
+			gopts->node_buffer_size == 0 ||
+			gopts->class_buffer_size == 0) {
+	
+	
+		if ((gopts->metadata_heap_sz +
+				gopts->node_buffer_size +
+				gopts->class_buffer_size) != 0) {
+			printf("Parameter error: Specify -H, -N, AND -C or none of them for automatic parameter selection\n");
+			exit(EXIT_FAILURE);
+		} else {
+			autodetect_metadata_parameters(gopts);
+		}
+
+	}
+
+
 }
 
 
