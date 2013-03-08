@@ -111,17 +111,16 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 		gopts->node_buffer_size = gopts->class_buffer_size;
 	}
 	
-	//32MB per thread for bookkeeping
-	gopts->metadata_heap_sz = gopts->num_threads * (1 << 15);
+	//128MB per thread for bookkeeping
+	gopts->metadata_heap_sz = gopts->num_threads * (1 << 17);
 	
 	//add the buffers for nodes and classes, add extra space for aligning ect...
 	gopts->metadata_heap_sz += (
-		3 * gopts->class_buffer_size * L1_LINE_SZ +
-		3 * gopts->node_buffer_size * L1_LINE_SZ) / 1024;
+		4 * gopts->class_buffer_size * L1_LINE_SZ +
+		4 * gopts->node_buffer_size * L1_LINE_SZ) / 1024;
 }
 
 static void check_params(GOptions *gopts) {
-	//TODO:check missing parameters
 	if (gopts->list_based_ratio < 0 || 
 			gopts->list_based_ratio  > 100) {
 		printf("Parameter error: -q value must be between 0 and 100\n");
@@ -137,7 +136,6 @@ static void check_params(GOptions *gopts) {
 		gopts->write_access_ratio = 100;
 	}
 	if (gopts->max_time_gap < 0) gopts->max_time_gap = gopts->max_lifetime;
-
 
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
 	int max_threads = 128;
@@ -165,8 +163,6 @@ static void check_params(GOptions *gopts) {
 		}
 
 	}
-
-
 }
 
 
