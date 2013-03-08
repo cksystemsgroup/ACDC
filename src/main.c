@@ -137,7 +137,6 @@ static void check_params(GOptions *gopts) {
 	}
 	if (gopts->max_time_gap < 0) gopts->max_time_gap = gopts->max_lifetime;
 
-
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
 	int max_threads = 128;
 #else
