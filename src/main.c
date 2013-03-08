@@ -111,10 +111,9 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 		gopts->node_buffer_size = gopts->class_buffer_size;
 	}
 	
-	//16MB per thread for bookkeeping
+	//32MB per thread for bookkeeping
 	gopts->metadata_heap_sz = gopts->num_threads * (1 << 15);
 	
-	//TODO: INCREASE
 	//add the buffers for nodes and classes, add extra space for aligning ect...
 	gopts->metadata_heap_sz += (
 		3 * gopts->class_buffer_size * L1_LINE_SZ +
