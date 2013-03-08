@@ -111,18 +111,16 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 		gopts->node_buffer_size = gopts->class_buffer_size;
 	}
 	
-	//16MB per thread for bookkeeping
-	gopts->metadata_heap_sz = gopts->num_threads * (1 << 15);
+	//128MB per thread for bookkeeping
+	gopts->metadata_heap_sz = gopts->num_threads * (1 << 17);
 	
-	//TODO: INCREASE
 	//add the buffers for nodes and classes, add extra space for aligning ect...
 	gopts->metadata_heap_sz += (
-		3 * gopts->class_buffer_size * L1_LINE_SZ +
-		3 * gopts->node_buffer_size * L1_LINE_SZ) / 1024;
+		4 * gopts->class_buffer_size * L1_LINE_SZ +
+		4 * gopts->node_buffer_size * L1_LINE_SZ) / 1024;
 }
 
 static void check_params(GOptions *gopts) {
-	//TODO:check missing parameters
 	if (gopts->list_based_ratio < 0 || 
 			gopts->list_based_ratio  > 100) {
 		printf("Parameter error: -q value must be between 0 and 100\n");
@@ -166,8 +164,6 @@ static void check_params(GOptions *gopts) {
 		}
 
 	}
-
-
 }
 
 
