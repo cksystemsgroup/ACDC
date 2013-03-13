@@ -47,11 +47,13 @@ do
 
 		if [ $CONF == "hoard" ]
 		then
-			export LD_PRELOAD=/home/maigner/workspace/acdc/allocators/libhoard.so
+			export LD_PRELOAD=./allocators/libhoard.so
+		elif [ $CONF == "streamflow" ]
+		then
+			export LD_PRELOAD=./allocators/libstreamflow.so
 		else
 			unset LD_PRELOAD
 		fi
-
 
 		for (( REP=1; REP<=$REPS; REP++ ))
 		do
