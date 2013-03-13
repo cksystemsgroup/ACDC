@@ -41,3 +41,10 @@ ln -s tbb41_20130116oss/lib/intel64/cc4.1.0_libc2.4_kernel2.6.16.21/libtbbmalloc
 
 # tcmalloc
 sudo apt-get install libgoogle-perftools-dev
+
+#hoard
+git clone --recursive https://github.com/emeryberger/Hoard
+cd Hoard/src
+make linux-gcc-x86-64
+cd ../../
+ln -s Hoard/src/libhoard.so libhoard.so
