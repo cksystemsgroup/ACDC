@@ -45,6 +45,7 @@ sudo apt-get install libgoogle-perftools-dev
 #streamflow
 git clone git://github.com/scotts/streamflow.git
 cd streamflow/
+sed -i '1s/^/#include <unistd.h>\n/' malloc_new.cpp
 make
 cd ..
 ln -s streamflow/libstreamflow.so libstreamflow.so
