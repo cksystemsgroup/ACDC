@@ -43,6 +43,7 @@ ln -s tbb41_20130116oss/lib/intel64/cc4.1.0_libc2.4_kernel2.6.16.21/libtbbmalloc
 sudo apt-get install libgoogle-perftools-dev
 
 #streamflow
+sudo apt-get install libnuma-dev
 git clone git://github.com/scotts/streamflow.git
 cd streamflow/
 sed -i '1s/^/#include <unistd.h>\n/' malloc_new.cpp
