@@ -42,6 +42,13 @@ ln -s tbb41_20130116oss/lib/intel64/cc4.1.0_libc2.4_kernel2.6.16.21/libtbbmalloc
 # tcmalloc
 sudo apt-get install libgoogle-perftools-dev
 
+#streamflow
+git clone git://github.com/scotts/streamflow.git
+cd streamflow/
+make
+cd ..
+ln -s streamflow/libstreamflow.so libstreamflow.so
+
 #hoard
 git clone --recursive https://github.com/emeryberger/Hoard
 cd Hoard/src
