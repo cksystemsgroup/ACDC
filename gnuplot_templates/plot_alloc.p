@@ -19,5 +19,6 @@ plot "alloc.dat" using 1:($2/2100000):($3/2100000):xticlabel(1) with errorlines 
 "alloc.dat" using 1:(($12)/2100000):($13/2100000):xticlabel(1) with errorlines   lt 9 lw 3 title 'tbb', \
 "alloc.dat" using 1:(($14)/2100000):($15/2100000):xticlabel(1) with errorlines   lt 7 lw 3 title 'tcmalloc', \
 "alloc.dat" using 1:(($16)/2100000):($17/2100000):xticlabel(1) with errorlines   lt 10 lw 3 title 'streamflow', \
-"alloc.dat" using 1:(($18)/2100000):($19/2100000):xticlabel(1) with errorlines   lt 11 lw 3 title 'hoard'
+"alloc.dat" using 1:(($18)/2100000):($19/2100000):xticlabel(1) with errorlines   lt 11 lw 3 title 'hoard', \
+"alloc.dat" using 1:(($20)/2100000):($21/2100000):xticlabel(1) with errorlines   lt 12 lw 3 title 'scalloc'
 

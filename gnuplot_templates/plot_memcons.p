@@ -18,5 +18,6 @@ plot "memcons.dat" using 1:($2/1):($3/1):xticlabel(1) with errorlines lt 1 lw 3 
 "memcons.dat" using 1:(($12)/1):($13/1):xticlabel(1) with errorlines   lt 9 lw 3 title 'tbb', \
 "memcons.dat" using 1:(($14)/1):($15/1):xticlabel(1) with errorlines   lt 7 lw 3 title 'tcmalloc', \
 "memcons.dat" using 1:(($16)/1):($17/1):xticlabel(1) with errorlines   lt 10 lw 3 title 'streamflow', \
-"memcons.dat" using 1:(($18)/1):($19/1):xticlabel(1) with errorlines   lt 11 lw 3 title 'hoard'
+"memcons.dat" using 1:(($18)/1):($19/1):xticlabel(1) with errorlines   lt 11 lw 3 title 'hoard', \
+"memcons.dat" using 1:(($20)/1):($21/1):xticlabel(1) with errorlines   lt 12 lw 3 title 'scalloc'
 
