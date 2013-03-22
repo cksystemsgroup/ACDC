@@ -11,6 +11,7 @@
 #include <unistd.h>
 
 #include "acdc.h"
+#include "caches.h"
 #include "metadata-allocator.h"
 #include "proc_status.h"
 
@@ -50,7 +51,7 @@ static void set_default_params(GOptions *gopts) {
 	gopts->time_quantum = 1<<18;
 	gopts->benchmark_duration = 100;
 	gopts->seed = 1;
-	gopts->metadata_heap_sz = 4096; //4MB
+	gopts->metadata_heap_sz = 0; //0 means that the user did not give that option
 	gopts->min_lifetime = 1;
 	gopts->max_lifetime = 10;
 	gopts->max_time_gap = -1;
@@ -58,8 +59,8 @@ static void set_default_params(GOptions *gopts) {
 	gopts->min_object_sc = 4;
 	gopts->max_object_sc = 8;
 	gopts->fixed_number_of_objects = 0;
-	gopts->node_buffer_size = 1000; //TODO estimate from other parameters
-	gopts->class_buffer_size = 1000; //TODO estimate from other parameters
+	gopts->node_buffer_size = 0; //0 means that the user did not give that option
+	gopts->class_buffer_size = 0; //0 means that the user did not give that option
 	gopts->shared_objects = 0;
 	gopts->shared_objects_ratio = 0;
 	gopts->receiving_threads_ratio = 100;
@@ -71,8 +72,55 @@ static void set_default_params(GOptions *gopts) {
 	gopts->verbosity = 0;
 }
 
+/* 
+ * this function takes the expected values of the random variables lifetime
+ *  and object size to estimate the space required for the metadata
+ */
+static void autodetect_metadata_parameters(GOptions *gopts) {
+
+	double expected_lt = (double)(gopts->max_lifetime + gopts->min_lifetime) / 2.0;
+	double expected_sc = (double)(gopts->max_object_sc + gopts->min_object_sc) / 2.0;
+	double expected_sz = (double)((1 << (int)expected_sc) + 
+				(1 << (int)(expected_sc + 1))) / 2.0;
+
+	double expected_num_obj = (double)(gopts->max_lifetime - expected_lt + 1);
+	expected_num_obj *= (gopts->max_lifetime - expected_lt + 1);
+	expected_num_obj *= (gopts->max_object_sc - expected_sc + 1);
+	expected_num_obj *= (gopts->max_object_sc - expected_sc + 1);
+
+	double expected_lifetime_size_classes = 
+		(expected_lt * (double)gopts->time_quantum) / 
+		 (expected_num_obj * expected_sz);
+
+	if (gopts->shared_objects) {
+		//mind the gap :)
+		expected_lifetime_size_classes *=
+			((double)gopts->max_time_gap + expected_lt) / expected_lt;
+	}
+
+	gopts->class_buffer_size = (int)expected_lifetime_size_classes * 10;
+
+	if (gopts->shared_objects) {
+		double receiving_threads_num = 
+			(double)(gopts->num_threads * gopts->receiving_threads_ratio) 
+			/ 100.0;
+		
+		gopts->node_buffer_size = gopts->class_buffer_size + (int)(
+			(double)gopts->class_buffer_size * receiving_threads_num);
+	} else {
+		gopts->node_buffer_size = gopts->class_buffer_size;
+	}
+	
+	//128MB per thread for bookkeeping
+	gopts->metadata_heap_sz = gopts->num_threads * (1 << 17);
+	
+	//add the buffers for nodes and classes, add extra space for aligning ect...
+	gopts->metadata_heap_sz += (
+		4 * gopts->class_buffer_size * L1_LINE_SZ +
+		4 * gopts->node_buffer_size * L1_LINE_SZ) / 1024;
+}
+
 static void check_params(GOptions *gopts) {
-	//TODO:check missing parameters
 	if (gopts->list_based_ratio < 0 || 
 			gopts->list_based_ratio  > 100) {
 		printf("Parameter error: -q value must be between 0 and 100\n");
@@ -89,7 +137,6 @@ static void check_params(GOptions *gopts) {
 	}
 	if (gopts->max_time_gap < 0) gopts->max_time_gap = gopts->max_lifetime;
 
-
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
 	int max_threads = 128;
 #else
@@ -99,6 +146,22 @@ static void check_params(GOptions *gopts) {
 		printf("Parameter error: -n value must be between 0 and %d\n",
 				max_threads);
 		exit(EXIT_FAILURE);
+	}
+
+	if (gopts->metadata_heap_sz == 0 ||
+			gopts->node_buffer_size == 0 ||
+			gopts->class_buffer_size == 0) {
+	
+	
+		if ((gopts->metadata_heap_sz +
+				gopts->node_buffer_size +
+				gopts->class_buffer_size) != 0) {
+			printf("Parameter error: Specify -H, -N, AND -C or none of them for automatic parameter selection\n");
+			exit(EXIT_FAILURE);
+		} else {
+			autodetect_metadata_parameters(gopts);
+		}
+
 	}
 }
 
@@ -131,8 +194,7 @@ static void print_params(GOptions *gopts) {
 
 int main(int argc, char **argv) {
 
-	GOptions *gopts = sbrk(sizeof(GOptions));	
-	//GOptions *gopts = malloc(sizeof(GOptions));	
+	GOptions *gopts = sbrk(sizeof(GOptions));
 	if (gopts == (void*)-1) {
 		printf("unable to allocate global options\n");
 		exit(EXIT_FAILURE);

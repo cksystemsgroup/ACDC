@@ -8,14 +8,6 @@
 #include "acdc.h"
 #include "metadata-allocator.h"
 
-LClass *allocate_heap_class(unsigned int max_lifetime) {
-
-	LClass *ec = calloc_meta(max_lifetime, sizeof(LClass));
-	//calloc creates zeroed memory, i.e., the first and last
-	//pointers of each LClass are NULL
-	return ec;
-}
-
 void lclass_insert_after(LClass *list, LSCNode *after, LSCNode *c) {
 	c->prev = after;
 	c->next = after->next;

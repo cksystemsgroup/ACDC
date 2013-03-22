@@ -191,12 +191,6 @@ LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type type, size_t sz
 void deallocate_LSClass(MContext *mc, LSClass *oc); 
 void traverse_LSClass(MContext *mc, LSClass *oc);
 
-/*
- * allocates a heap-class, i.e., an array of lifetime-classes
- * where we have one lifetime-class for each lifetime in
- * [min. lifetime, max. lifetime]
- */
-LClass *allocate_heap_class(unsigned int max_lifetime);
 
 /*
  * lifetime-classes are doubly-linked lists of lifetime-size-classes.
