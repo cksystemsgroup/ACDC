@@ -1,17 +1,18 @@
 # ACDC Benchmark
 
 We present ACDC, an open-source benchmark that may be configured to emulate
-virtually any realistic single- and multi-threaded memory allocation, sharing,
-access, and deallocation behavior. ACDC mimics periodic memory allocation and
-deallocation (AC) as well as persistent memory (DC). Memory may be allocated
-thread-locally and shared among multiple threads to study multicore
-scalability and even false sharing. Memory may be deallocated by threads
-other than the allocating threads to study blowup memory fragmentation. Memory
-may be accessed and deallocated sequentially in allocation order or in
-tree-like traversals to expose allocator deficiencies in exploiting spatial
-locality. We demonstrate ACDC’s capabilities with six state-of-the-art
-allocators for C/C++ in an empirical study which also reveals interesting
-performance differences of the allocators.
+explicit single- and multi-threaded memory allocation, sharing, access, and
+deallocation behavior that exposes virtually any relevant allocator performance
+differences. ACDC mimics periodic memory allocation and deallocation (AC) as
+well as persistent memory (DC). Memory may be allocated thread-locally and
+shared among multiple threads to study multi-core scalability and even false
+sharing. Memory may be deallocated by threads other than the allocating threads
+to study blowup memory fragmentation. Memory may be accessed and deallocated
+sequentially in allocation order or in tree-like traversals to expose allocator
+deficiencies in exploiting spatial locality. We demonstrate ACDC’s capabilities
+with six state-of-the-art allocators for C/C++ in an empirical study which also
+reveals interesting performance differences between the allocators.
+
 
 ## Compiling ACDC
 * Use a recent version of gcc. ACDC is known to work with gcc 4.6.3 on Linux x86-64
