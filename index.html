@@ -63,7 +63,8 @@
             <ul class="nav pull-right">
               <ul class="nav">
                 <li><a href="http://cs.uni-salzburg.at/~ck">Computational Systems Group</a></li>
-              </ul>
+	    </ul>
+<!--
               <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                   Other Projects
@@ -75,7 +76,8 @@
                   <li class="divider"></li>
                   <li><a tabindex="-1" href="http://github.com/cksystemsgroup">cksystemsgroup</a></li>
                 </ul>
-              </li>
+		</li>
+-->
             </ul>
           </div><!--/.nav-collapse -->
         </div>
@@ -89,9 +91,10 @@
         </div>
 
 	<p> We present ACDC, an open-source benchmark that may be configured
-	to emulate virtually any realistic single- and multi-threaded memory
-	allocation, sharing, access, and deallocation behavior. ACDC mimics
-	periodic memory allocation and deallocation (AC) as well as persistent
+	to emulate explicit single- and multi-threaded memory
+	allocation, sharing, access, and deallocation behavior that exposes virtually
+	any relevant allocator performance differences. 
+	ACDC mimics periodic memory allocation and deallocation (AC) as well as persistent
 	memory (DC). Memory may be allocated thread-locally and shared among
 	multiple threads to study multi-core scalability and even false
 	sharing. Memory may be deallocated by threads other than the allocating
@@ -100,14 +103,14 @@
 	traversals to expose allocator deficiencies in exploiting spatial
 	locality. We demonstrate ACDC’s capabilities with six state-of-the-art
 	allocators for C/C++ in an empirical study which also reveals
-	interesting performance differences of the allocators. </p>
+	interesting performance differences between the allocators. </p>
         
         <a name="people"><h2>People</h2></a>
         <div style="z-index:900; position:relative;">
 		<!--<h3>University of Salzburg</h3>-->
         <ul>
-          <li><a href="//cs.uni-salzburg.at/~maigner">Martin Aigner</a>
-          <li><a href="//cs.uni-salzburg.at/~ck">Christoph Kirsch</a>
+          <li><a href="http://cs.uni-salzburg.at/~maigner">Martin Aigner</a>
+          <li><a href="http://cs.uni-salzburg.at/~ck">Christoph Kirsch</a>
         </ul>
         </div>
 
