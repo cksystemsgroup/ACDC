@@ -8,6 +8,7 @@ set xlabel "x value"
 set ylabel "total deallocation time per thread in milliseconds\n(lower is better)"
 
 set multiplot
+set logscale y
 
 set key outside center bottom horizontal
 
