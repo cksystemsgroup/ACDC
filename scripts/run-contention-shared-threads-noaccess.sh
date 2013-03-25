@@ -2,7 +2,7 @@
 
 OUTPUT_DIR=data/contention-shared-threads-noaccess
 #OPTIONS="-a -s 3 -S 10 -d 100 -l 1 -L 5 -k -t 1000000 -N 10000 -C 10000 -O -T 100 -R 100 -H 50000"
-OPTIONS="-a -s 3 -S 10 -d 200 -l 1 -L 5 -t 1000000 -N 40000 -C 40000 -O -T 100 -R 100 -H 500000"
+OPTIONS="-a -s 3 -S 10 -d 500 -l 1 -L 5 -t 1000000 -N 40000 -C 40000 -O -T 100 -R 100 -H 500000"
 FACTOR1="-n"
 FACTOR2=""
 REPS=4
@@ -10,7 +10,7 @@ RELATIVE=1
 
 HEADLINE="#Created at: `date` on `hostname`"
 HEADLINE="$HEADLINE\n#Average on $REPS runs. ACDC Options: $OPTIONS"
-HEADLINE="$HEADLINE\n#x($FACTOR1)\tjemalloc\tstddev\tllalloc\tstddev\toptimal\tstddev\tptmalloc2\tstddev\tptmalloc3\tstddev\ttbb\tstddev\ttcmalloc\tstddev\tstreamflow\tstddev\thoard\tstddev"
+HEADLINE="$HEADLINE\n#x($FACTOR1)\tjemalloc\tstddev\tllalloc\tstddev\toptimal\tstddev\tptmalloc2\tstddev\tptmalloc3\tstddev\ttbb\tstddev\ttcmalloc\tstddev\tstreamflow\tstddev\thoard\tstddev\tscalloc\tstddev"
 	
 rm -rf $OUTPUT_DIR
 mkdir -p $OUTPUT_DIR
@@ -26,7 +26,7 @@ do
 	FREE_OUTPUT="$XVALUE"
 	ACCESS_OUTPUT="$XVALUE"
 	MEMCONS_OUTPUT="$XVALUE"
-	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc streamflow hoard
+	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc streamflow hoard scalloc
 	do
 
 		ALLOC_SUM=0
@@ -34,7 +34,7 @@ do
 		ACCESS_SUM=0
 		MEMCONS_SUM=0
 
-		if [ $CONF == "optimal" -o $CONF == "ptmalloc3"  -o $CONF == "ptmalloc2"  ]
+		if [ $CONF == "optimal" -o $CONF == "ptmalloc3"  -o $CONF == "dummy" -o $CONF == "scalloc" -o $CONF == "tcmalloc" ]
 		then
 			echo "skipping $CONF..."
 			RUNTIME_OUTPUT="$RUNTIME_OUTPUT\t0\t0"p		
@@ -47,10 +47,10 @@ do
 
 		if [ $CONF == "hoard" ]
 		then
-			export LD_PRELOAD=./allocators/libhoard.so
+			export LD_PRELOAD=/home/maigner/workspace/acdc/allocators/libhoard.so
 		elif [ $CONF == "streamflow" ]
 		then
-			export LD_PRELOAD=./allocators/libstreamflow.so
+			export LD_PRELOAD=/home/maigner/workspace/acdc/allocators/libstreamflow.so
 		else
 			unset LD_PRELOAD
 		fi
