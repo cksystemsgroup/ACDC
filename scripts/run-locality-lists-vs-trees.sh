@@ -1,15 +1,15 @@
 #/bin/bash
 
 OUTPUT_DIR=data/locality-lists-vs-trees
-OPTIONS="-a -t 200000 -d 50 -l 1 -L 10 -s 4 -S 4 -i 1 -w 0 -N 10000 -C 10000"
+OPTIONS="-a -t 500000 -d 50 -l 1 -L 10 -s 4 -S 5 -i 1 -w 0 -A -N 10000 -C 10000 -H 4000"
 FACTOR1="-q"
-FACTOR2="-b"
-REPS=3
+#FACTOR2="-b"
+REPS=5
 RELATIVE=0
 
 HEADLINE="#Created at: `date` on `hostname`"
 HEADLINE="$HEADLINE\n#Average on $REPS runs. ACDC Options: $OPTIONS"
-HEADLINE="$HEADLINE\n#x($FACTOR1)\tjemalloc\tstddev\tllalloc\tstddev\toptimal\tstddev\tptmalloc2\tstddev\tptmalloc3\tstddev\ttbb\tstddev\ttcmalloc\tstddev"
+HEADLINE="$HEADLINE\n#x($FACTOR1)\tjemalloc\tstddev\tllalloc\tstddev\toptimal\tstddev\tptmalloc2\tstddev\tptmalloc3\tstddev\ttbb\tstddev\ttcmalloc\tstddev\tstreamflow\tstddev\thoard\tstddev\tscalloc\tstddev"
 	
 rm -rf $OUTPUT_DIR
 mkdir -p $OUTPUT_DIR
@@ -25,20 +25,43 @@ do
 	FREE_OUTPUT="$XVALUE"
 	ACCESS_OUTPUT="$XVALUE"
 	MEMCONS_OUTPUT="$XVALUE"
-	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc
+	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc streamflow hoard scalloc
 	do
 
 		ALLOC_SUM=0
 		FREE_SUM=0
 		ACCESS_SUM=0
 		MEMCONS_SUM=0
+		
+		if [ $CONF == "dummy" -o $CONF == "scalloc" -o $CONF == "streamflow" ]
+		then
+			echo "skipping $CONF..."
+			RUNTIME_OUTPUT="$RUNTIME_OUTPUT\t0\t0"p		
+			ALLOC_OUTPUT="$ALLOC_OUTPUT\t0\t0"
+			FREE_OUTPUT="$FREE_OUTPUT\t0\t0"
+			ACCESS_OUTPUT="$ACCESS_OUTPUT\t0\t0"
+			MEMCONS_OUTPUT="$MEMCONS_OUTPUT\t0\t0"
+			continue
+		fi
+
+		if [ $CONF == "hoard" ]
+		then
+			export LD_PRELOAD=/home/maigner/workspace/acdc/allocators/libhoard.so
+		elif [ $CONF == "streamflow" ]
+		then
+			export LD_PRELOAD=/home/maigner/workspace/acdc/allocators/libstreamflow.so
+		else
+			unset LD_PRELOAD
+		fi
 
 		for (( REP=1; REP<=$REPS; REP++ ))
 		do
 			#maybe derive 2nd factor from first factor?
-			let "XVALUE2=100 - $XVALUE"
-			echo "./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2"
-			OUTPUT=$(./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
+			#let "XVALUE2=100 - $XVALUE"
+			#echo "./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2"
+			echo "./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE"
+			#OUTPUT=$(./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
+			OUTPUT=$(./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE)
 
 			RUNTIME=$(echo "$OUTPUT" | grep RUNTIME)
 			MEMSTAT=$(echo "$OUTPUT" | grep MEMORY)
