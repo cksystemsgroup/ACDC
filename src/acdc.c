@@ -538,12 +538,12 @@ static void *acdc_thread(void *ptr) {
 			reference_map = BIT_ZERO << mc->thread_id;
 		}
 
-		//check if collections can be built with sz + min_payload
+		//check if collections can be built with sz
 		
-		if (tp == BTREE && sz < (sizeof(BTObject) + 4))
-			sz = sizeof(BTObject) + 4;
-		if (tp == LIST && sz < (sizeof(BTObject) + 4))
-			sz = sizeof(BTObject) + 4;
+		if (sz < (sizeof(BTObject)))
+			sz = sizeof(BTObject);
+		//if (tp == LIST && sz < (sizeof(LObject)))
+		//	sz = sizeof(LObject);
 
 		mc->stat->lt_histogram[lt] += num_objects;
 		mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
