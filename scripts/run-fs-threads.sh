@@ -1,7 +1,7 @@
 #/bin/bash
 
 OUTPUT_DIR=data/fs-threads
-OPTIONS="-f -s 2 -S 2 -d 30 -i 1000000"
+OPTIONS="-f -d 30 -i 1000000"
 FACTOR1="-n"
 FACTOR2=""
 REPS=5
@@ -10,6 +10,7 @@ RELATIVE=1
 HEADLINE="#Created at: `date` on `hostname`"
 HEADLINE="$HEADLINE\n#Average on $REPS runs. ACDC Options: $OPTIONS"
 HEADLINE="$HEADLINE\n#x($FACTOR1)\tjemalloc\tstddev\tllalloc\tstddev\toptimal\tstddev\tptmalloc2\tstddev\tptmalloc3\tstddev\ttbb\tstddev\ttcmalloc\tstddev"
+HEADLINE="$HEADLINE\n#x($FACTOR1)\tjemalloc\tstddev\tllalloc\tstddev\toptimal\tstddev\tptmalloc2\tstddev\tptmalloc3\tstddev\ttbb\tstddev\ttcmalloc\tstddev\tstreamflow\tstddev\thoard\tstddev\tscalloc\tstddev"
 	
 rm -rf $OUTPUT_DIR
 mkdir -p $OUTPUT_DIR
@@ -25,7 +26,7 @@ do
 	FREE_OUTPUT="$XVALUE"
 	ACCESS_OUTPUT="$XVALUE"
 	MEMCONS_OUTPUT="$XVALUE"
-	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc
+	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc streamflow hoard scalloc
 	do
 
 		ALLOC_SUM=0
@@ -33,10 +34,32 @@ do
 		ACCESS_SUM=0
 		MEMCONS_SUM=0
 
+		if [ $CONF == "foo" -o $CONF == "scalloc" -o $CONF == "streamflow" ]
+		then
+			echo "skipping $CONF..."
+			RUNTIME_OUTPUT="$RUNTIME_OUTPUT\t0\t0"p		
+			ALLOC_OUTPUT="$ALLOC_OUTPUT\t0\t0"
+			FREE_OUTPUT="$FREE_OUTPUT\t0\t0"
+			ACCESS_OUTPUT="$ACCESS_OUTPUT\t0\t0"
+			MEMCONS_OUTPUT="$MEMCONS_OUTPUT\t0\t0"
+			continue
+		fi
+
+		if [ $CONF == "hoard" ]
+		then
+			export LD_PRELOAD=/home/maigner/workspace/acdc/allocators/libhoard.so
+		elif [ $CONF == "streamflow" ]
+		then
+			export LD_PRELOAD=/home/maigner/workspace/acdc/allocators/libstreamflow.so
+		else
+			unset LD_PRELOAD
+		fi
+
 		for (( REP=1; REP<=$REPS; REP++ ))
 		do
 			#maybe derive 2nd factor from first factor?
 			XVALUE2=""
+			echo "./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2"
 			OUTPUT=$(./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
 
 			RUNTIME=$(echo "$OUTPUT" | grep RUNTIME)

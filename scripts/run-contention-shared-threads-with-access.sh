@@ -1,7 +1,7 @@
 #/bin/bash
 
 OUTPUT_DIR=data/contention-shared-threads-with-access
-OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 5 -i 1 -w 10 -t 1000000 -N 10000 -C 10000 -O -T 100 -R 100 -H 50000"
+OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 5 -i 1 -A -w 10 -t 1000000 -N 40000 -C 40000 -O -T 100 -R 100 -H 500000"
 FACTOR1="-n"
 FACTOR2=""
 REPS=5
@@ -9,7 +9,7 @@ RELATIVE=1
 
 HEADLINE="#Created at: `date` on `hostname`"
 HEADLINE="$HEADLINE\n#Average on $REPS runs. ACDC Options: $OPTIONS"
-HEADLINE="$HEADLINE\n#x($FACTOR1)\tjemalloc\tstddev\tllalloc\tstddev\toptimal\tstddev\tptmalloc2\tstddev\tptmalloc3\tstddev\ttbb\tstddev\ttcmalloc\tstddev"
+HEADLINE="$HEADLINE\n#x($FACTOR1)\tjemalloc\tstddev\tllalloc\tstddev\toptimal\tstddev\tptmalloc2\tstddev\tptmalloc3\tstddev\ttbb\tstddev\ttcmalloc\tstddev\tstreamflow\tstddev\thoard\tstddev\tscalloc\tstddev"
 	
 rm -rf $OUTPUT_DIR
 mkdir -p $OUTPUT_DIR
@@ -19,19 +19,40 @@ echo -e $HEADLINE > $OUTPUT_DIR/free.dat
 echo -e $HEADLINE > $OUTPUT_DIR/access.dat
 echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
-for XVALUE in 1 2 4 8 12 16 20 24
+for XVALUE in 1 2 4 6 8 10 12 14 16 20 24
 do
 	ALLOC_OUTPUT="$XVALUE"
 	FREE_OUTPUT="$XVALUE"
 	ACCESS_OUTPUT="$XVALUE"
 	MEMCONS_OUTPUT="$XVALUE"
-	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc
+	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc streamflow hoard scalloc
 	do
 
 		ALLOC_SUM=0
 		FREE_SUM=0
 		ACCESS_SUM=0
 		MEMCONS_SUM=0
+
+		if [ $CONF == "foo" -o $CONF == "scalloc" -o $CONF == "streamflow" ]
+		then
+			echo "skipping $CONF..."
+			RUNTIME_OUTPUT="$RUNTIME_OUTPUT\t0\t0"p		
+			ALLOC_OUTPUT="$ALLOC_OUTPUT\t0\t0"
+			FREE_OUTPUT="$FREE_OUTPUT\t0\t0"
+			ACCESS_OUTPUT="$ACCESS_OUTPUT\t0\t0"
+			MEMCONS_OUTPUT="$MEMCONS_OUTPUT\t0\t0"
+			continue
+		fi
+
+		if [ $CONF == "hoard" ]
+		then
+			export LD_PRELOAD=/home/maigner/workspace/acdc/allocators/libhoard.so
+		elif [ $CONF == "streamflow" ]
+		then
+			export LD_PRELOAD=/home/maigner/workspace/acdc/allocators/libstreamflow.so
+		else
+			unset LD_PRELOAD
+		fi
 
 		for (( REP=1; REP<=$REPS; REP++ ))
 		do
