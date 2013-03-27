@@ -1,16 +1,49 @@
 #/bin/bash
 
-OUTPUT_DIR=t1
-OPTIONS="-a -s 2 -S 4 -d 10 -l 1 -L 10 -i 0 -t 10000 -b 50 -q 50"
+ALLOCATORS="jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc streamflow hoard scalloc"
+EXCLUDE="optimal ptmalloc3 streamflow scalloc"
+
+# -a (run in ACDC mode)
+# -f (run in false-sharing mode)
+# -n: number of threads (default 1)
+# -F: (fixed) number of objects (default 0: ACDC decides)
+# -s: min. size (in 2^x bytes)
+# -S: max. size (in 2^x bytes)
+# -l: min. lifetime
+# -L: max. lifetime
+# -D: deallocation delay
+# -t: time quantum
+# -d: benchmark duration
+# -g: max. time drift
+# -q: list-based ratio in %
+# -A access live objects
+# -w: write access ratio in %
+# -O shared objects
+# -R: shared objects ratio
+# -T: receiving threads ratio
+# -r: seed value
+# -i: write iterations.
+# -H: meta data heap size in kB
+# -N: node buffer size
+# -C: class buffer size
+
+OUTPUT_DIR=data/output
+OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 5 -t 1000000 -N 40000 -C 40000 -H 500000"
 FACTOR1="-n"
+LEVELS="1 2 4 6 8 10 12 14 16 20 24"
 FACTOR2=""
 REPS=5
 RELATIVE=1
 
 HEADLINE="#Created at: `date` on `hostname`"
 HEADLINE="$HEADLINE\n#Average on $REPS runs. ACDC Options: $OPTIONS"
-HEADLINE="$HEADLINE\n#x($FACTOR1)\tjemalloc\tstddev\tllalloc\tstddev\toptimal\tstddev\tptmalloc2\tstddev\tptmalloc3\tstddev\ttbb\tstddev\ttcmalloc\tstddev"
-	
+HEADLINE="$HEADLINE\n#x($FACTOR1)"
+
+for ITEM in $ALLOCATORS
+do
+	HEADLINE="$HEADLINE\t$ITEM\t$ITEM-stddev"
+done
+
 rm -rf $OUTPUT_DIR
 mkdir -p $OUTPUT_DIR
 
@@ -19,13 +52,13 @@ echo -e $HEADLINE > $OUTPUT_DIR/free.dat
 echo -e $HEADLINE > $OUTPUT_DIR/access.dat
 echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
-for XVALUE in 1 2 4 6 8
+for XVALUE in $LEVELS 
 do
 	ALLOC_OUTPUT="$XVALUE"
 	FREE_OUTPUT="$XVALUE"
 	ACCESS_OUTPUT="$XVALUE"
 	MEMCONS_OUTPUT="$XVALUE"
-	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc
+	for CONF in $ALLOCATORS
 	do
 
 		ALLOC_SUM=0
@@ -33,17 +66,37 @@ do
 		ACCESS_SUM=0
 		MEMCONS_SUM=0
 
+		if [[ $EXCLUDE =~ $CONF ]]
+		then
+			echo "skipping $CONF..."
+			RUNTIME_OUTPUT="$RUNTIME_OUTPUT\t0\t0"p		
+			ALLOC_OUTPUT="$ALLOC_OUTPUT\t0\t0"
+			FREE_OUTPUT="$FREE_OUTPUT\t0\t0"
+			ACCESS_OUTPUT="$ACCESS_OUTPUT\t0\t0"
+			MEMCONS_OUTPUT="$MEMCONS_OUTPUT\t0\t0"
+			continue
+		fi
+
+		#Hoard and Streamflow require LD_PRELOAD
+		if [ $CONF == "hoard" ]
+		then
+			export LD_PRELOAD=~/workspace/acdc/allocators/libhoard.so
+		elif [ $CONF == "streamflow" ]
+		then
+			export LD_PRELOAD=~/workspace/acdc/allocators/libstreamflow.so
+		else
+			unset LD_PRELOAD
+		fi
+
 		for (( REP=1; REP<=$REPS; REP++ ))
 		do
 			#maybe derive 2nd factor from first factor?
 			XVALUE2=""
+			echo "./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2"
 			OUTPUT=$(./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
 
 			RUNTIME=$(echo "$OUTPUT" | grep RUNTIME)
 			MEMSTAT=$(echo "$OUTPUT" | grep MEMORY)
-
-			#echo $RUNTIME
-			#echo $MEMSTAT
 
 			read -a RUNTIME_ARRAY <<<$RUNTIME
 			read -a MEMSTAT_ARRAY <<<$MEMSTAT
