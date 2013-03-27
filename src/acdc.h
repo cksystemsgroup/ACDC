@@ -211,7 +211,6 @@ Object *allocate(MContext *mc, size_t size);
 void deallocate(MContext *mc, Object *o, size_t size);
 Object *allocate_aligned(MContext *mc, size_t size, size_t alignment);
 void deallocate_aligned(MContext *mc, Object *o, size_t size, size_t alignment);
-void write_object(Object *o, size_t size, size_t offset);
 unsigned int get_sizeclass(size_t size);
 
 

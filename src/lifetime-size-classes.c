@@ -16,6 +16,17 @@
 #include "arch.h"
 #include "caches.h"
 
+static inline void write_object(Object *o, size_t size, size_t offset) {
+	int i;
+	size_t pl_sz = size - offset;
+	//payload starts after header
+	volatile char *payload = (char*)o + offset;
+	
+	for (i = 1; i < pl_sz; ++i) {
+		payload[i] = payload[i-1] + 1;
+	}
+}
+
 static LSClass *get_LSClass(MContext *mc) {
 	LSCNode *node = mc->class_cache.first;
 	if (node != NULL) {
