@@ -35,9 +35,6 @@ for config in ['optimal', 'ptmalloc2', 'ptmalloc3', 'tcmalloc', 'jemalloc', 'tbb
 	if config == 'streamflow':
 		e.Append(LIBS=['streamflow'], LIBPATH=[allocator_dir])
 		e.Append(CPPFLAGS=['-DALLOCATOR=streamflow'])
-	if config == 'scalloc':
-		e.Append(LIBS=['scalloc'], LIBPATH=['/home/mlippautz/work/scalloc/.libs'])
-		e.Append(CPPFLAGS=['-DALLOCATOR=scalloc'])
 	
 	object_list = []
 	for obj in ['main', 'memory', 'acdc', 'distribution', 'lifetime-class', 'lifetime-size-classes', 'metadata-allocator', 'barrier', 'proc_status']:
