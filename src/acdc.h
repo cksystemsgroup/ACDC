@@ -216,7 +216,7 @@ unsigned int get_sizeclass(size_t size);
 
 void get_random_object_props(MContext *mc, 
 		size_t *size, 
-		unsigned int *lifetime, 
+		unsigned int *liveness, 
 		unsigned int *num_objects,
     lifetime_size_class_type *type,
     reference_map_t *reference_map

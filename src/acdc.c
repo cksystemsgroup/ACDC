@@ -106,7 +106,9 @@ static void recycle_LSCNode(MContext *mc, LSCNode *node) {
 static void heap_class_insert(MContext *mc, LClass *heap_class, 
 		LSClass *c) {
 
-	unsigned int insert_index = (mc->time + c->lifetime) % 
+	unsigned long liveness = c->lifetime - mc->gopts->deallocation_delay;
+
+	unsigned int insert_index = (mc->time + liveness) % 
 			(mc->gopts->max_liveness + 
 			 mc->gopts->deallocation_delay);
 
@@ -121,14 +123,14 @@ static void heap_class_insert(MContext *mc, LClass *heap_class,
 
 /*
  * returns a pointer to the lifetime-class that corresponds to
- * 'remaining_lifetime' in 'heap_class'
+ * 'remaining_liveness' in 'heap_class'
  */
 static LClass *heap_class_get_LClass(MContext *mc, LClass *heap_class,
-		unsigned int remaining_lifetime) {
+		unsigned int remaining_liveness) {
 
-	assert(remaining_lifetime < mc->gopts->max_liveness);
+	assert(remaining_liveness < mc->gopts->max_liveness);
 
-	int index = (mc->time + remaining_lifetime) % 
+	int index = (mc->time + remaining_liveness) % 
 		(mc->gopts->max_liveness + mc->gopts->deallocation_delay);
 	return &heap_class[index];
 }
@@ -523,18 +525,18 @@ static void *acdc_thread(void *ptr) {
 	while (runs < mc->gopts->benchmark_duration) {
 
 		size_t sz = 0;
-		unsigned int lt;
+		unsigned int liveness;
 		unsigned int num_objects;
 		lifetime_size_class_type tp;
 		reference_map_t reference_map;
 
-		get_random_object_props(mc, &sz, &lt, &num_objects, &tp, &reference_map);
+		get_random_object_props(mc, &sz, &liveness, &num_objects, &tp, &reference_map);
 
 		if (mc->gopts->fixed_number_of_objects > 0) {
 			//override random properties
 			num_objects = mc->gopts->fixed_number_of_objects;
 			sz = BIT_ZERO << mc->gopts->min_object_sc;
-			lt = mc->gopts->min_liveness;
+			liveness = mc->gopts->min_liveness;
 			reference_map = BIT_ZERO << mc->thread_id;
 		}
 
@@ -545,7 +547,7 @@ static void *acdc_thread(void *ptr) {
 		//if (tp == LIST && sz < (sizeof(LObject)))
 		//	sz = sizeof(LObject);
 
-		mc->stat->lt_histogram[lt] += num_objects;
+		mc->stat->lt_histogram[liveness] += num_objects;
 		mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
 
 
@@ -558,12 +560,12 @@ static void *acdc_thread(void *ptr) {
 		LSClass *c = 
 			allocate_LSClass(mc, tp, sz, num_objects, reference_map);
 
-		c->lifetime = lt;
+		c->lifetime = liveness + mc->gopts->deallocation_delay;
 
 		allocation_end = rdtsc();
 		mc->stat->allocation_time += allocation_end - allocation_start;
 
-		debug(mc, "created collection %p with lt %d", c, lt);
+		debug(mc, "created collection %p with liveness %d", c, liveness);
 
 		if (mc->gopts->shared_objects) {
 			share_LSClass(mc, c);

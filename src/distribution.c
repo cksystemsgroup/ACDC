@@ -39,7 +39,7 @@ static unsigned int get_sharing_dist(MContext *mc) {
 	return 0;
 }
 
-static unsigned int get_random_lifetime(MContext *mc) {
+static unsigned int get_random_liveness(MContext *mc) {
 	return get_rand_int_range(mc,
 			mc->gopts->min_liveness,
 			mc->gopts->max_liveness);
@@ -113,25 +113,25 @@ static reference_map_t get_random_thread_selection(MContext *mc) {
 //creates random object properties and stores them in call-by-reference arguments
 void get_random_object_props(MContext *mc, 
 		size_t *size, 
-		unsigned int *lifetime, 
+		unsigned int *liveness, 
 		unsigned int *num_objects,
 		lifetime_size_class_type *type,
 		reference_map_t *reference_map) {
 
-	unsigned int lt = get_random_lifetime(mc);
+	unsigned int lt = get_random_liveness(mc);
 	unsigned int sz = get_random_size(mc);
 	unsigned int sc = get_sizeclass(sz);
 
 	unsigned int effect_of_sizeclass = (mc->gopts->max_object_sc - sc) + 1;
 	effect_of_sizeclass *= effect_of_sizeclass; //quadratic impact
 
-	unsigned int effect_of_lifetime = (mc->gopts->max_liveness - lt) + 1;
-	effect_of_lifetime *= effect_of_lifetime; //quadratic impact
+	unsigned int effect_of_liveness = (mc->gopts->max_liveness - lt) + 1;
+	effect_of_liveness *= effect_of_liveness; //quadratic impact
 
 	//output parameters
 	*size = sz;
-	*lifetime = lt;
-	*num_objects = effect_of_sizeclass * effect_of_lifetime;
+	*liveness = lt;
+	*num_objects = effect_of_sizeclass * effect_of_liveness;
 
 	assert(*num_objects > 0);
 	assert(sz <= (BIT_ZERO << mc->gopts->max_object_sc));
