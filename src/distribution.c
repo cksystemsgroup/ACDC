@@ -41,8 +41,8 @@ static unsigned int get_sharing_dist(MContext *mc) {
 
 static unsigned int get_random_lifetime(MContext *mc) {
 	return get_rand_int_range(mc,
-			mc->gopts->min_lifetime,
-			mc->gopts->max_lifetime);
+			mc->gopts->min_liveness,
+			mc->gopts->max_liveness);
 }
 
 static unsigned int get_random_size(MContext *mc) {
@@ -125,7 +125,7 @@ void get_random_object_props(MContext *mc,
 	unsigned int effect_of_sizeclass = (mc->gopts->max_object_sc - sc) + 1;
 	effect_of_sizeclass *= effect_of_sizeclass; //quadratic impact
 
-	unsigned int effect_of_lifetime = (mc->gopts->max_lifetime - lt) + 1;
+	unsigned int effect_of_lifetime = (mc->gopts->max_liveness - lt) + 1;
 	effect_of_lifetime *= effect_of_lifetime; //quadratic impact
 
 	//output parameters

@@ -24,8 +24,8 @@ static void print_usage() {
 			"-F: (fixed) number of objects (default 0: ACDC decides)\n"
 			"-s: min. size (in 2^x bytes)\n"
 			"-S: max. size (in 2^x bytes)\n"		
-			"-l: min. lifetime\n"
-			"-L: max. lifetime\n"
+			"-l: min. liveness\n"
+			"-L: max. liveness\n"
 			"-D: deallocation delay\n"
 			"-t: time quantum\n"
 			"-d: benchmark duration\n"
@@ -52,8 +52,8 @@ static void set_default_params(GOptions *gopts) {
 	gopts->benchmark_duration = 100;
 	gopts->seed = 1;
 	gopts->metadata_heap_sz = 0; //0 means that the user did not give that option
-	gopts->min_lifetime = 1;
-	gopts->max_lifetime = 10;
+	gopts->min_liveness = 1;
+	gopts->max_liveness = 10;
 	gopts->max_time_gap = -1;
 	gopts->deallocation_delay = 0;
 	gopts->min_object_sc = 4;
@@ -73,18 +73,18 @@ static void set_default_params(GOptions *gopts) {
 }
 
 /* 
- * this function takes the expected values of the random variables lifetime
+ * this function takes the expected values of the random variables liveness
  *  and object size to estimate the space required for the metadata
  */
 static void autodetect_metadata_parameters(GOptions *gopts) {
 
-	double expected_lt = (double)(gopts->max_lifetime + gopts->min_lifetime) / 2.0;
+	double expected_lt = (double)(gopts->max_liveness + gopts->min_liveness) / 2.0;
 	double expected_sc = (double)(gopts->max_object_sc + gopts->min_object_sc) / 2.0;
 	double expected_sz = (double)((1 << (int)expected_sc) + 
 				(1 << (int)(expected_sc + 1))) / 2.0;
 
-	double expected_num_obj = (double)(gopts->max_lifetime - expected_lt + 1);
-	expected_num_obj *= (gopts->max_lifetime - expected_lt + 1);
+	double expected_num_obj = (double)(gopts->max_liveness - expected_lt + 1);
+	expected_num_obj *= (gopts->max_liveness - expected_lt + 1);
 	expected_num_obj *= (gopts->max_object_sc - expected_sc + 1);
 	expected_num_obj *= (gopts->max_object_sc - expected_sc + 1);
 
@@ -135,7 +135,7 @@ static void check_params(GOptions *gopts) {
 		gopts->access_live_objects = 0;
 		gopts->write_access_ratio = 100;
 	}
-	if (gopts->max_time_gap < 0) gopts->max_time_gap = gopts->max_lifetime;
+	if (gopts->max_time_gap < 0) gopts->max_time_gap = gopts->max_liveness;
 
 #ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
 	int max_threads = 128;
@@ -173,8 +173,8 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->benchmark_duration = %d\n", gopts->benchmark_duration);
 	printf("gopts->seed = %d\n", gopts->seed);
 	printf("gopts->metadata_heap_sz = %lu\n", gopts->metadata_heap_sz);
-	printf("gopts->min_lifetime = %d\n", gopts->min_lifetime);
-	printf("gopts->max_lifetime = %d\n", gopts->max_lifetime);
+	printf("gopts->min_liveness = %d\n", gopts->min_liveness);
+	printf("gopts->max_liveness = %d\n", gopts->max_liveness);
 	printf("gopts->max_time_gap = %d\n", gopts->max_time_gap);
 	printf("gopts->deallocation_delay = %d\n", gopts->deallocation_delay);
 	printf("gopts->min_object_sc = %d\n", gopts->min_object_sc);
@@ -230,10 +230,10 @@ int main(int argc, char **argv) {
 				gopts->metadata_heap_sz = atoi(optarg);
 				break;
 			case 'l':
-				gopts->min_lifetime = atoi(optarg);
+				gopts->min_liveness = atoi(optarg);
 				break;
 			case 'L':
-				gopts->max_lifetime = atoi(optarg);
+				gopts->max_liveness = atoi(optarg);
 				break;
 			case 'D':
 				gopts->deallocation_delay = atoi(optarg);

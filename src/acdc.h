@@ -66,8 +66,8 @@ struct global_options {
   size_t metadata_heap_sz; //-H: in kB
   
   //options for object creation
-  int min_lifetime; //-l: must be >= 1 and <= max_lifetime
-  int max_lifetime; //-L:
+  int min_liveness; //-l: must be >= 1 and <= max_lifetime
+  int max_liveness; //-L:
   int fixed_number_of_objects; //-F:
   int deallocation_delay; //-D:
   int max_time_gap; //-g: defaults to max_lifetime

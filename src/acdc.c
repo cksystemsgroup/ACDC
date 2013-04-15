@@ -107,7 +107,7 @@ static void heap_class_insert(MContext *mc, LClass *heap_class,
 		LSClass *c) {
 
 	unsigned int insert_index = (mc->time + c->lifetime) % 
-			(mc->gopts->max_lifetime + 
+			(mc->gopts->max_liveness + 
 			 mc->gopts->deallocation_delay);
 
 	LClass *target_lifetime_class = &heap_class[insert_index];
@@ -126,10 +126,10 @@ static void heap_class_insert(MContext *mc, LClass *heap_class,
 static LClass *heap_class_get_LClass(MContext *mc, LClass *heap_class,
 		unsigned int remaining_lifetime) {
 
-	assert(remaining_lifetime < mc->gopts->max_lifetime);
+	assert(remaining_lifetime < mc->gopts->max_liveness);
 
 	int index = (mc->time + remaining_lifetime) % 
-		(mc->gopts->max_lifetime + mc->gopts->deallocation_delay);
+		(mc->gopts->max_liveness + mc->gopts->deallocation_delay);
 	return &heap_class[index];
 }
 
@@ -141,10 +141,10 @@ static LClass *heap_class_get_LClass(MContext *mc, LClass *heap_class,
 static void heap_class_remove(MContext *mc, LClass *heap_class) {
 
 	int delete_index = (mc->time) % 
-		(mc->gopts->max_lifetime + mc->gopts->deallocation_delay);
+		(mc->gopts->max_liveness + mc->gopts->deallocation_delay);
 	delete_index -= mc->gopts->deallocation_delay;
 	if (delete_index < 0)
-		delete_index += (mc->gopts->max_lifetime +
+		delete_index += (mc->gopts->max_liveness +
 				mc->gopts->deallocation_delay);
 
 	LClass *expired_lifetime_class = &heap_class[delete_index];
@@ -168,7 +168,7 @@ static void heap_class_remove(MContext *mc, LClass *heap_class) {
 /*
  * allocates a heap-class, i.e., an array of lifetime-classes
  * where we have one lifetime-class for each lifetime in
- * [min. lifetime, max. lifetime]
+ * [min. liveness, max. liveness]
  */
 static LClass *allocate_heap_class(unsigned int max_lifetime) {
 
@@ -192,18 +192,18 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 	mc->rand = gopts->seed + thread_id; // different seeds for different threads
 
 	mc->stat = calloc_meta(1, sizeof(MStat));
-	mc->stat->lt_histogram = calloc_meta(gopts->max_lifetime + 1, 
+	mc->stat->lt_histogram = calloc_meta(gopts->max_liveness + 1, 
 			sizeof(unsigned long));
 	mc->stat->sz_histogram = calloc_meta(gopts->max_object_sc + 1, 
 			sizeof(unsigned long));
 
 	mc->heap_class = allocate_heap_class(
-			gopts->max_lifetime + gopts->deallocation_delay);
+			gopts->max_liveness + gopts->deallocation_delay);
 
 	shared_heap_classes[thread_id] = allocate_heap_class(
-			gopts->max_lifetime); 
+			gopts->max_liveness); 
 	//no deallocation delay necessary here, we only distribute LSClasses 
-	//with lifetimes ranging from 1 to max_lifetime
+	//with lifetimes ranging from 1 to max_liveness
 	
 	int r = pthread_mutex_init(&shared_heap_classes_locks[thread_id], NULL);
 	if (r != 0) {
@@ -237,9 +237,9 @@ static void get_and_print_memstats(MContext *mc) {
 	update_proc_status(mc->gopts->pid);
 	mc->stat->current_rss = get_resident_set_size();
 	
-	//warmup phase: start memory measurements after max-lifetime
+	//warmup phase: start memory measurements after max-liveness
 	//units of time
-	if (mc->time >= 2 * mc->gopts->max_lifetime) {
+	if (mc->time >= 2 * mc->gopts->max_liveness) {
 		mc->stat->resident_set_size_counter +=
 			mc->stat->current_rss;
 		mc->stat->vm_peak = get_vm_peak();
@@ -322,7 +322,7 @@ static void access_live_LClasses(MContext *mc) {
 	if (mc->gopts->access_live_objects == 0) return;
 
 	int i;
-	for (i = 0; i < mc->gopts->max_lifetime; ++i) {
+	for (i = 0; i < mc->gopts->max_liveness; ++i) {
 		
 		LClass *lc = heap_class_get_LClass(mc, mc->heap_class, i);
 
@@ -370,7 +370,7 @@ static void share_LSClass(MContext *mc, LSClass *c) {
 
 /* a thread can call this function to fetch all lifetime-classes from its
  * shared heap-class to its local heap-class.
- *  this method runs in O(max_lifetime)
+ *  this method runs in O(max_liveness)
  */
 static void get_shared_LClasses(MContext *mc) {
 
@@ -381,7 +381,7 @@ static void get_shared_LClasses(MContext *mc) {
 
 	//for each possible lifetime
 	int i;
-	for (i = 0; i < mc->gopts->max_lifetime; ++i) {
+	for (i = 0; i < mc->gopts->max_liveness; ++i) {
 		//append shared LClass to local LClass
 		LClass *remote = &shared_heap_classes[tid][i];
 		LClass *local = heap_class_get_LClass(mc, mc->heap_class, i);
@@ -534,7 +534,7 @@ static void *acdc_thread(void *ptr) {
 			//override random properties
 			num_objects = mc->gopts->fixed_number_of_objects;
 			sz = BIT_ZERO << mc->gopts->min_object_sc;
-			lt = mc->gopts->min_lifetime;
+			lt = mc->gopts->min_liveness;
 			reference_map = BIT_ZERO << mc->thread_id;
 		}
 
@@ -618,7 +618,7 @@ void run_acdc(GOptions *gopts) {
 	MContext **thread_results = malloc_meta(sizeof(MContext*) * gopts->num_threads);
 	int thread_0_index = 0;
 
-	//distribution_pools = create_collection_pools(gopts->max_lifetime + 1);
+	//distribution_pools = create_collection_pools(gopts->max_liveness + 1);
 	
 	//allocate shared data here. 
 	//init everything per-thread in create_mutator_context
@@ -687,7 +687,7 @@ void run_acdc(GOptions *gopts) {
 			res->stat->objects_allocated;
 		thread_results[0]->stat->objects_deallocated += 
 			res->stat->objects_deallocated;
-		for (j = 0; j < gopts->max_lifetime; ++j) {
+		for (j = 0; j < gopts->max_liveness; ++j) {
 			thread_results[0]->stat->lt_histogram[j] +=
 				res->stat->lt_histogram[j];
 		}
@@ -697,7 +697,7 @@ void run_acdc(GOptions *gopts) {
 		}
 	}
 
-	for (i = 0; i <= gopts->max_lifetime; ++i) {
+	for (i = 0; i <= gopts->max_liveness; ++i) {
 		printf("LT_HISTO:\t%d\t%lu\n", 
 				i, 
 				thread_results[0]->stat->lt_histogram[i]
@@ -738,7 +738,7 @@ void run_acdc(GOptions *gopts) {
 			thread_results[thread_0_index]->stat->vm_peak, 
 			thread_results[thread_0_index]->stat->rss_hwm, 
 			(thread_results[thread_0_index]->stat->resident_set_size_counter / 
-			(gopts->benchmark_duration - 2 * gopts->max_lifetime))
+			(gopts->benchmark_duration - 2 * gopts->max_liveness))
 		       	- gopts->metadata_heap_sz	/* warmup*/
 			);
 
