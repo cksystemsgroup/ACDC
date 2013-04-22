@@ -91,23 +91,25 @@
           	<a href="https://github.com/cksystemsgroup/acdc">Fork us on GitHub</a>
         	</div>
 
-		<h1>ACDC:<small> Towards a Universal Mutator for Benchmarking Heap Management Systems</small></h1>
+		<h1>ACDC</h1>
 
-	<p> We present ACDC, an open-source benchmark that may be configured
-	to emulate explicit single- and multi-threaded memory
-	allocation, sharing, access, and deallocation behavior that exposes virtually
-	any relevant allocator performance differences. 
-	ACDC mimics periodic memory allocation and deallocation (AC) as well as persistent
-	memory (DC). Memory may be allocated thread-locally and shared among
-	multiple threads to study multi-core scalability and even false
-	sharing. Memory may be deallocated by threads other than the allocating
-	threads to study blowup memory fragmentation. Memory may be accessed
-	and deallocated sequentially in allocation order or in tree-like
-	traversals to expose allocator deficiencies in exploiting spatial
-	locality. We demonstrate ACDC’s capabilities with six state-of-the-art
-	allocators for C/C++ in an empirical study which also reveals
-	interesting performance differences between the allocators. </p>
-        </div>
+    <h3>Towards a Universal Mutator for Benchmarking Heap Management Systems</h3>
+
+       <p> We present ACDC, an open-source benchmark that may be configured
+       to emulate explicit single- and multi-threaded memory allocation,
+       sharing, access, and deallocation behavior to expose virtually any
+       relevant allocator performance differences. ACDC mimics periodic
+       memory allocation and deallocation (AC) as well as persistent memory
+       (DC). Memory may be allocated thread-locally and shared among multiple
+       threads to study multicore scalability and even false sharing. Memory
+       may be deallocated by threads other than the allocating threads to
+       study blowup memory fragmentation. Memory may be accessed and
+       deallocated sequentially in allocation order or in tree-like
+       traversals to expose allocator deficiencies in exploiting spatial
+       locality. We demonstrate ACDC’s capabilities with seven state-of-the-
+       art allocators for C/C++ in an empirical study which also reveals
+       interesting performance differences between the allocators. </p>
+</div>
         
         <a name="people"><h2>People</h2></a>
         <div style="z-index:900; position:relative;">
