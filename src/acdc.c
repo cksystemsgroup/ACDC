@@ -699,12 +699,14 @@ void run_acdc(GOptions *gopts) {
 		}
 	}
 
+	printf("Lifetime Histogram:\tlifetime\tnum_objects\n");
 	for (i = 0; i <= gopts->max_liveness; ++i) {
 		printf("LT_HISTO:\t%d\t%lu\n", 
 				i, 
 				thread_results[0]->stat->lt_histogram[i]
 				);
 	}
+	printf("Size-class Histogram:\tsize-class(2^n)\tnum_objects\n");
 	for (i = 0; i <= gopts->max_object_sc; ++i) {
 		printf("SZ_HISTO:\t%d\t%lu\n", 
 				i, 
@@ -712,7 +714,9 @@ void run_acdc(GOptions *gopts) {
 				);
 	}
 
-	printf("RUNTIME\t%s\t%d\t%llu\t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%%\n", 
+	printf("\nTime is given in CPU cycles\n\n");
+	printf("RESULTS\tallocator\tnum_threads\trunning_time\trunning_time_in_percent\tallocation_time\tallocation_time_in_percent\tdeallocation_time\tdeallocation_time_in_percent\taccess_time\taccess_time_in_percent\n");
+	printf("RUNTIME\t%s\t%d\t%llu\t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%%\n\n", 
 			ALLOCATOR_NAME,
 			gopts->num_threads,
 			thread_results[0]->stat->running_time, 
@@ -731,10 +735,11 @@ void run_acdc(GOptions *gopts) {
 	elapsed.tv_usec = end.tv_usec - start.tv_usec;
 	unsigned long time_in_ms = (elapsed.tv_sec * 1000000 + elapsed.tv_usec)/1000;
 
-	printf("WALLCLOCK\t%lu\n", time_in_ms);
+	printf("WALLCLOCK [ms]\t%lu\n\n", time_in_ms);
 
 	//update_proc_status(gopts->pid);
-	printf("MEMORY\t%s\t%d\t%ld\t%ld\t%ld\n",
+	printf("MEM-RESULTS\tallocator\tnum_threads\tVM_PEAK\tRSS_HWM\tRSS_AVG (after warmup)\n");
+	printf("MEMORY\t%s\t%d\t%ld\t%ld\t%ld\n\n",
 			ALLOCATOR_NAME,
 			gopts->num_threads,
 			thread_results[thread_0_index]->stat->vm_peak, 
