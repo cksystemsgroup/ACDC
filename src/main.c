@@ -88,9 +88,23 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 	expected_num_obj *= (gopts->max_object_sc - expected_sc + 1);
 	expected_num_obj *= (gopts->max_object_sc - expected_sc + 1);
 
+	double expected_lifetime_size_class_size = expected_sz * expected_num_obj;
+
+	if (expected_lifetime_size_class_size > gopts->time_quantum) {
+		printf("WARNING: The expected size of a single lifetime-size-class "
+				"is larger than the time quantum (%d > %d). "
+				" Use a larger time quantum!\n", 
+				(int)expected_lifetime_size_class_size,
+				gopts->time_quantum);
+		printf("Autodetection of metadata heap size will fail!\n"
+				"Try -H, -N, -C options instead if you want to use "
+				"a small quantum in combination with large objects\n");
+		exit(EXIT_FAILURE);
+	}
+
 	double expected_lifetime_size_classes = 
 		(expected_lt * (double)gopts->time_quantum) / 
-		 (expected_num_obj * expected_sz);
+		expected_lifetime_size_class_size;
 
 	if (gopts->shared_objects) {
 		//mind the gap :)
@@ -111,13 +125,13 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 		gopts->node_buffer_size = gopts->class_buffer_size;
 	}
 	
-	//128MB per thread for bookkeeping
-	gopts->metadata_heap_sz = gopts->num_threads * (1 << 17);
+	//1MB per thread for bookkeeping
+	gopts->metadata_heap_sz = gopts->num_threads * (1 << 10);
 	
 	//add the buffers for nodes and classes, add extra space for aligning ect...
 	gopts->metadata_heap_sz += (
-		4 * gopts->class_buffer_size * L1_LINE_SZ +
-		4 * gopts->node_buffer_size * L1_LINE_SZ) / 1024;
+		1 * gopts->class_buffer_size * L1_LINE_SZ +
+		1 * gopts->node_buffer_size * L1_LINE_SZ) / 1024;
 }
 
 static void check_params(GOptions *gopts) {
