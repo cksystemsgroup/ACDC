@@ -115,7 +115,7 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 	if (gopts->shared_objects) {
 		//mind the gap :)
 		expected_lifetime_size_classes *=
-			((double)gopts->max_time_gap + expected_lt) / expected_lt;
+			((double)gopts->max_time_gap + expected_lt);
 		expected_lifetime_size_classes *= receiving_threads_num;
 	} else {
 		expected_lifetime_size_classes *= expected_lt;
@@ -150,6 +150,10 @@ static void check_params(GOptions *gopts) {
 		exit(EXIT_FAILURE);
 	}
 	gopts->btree_based_ratio = 100 - gopts->list_based_ratio;
+
+	if (gopts->min_object_sc >= gopts->max_object_sc) {
+		printf("max. size must be larger than min. size\n");
+	}
 
 	if (gopts->mode == FS) {
 		gopts->receiving_threads_ratio = 100;
