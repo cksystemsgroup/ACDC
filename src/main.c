@@ -103,20 +103,23 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 		exit(EXIT_FAILURE);
 	}
 
-	// per thread
-	double expected_lifetime_size_classes = 
-		(expected_lt * (double)gopts->time_quantum) / 
-		expected_lifetime_size_class_size;
 
 	double receiving_threads_num = 
 			(double)(gopts->num_threads * gopts->receiving_threads_ratio) 
 			/ 100.0;
+	double shared_objects_multiplier = 
+			(double)(gopts->num_threads * gopts->shared_objects_ratio) 
+			/ 100.0;
+
+	// per thread, mind for the overapproximation
+	double expected_lifetime_size_classes = 
+		(expected_lt * (double)gopts->time_quantum) / 
+		expected_lifetime_size_class_size;
 
 	if (gopts->shared_objects) {
 		//mind the gap :)
 		expected_lifetime_size_classes *=
-			((double)gopts->max_time_gap + expected_lt);
-		expected_lifetime_size_classes *= receiving_threads_num;
+			((double)gopts->max_time_gap + expected_lt) * shared_objects_multiplier;
 	} else {
 		expected_lifetime_size_classes *= expected_lt;
 	}
@@ -127,7 +130,8 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 
 	if (gopts->shared_objects) {
 		gopts->node_buffer_size = gopts->class_buffer_size + (int)(
-			(double)gopts->class_buffer_size * receiving_threads_num);
+			(double)gopts->class_buffer_size * 
+			receiving_threads_num);
 	} else {
 		gopts->node_buffer_size = gopts->class_buffer_size;
 	}
@@ -137,10 +141,10 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 	
 	//global metadata heap
 	//add the buffers for nodes and classes, add extra space for aligning ect...
-	gopts->metadata_heap_sz += ((
-		1 * gopts->class_buffer_size * L1_LINE_SZ +
-		1 * gopts->node_buffer_size * L1_LINE_SZ) *
-		gopts->num_threads) / 1024;
+	gopts->metadata_heap_sz += (((
+		gopts->class_buffer_size * L1_LINE_SZ +
+		gopts->node_buffer_size * L1_LINE_SZ) *
+		gopts->num_threads) / 1024) * 16;
 }
 
 static void check_params(GOptions *gopts) {
