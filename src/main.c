@@ -83,6 +83,7 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 	double expected_sz = (double)((1 << (int)expected_sc) + 
 				(1 << (int)(expected_sc + 1))) / 2.0;
 
+	// per lifetime-size-class
 	double expected_num_obj = (double)(gopts->max_liveness - expected_lt + 1);
 	expected_num_obj *= (gopts->max_liveness - expected_lt + 1);
 	expected_num_obj *= (gopts->max_object_sc - expected_sc + 1);
@@ -102,23 +103,29 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 		exit(EXIT_FAILURE);
 	}
 
+	// per thread
 	double expected_lifetime_size_classes = 
 		(expected_lt * (double)gopts->time_quantum) / 
 		expected_lifetime_size_class_size;
+
+	double receiving_threads_num = 
+			(double)(gopts->num_threads * gopts->receiving_threads_ratio) 
+			/ 100.0;
 
 	if (gopts->shared_objects) {
 		//mind the gap :)
 		expected_lifetime_size_classes *=
 			((double)gopts->max_time_gap + expected_lt) / expected_lt;
+		expected_lifetime_size_classes *= receiving_threads_num;
+	} else {
+		expected_lifetime_size_classes *= expected_lt;
 	}
 
-	gopts->class_buffer_size = (int)expected_lifetime_size_classes * 10;
+	// add some space in case the distribution does not satisfy the expected
+	// value for short runs
+	gopts->class_buffer_size = (int)expected_lifetime_size_classes * 2;
 
 	if (gopts->shared_objects) {
-		double receiving_threads_num = 
-			(double)(gopts->num_threads * gopts->receiving_threads_ratio) 
-			/ 100.0;
-		
 		gopts->node_buffer_size = gopts->class_buffer_size + (int)(
 			(double)gopts->class_buffer_size * receiving_threads_num);
 	} else {
@@ -128,10 +135,12 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 	//1MB per thread for bookkeeping
 	gopts->metadata_heap_sz = gopts->num_threads * (1 << 10);
 	
+	//global metadata heap
 	//add the buffers for nodes and classes, add extra space for aligning ect...
-	gopts->metadata_heap_sz += (
+	gopts->metadata_heap_sz += ((
 		1 * gopts->class_buffer_size * L1_LINE_SZ +
-		1 * gopts->node_buffer_size * L1_LINE_SZ) / 1024;
+		1 * gopts->node_buffer_size * L1_LINE_SZ) *
+		gopts->num_threads) / 1024;
 }
 
 static void check_params(GOptions *gopts) {
