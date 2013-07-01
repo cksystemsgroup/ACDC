@@ -44,8 +44,14 @@ static long get_long_from_line(char *str, int index) {
 	char *token;
 	int i = 0;
 	const char *delimiter = " ";
-	char *sp;
-	for (sp = str; ; sp = NULL) {
+	char *sp = str;
+	while (*sp != '\0' && i < LINE_MAX) {
+		if (*sp == '\t') *sp = ' ';
+		++i;
+		++sp;
+	}
+	
+	for (sp = str, i = 0; ; sp = NULL) {
 		token = strtok(sp, delimiter);
 		if (token == NULL) break;
 		if (i++ == index) return atol(token);
@@ -58,7 +64,7 @@ void update_proc_status(pid_t pid) {
 	char filename[50]; //more than enough for /proc/[pid]/status
 	snprintf(filename, 50, "/proc/%d/status", pid);
 	FILE *stream;
-	char buf[LINE_MAX];
+	char buf[LINE_MAX] = {0};
 	//size_t len;
 
 	stream = fopen(filename, "r");
@@ -66,6 +72,13 @@ void update_proc_status(pid_t pid) {
 		perror("fopen");
 		exit(EXIT_FAILURE);
 	}
+
+	//reset
+	stat.vm_data = 0;
+	stat.vm_hwm = 0;
+	stat.vm_peak = 0;
+	stat.vm_rss = 0;
+	stat.vm_size = 0;
 
 	while (fgets(buf, LINE_MAX, stream)) {
 		if (strncmp(buf, "VmPeak", 6) == 0) {

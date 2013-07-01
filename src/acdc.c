@@ -248,6 +248,12 @@ static void get_and_print_memstats(MContext *mc) {
 		mc->stat->rss_hwm = get_high_water_mark();
 	}
 
+	
+	if (mc->stat->current_rss < mc->gopts->metadata_heap_sz) {
+		printf("FAULTY RSS SAMPLE: %ld\n", mc->stat->current_rss);
+		return;
+	}
+	
 	if (mc->gopts->verbosity == 0) return;
 
 	printf("MEMSTATS\t%s\t%3u\t%4u\t%12lu\n",
