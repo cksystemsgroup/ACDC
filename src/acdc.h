@@ -60,7 +60,7 @@ struct global_options {
   //benchmark options
   benchmark_mode_t mode; //-m: acdc, false-sharing, ...
   int num_threads;  //-n: number of mutator threads
-  int time_quantum; //-t: allocated bytes until time advances
+  unsigned long time_quantum; //-t: allocated bytes until time advances
   int benchmark_duration; //-d: How long acdc will run
   int seed; //-r:
   size_t metadata_heap_sz; //-H: in kB

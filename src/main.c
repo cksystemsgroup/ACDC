@@ -93,9 +93,9 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 
 	if (expected_lifetime_size_class_size > gopts->time_quantum) {
 		printf("WARNING: The expected size of a single lifetime-size-class "
-				"is larger than the time quantum (%d > %d). "
+				"is larger than the time quantum (%lu > %lu). "
 				" Use a larger time quantum!\n", 
-				(int)expected_lifetime_size_class_size,
+				(long unsigned)expected_lifetime_size_class_size,
 				gopts->time_quantum);
 		printf("Autodetection of metadata heap size will fail!\n"
 				"Try -H, -N, -C options instead if you want to use "
@@ -200,7 +200,7 @@ static void check_params(GOptions *gopts) {
 static void print_params(GOptions *gopts) {
 	printf("gopts->mode = %d\n", gopts->mode);
 	printf("gopts->num_threads = %d\n", gopts->num_threads);
-	printf("gopts->time_quantum = %d\n", gopts->time_quantum);
+	printf("gopts->time_quantum = %lu\n", gopts->time_quantum);
 	printf("gopts->benchmark_duration = %d\n", gopts->benchmark_duration);
 	printf("gopts->seed = %d\n", gopts->seed);
 	printf("gopts->metadata_heap_sz = %lu\n", gopts->metadata_heap_sz);
@@ -249,7 +249,7 @@ int main(int argc, char **argv) {
 				gopts->num_threads = atoi(optarg);
 				break;
 			case 't':
-				gopts->time_quantum = atoi(optarg);
+				gopts->time_quantum = atol(optarg);
 				break;
 			case 'd':
 				gopts->benchmark_duration = atoi(optarg);
