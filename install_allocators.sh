@@ -9,7 +9,7 @@ mkdir -p allocators
 cd allocators
 
 # jemalloc
-git clone git://canonware.com/jemalloc.git
+git clone git://pkgs.fedoraproject.org/jemalloc.git
 cd jemalloc
 ./autogen.sh
 make -j 2
