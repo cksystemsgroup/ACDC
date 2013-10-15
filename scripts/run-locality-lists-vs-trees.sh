@@ -4,6 +4,7 @@ OUTPUT_DIR=data/locality-lists-vs-trees
 OPTIONS="-a -t 500000 -d 50 -l 1 -L 10 -s 4 -S 5 -i 1 -w 0 -A -N 10000 -C 10000 -H 4000"
 FACTOR1="-q"
 #FACTOR2="-b"
+#REPS=5
 REPS=5
 RELATIVE=0
 
@@ -33,7 +34,16 @@ do
 		ACCESS_SUM=0
 		MEMCONS_SUM=0
 		
-		if [ $CONF == "dummy" -o $CONF == "scalloc" -o $CONF == "streamflow" ]
+		if [ $CONF == "dummy" \
+			-o $CONF == "jemalloc" \
+			-o $CONF == "optimal" \
+			-o $CONF == "llalloc" \
+			-o $CONF == "ptmalloc2" \
+			-o $CONF == "tbb" \
+			-o $CONF == "tcmalloc" \
+			-o $CONF == "streamflow" \
+			-o $CONF == "hoard" \
+			-o $CONF == "ptmalloc3" ]
 		then
 			echo "skipping $CONF..."
 			RUNTIME_OUTPUT="$RUNTIME_OUTPUT\t0\t0"p		

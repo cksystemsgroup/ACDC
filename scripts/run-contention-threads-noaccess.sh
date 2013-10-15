@@ -1,10 +1,10 @@
 #/bin/bash
 
 OUTPUT_DIR=data/contention-threads-noaccess
-OPTIONS="-a -s 3 -S 12 -d 50 -l 1 -L 5 -t 1000000 -N 40000 -C 40000 -H 500000"
+OPTIONS="-a -s 3 -S 9 -d 50 -l 1 -L 5 -t 1000000 -N 40000 -C 40000 -H 500000"
 FACTOR1="-n"
 FACTOR2=""
-REPS=5
+REPS=3
 RELATIVE=1
 
 HEADLINE="#Created at: `date` on `hostname`"
@@ -19,7 +19,8 @@ echo -e $HEADLINE > $OUTPUT_DIR/free.dat
 echo -e $HEADLINE > $OUTPUT_DIR/access.dat
 echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
-for XVALUE in 1 2 4 6 8 10 12 14 16 20 24
+#for XVALUE in 1 2 4 6 8 10 12 14 16 20 24
+for XVALUE in 1 4 8 10 20 40 60 80
 do
 	ALLOC_OUTPUT="$XVALUE"
 	FREE_OUTPUT="$XVALUE"
@@ -33,7 +34,7 @@ do
 		ACCESS_SUM=0
 		MEMCONS_SUM=0
 
-		if [ $CONF == "streamflow"  -o $CONF == "dummy" -o $CONF == "scalloc" ]
+		if [ $CONF == "ptmalloc2"  -o $CONF == "ptmalloc3" -o $CONF == "optimal" -o $CONF == "hoard" ]
 		then
 			echo "skipping $CONF..."
 			RUNTIME_OUTPUT="$RUNTIME_OUTPUT\t0\t0"p		

@@ -1,10 +1,10 @@
 #/bin/bash
 
 OUTPUT_DIR=data/memcons-objsz
-OPTIONS="-a -d 20 -l 1 -L 1 -t 10000000 -n 1 -N 1000000 -C 1000000 -H 200000"
+OPTIONS="-a -d 20 -l 1 -L 1 -t 10000000 -n 1 -N 200000 -C 200000 -H 200000"
 FACTOR1="-s"
 FACTOR2="-S"
-REPS=5
+REPS=2
 RELATIVE=0
 
 HEADLINE="#Created at: `date` on `hostname`"
@@ -19,7 +19,7 @@ echo -e $HEADLINE > $OUTPUT_DIR/free.dat
 echo -e $HEADLINE > $OUTPUT_DIR/access.dat
 echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
 
-for XVALUE in 3 4 5 6 7 8 9 10 11 12
+for XVALUE in 4 5 6 7 8 9 10 11 12
 do
 	echo "XVALUE `date`"
 	ALLOC_OUTPUT="$XVALUE"
@@ -34,7 +34,7 @@ do
 		ACCESS_SUM=0
 		MEMCONS_SUM=0
 		
-		if [ $CONF == "dummy" -o $CONF == "scalloc" -o $CONF == "streamflow" ]
+		if [ $CONF == "tbb" -o $CONF == "ptmalloc3" -o $CONF == "tcmalloc" ]
 		then
 			echo "skipping $CONF..."
 			RUNTIME_OUTPUT="$RUNTIME_OUTPUT\t0\t0"p		

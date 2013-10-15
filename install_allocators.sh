@@ -57,3 +57,6 @@ cd Hoard/src
 make linux-gcc-x86-64
 cd ../../
 ln -s Hoard/src/libhoard.so libhoard.so
+
+#scalloc
+cp -P ../../scalloc/.libs/libscalloc.so* .
