@@ -9,7 +9,9 @@ mkdir -p allocators
 cd allocators
 
 # jemalloc
-git clone git://pkgs.fedoraproject.org/jemalloc.git
+wget http://ftp.de.debian.org/debian/pool/main/j/jemalloc/jemalloc_3.4.0.orig.tar.bz2
+tar -xvjf jemalloc_3.4.0.orig.tar.bz2
+mv jemalloc-3.4.0 jemalloc
 cd jemalloc
 ./autogen.sh
 make -j 2
