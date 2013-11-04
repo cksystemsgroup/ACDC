@@ -1,84 +1,70 @@
 #/bin/bash
 
 OUTPUT_DIR=data/contention-objsz
-
-#a -d 50 -l 1 -L 5 -t 1000000 -n 40 -r 2 -s 4 -S 5
-
-#OPTIONS="-a -d 20 -l 1 -L 1 -t 5000000 -n 40 -N 100000 -C 100000 -H 1000000"
-#OPTIONS="-a -d 10 -l 1 -L 1 -n 40 -N 100000 -C 100000 -H 1000000 -A"
+ALLOCATOR_DIR=`pwd`/allocators
+#name the allocators accordingly to their .so file
+ALLOCATORS="jemalloc llalloc ptmalloc2 tbbmalloc_proxy tcmalloc streamflow hoard scalloc scalloc-eager"
 OPTIONS="-a -d 5 -l 1 -L 1 -n 40 -N 100000 -C 100000 -H 1000000 -A"
 FACTOR1="-s"
+FACTOR1_VALUES="4 6 8 10 12 14 16 18 20"
 FACTOR2="-S"
+FACTOR2_VALUES=""
 REPS=5
+#if RELATIVE is set to 1, the the respoinse will be divided by the value for x
 RELATIVE=0
+
+if [ ! -d $ALLOCATOR_DIR ]; then
+	echo "Cannot find directory containing the allocators"
+	echo "try ./install_allocators.sh and run scripts from ACDC root dir"
+	exit
+fi
+
+export LD_LIBRARY_PATH=$ALLOCATOR_DIR
 
 HEADLINE="#Created at: `date` on `hostname`"
 HEADLINE="$HEADLINE\n#Average on $REPS runs. ACDC Options: $OPTIONS"
-HEADLINE="$HEADLINE\n#x($FACTOR1)\tjemalloc\tstddev\tllalloc\tstddev\toptimal\tstddev\tptmalloc2\tstddev\tptmalloc3\tstddev\ttbb\tstddev\ttcmalloc\tstddev\tstreamflow\tstddev\thoard\tstddev\tscalloc\tstddev"
-	
-rm -rf $OUTPUT_DIR/*.dat
+HEADLINE="$HEADLINE\n#x($FACTOR1)\taverage\tstddev"
+
+rm -rf $OUTPUT_DIR
 mkdir -p $OUTPUT_DIR
 
-echo -e $HEADLINE > $OUTPUT_DIR/alloc.dat
-echo -e $HEADLINE > $OUTPUT_DIR/free.dat
-echo -e $HEADLINE > $OUTPUT_DIR/access.dat
-echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
-
-#for XVALUE in 4 6 8 10 12 14 16 18 20 22 24 25
-for XVALUE in 4 6 8 10 12 14 16 18 20
+for ALLOCATOR in $ALLOCATORS
 do
-	echo "XVALUE `date`"
-	ALLOC_OUTPUT="$XVALUE"
-	FREE_OUTPUT="$XVALUE"
-	ACCESS_OUTPUT="$XVALUE"
-	MEMCONS_OUTPUT="$XVALUE"
-	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc streamflow hoard scalloc
-	do
+	echo "running ACDC config for $ALLOCATOR"
 
+	echo -e $HEADLINE > $OUTPUT_DIR/$ALLOCATOR-alloc.dat
+	echo -e $HEADLINE > $OUTPUT_DIR/$ALLOCATOR-free.dat
+	echo -e $HEADLINE > $OUTPUT_DIR/$ALLOCATOR-access.dat
+	echo -e $HEADLINE > $OUTPUT_DIR/$ALLOCATOR-memcons.dat
+	ALLOC_OUTPUT=""
+	FREE_OUTPUT=""
+	ACCESS_OUTPUT=""
+	MEMCONS_OUTPUT=""
+
+	for XVALUE in $FACTOR1_VALUES
+	do	
+		ALLOC_OUTPUT="$ALLOC_OUTPUT\n$XVALUE"
+		FREE_OUTPUT="$FREE_OUTPUT\n$XVALUE"
+		ACCESS_OUTPUT="$ACCESS_OUTPUT\n$XVALUE"
+		MEMCONS_OUTPUT="$MEMCONS_OUTPUT\n$XVALUE"
 		ALLOC_SUM=0
 		FREE_SUM=0
 		ACCESS_SUM=0
 		MEMCONS_SUM=0
-			
-			#-o $CONF == "ptmalloc3" \
-			#-o $CONF == "tcmalloc" \
-			#-o $CONF == "ptmalloc2" \
-			#-o $CONF == "tbb" \
-			#-o $CONF == "hoard" \
-			#-o $CONF == "streamflow" \
-		
-		if [ $CONF == "optimal" \
-			-o $CONF == "ptmalloc3" \
-			-o $CONF == "scalloc" ]
-		then
-			echo "skipping $CONF..."
-			RUNTIME_OUTPUT="$RUNTIME_OUTPUT\t0\t0"p		
-			ALLOC_OUTPUT="$ALLOC_OUTPUT\t0\t0"
-			FREE_OUTPUT="$FREE_OUTPUT\t0\t0"
-			ACCESS_OUTPUT="$ACCESS_OUTPUT\t0\t0"
-			MEMCONS_OUTPUT="$MEMCONS_OUTPUT\t0\t0"
-			continue
-		fi
-
-		if [ $CONF == "hoard" ]
-		then
-			export LD_PRELOAD=/home/martin/workspace/acdc/allocators/libhoard.so
-		elif [ $CONF == "streamflow" ]
-		then
-			export LD_PRELOAD=/home/martin/workspace/acdc/allocators/libstreamflow.so
-		else
-			unset LD_PRELOAD
-		fi
 
 		for (( REP=1; REP<=$REPS; REP++ ))
 		do
 			#maybe derive 2nd factor from first factor?
 			let "XVALUE2=$XVALUE + 2"
-			#THRESHOLD=$(echo "20000000 / (25 - $XVALUE)" | bc)
 			THRESHOLD=$(echo "2^$XVALUE * 1024" | bc)
-			#THRESHOLD=$(echo "2^($XVALUE/2) * 1024" | bc)
-			echo "./build/acdc-$CONF $OPTIONS -r $REP -t $THRESHOLD $FACTOR1 $XVALUE $FACTOR2 $XVALUE2"
-			OUTPUT=$(./build/acdc-$CONF $OPTIONS -r $REP -t $THRESHOLD $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
+			echo "./build/acdc-$ALLOCATOR $OPTIONS -r $REP -t $THRESHOLD $FACTOR1 $XVALUE $FACTOR2 $XVALUE2"
+			#ptmalloc2 requires no LD_PRELOAD. everything else does
+			unset LD_PRELOAD
+			if [ $ALLOCATOR != "ptmalloc2" -a $ALLOCATOR != "static" ]; then
+				export LD_PRELOAD=$ALLOCATOR_DIR/lib$ALLOCATOR.so
+			fi
+			OUTPUT=$(./build/acdc-$ALLOCATOR $OPTIONS -r $REP -t $THRESHOLD $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
+			unset LD_PRELOAD
 
 			RUNTIME=$(echo "$OUTPUT" | grep RUNTIME)
 			MEMSTAT=$(echo "$OUTPUT" | grep MEMORY)
@@ -106,7 +92,7 @@ do
 			FREE_SUM=$(echo "$FREE_SUM + ${FREE_VALUE[$REP]}" | bc)
 			ACCESS_SUM=$(echo "$ACCESS_SUM + ${ACCESS_VALUE[$REP]}" | bc)
 			MEMCONS_SUM=$(echo "$MEMCONS_SUM + ${MEMCONS_VALUE[$REP]}" | bc)
-		done
+		done #REPS
 		ALLOC_AVG=$(echo "scale=1;$ALLOC_SUM / $REPS" | bc)
 		FREE_AVG=$(echo "scale=1;$FREE_SUM / $REPS" | bc)
 		ACCESS_AVG=$(echo "scale=1;$ACCESS_SUM / $REPS" | bc)
@@ -116,38 +102,36 @@ do
 		FREE_SSD=0
 		ACCESS_SSD=0
 		MEMCONS_SSD=0
-
-		if [ $REPS -gt 1 ]
-		then
-			for (( REP=1; REP<=$REPS; REP++ ))
-			do
-				ALLOC_SSD=$(echo "$ALLOC_SSD + (${ALLOC_VALUE[$REP]} - $ALLOC_AVG)^2" | bc)
-				FREE_SSD=$(echo "$FREE_SSD + (${FREE_VALUE[$REP]} - $FREE_AVG)^2" | bc)
-				ACCESS_SSD=$(echo "$ACCESS_SSD + (${ACCESS_VALUE[$REP]} - $ACCESS_AVG)^2" | bc)
-				MEMCONS_SSD=$(echo "$MEMCONS_SSD + (${MEMCONS_VALUE[$REP]} - $MEMCONS_AVG)^2" | bc)
-			done
-			ALLOC_SSD=$(echo "scale=1;sqrt($ALLOC_SSD * (1 / ($REPS - 1)))" | bc)
-			FREE_SSD=$(echo "scale=1;sqrt($FREE_SSD * (1 / ($REPS - 1)))" | bc)
-			ACCESS_SSD=$(echo "scale=1;sqrt($ACCESS_SSD * (1 / ($REPS - 1)))" | bc)
-			MEMCONS_SSD=$(echo "scale=1;sqrt($MEMCONS_SSD * (1 / ($REPS - 1)))" | bc)
-		fi
-
+		for (( REP=1; REP<=$REPS; REP++ ))
+		do
+			ALLOC_SSD=$(echo "$ALLOC_SSD + (${ALLOC_VALUE[$REP]} - $ALLOC_AVG)^2" | bc)
+			FREE_SSD=$(echo "$FREE_SSD + (${FREE_VALUE[$REP]} - $FREE_AVG)^2" | bc)
+			ACCESS_SSD=$(echo "$ACCESS_SSD + (${ACCESS_VALUE[$REP]} - $ACCESS_AVG)^2" | bc)
+			MEMCONS_SSD=$(echo "$MEMCONS_SSD + (${MEMCONS_VALUE[$REP]} - $MEMCONS_AVG)^2" | bc)
+		done
+		ALLOC_SSD=$(echo "scale=1;sqrt($ALLOC_SSD * (1 / ($REPS - 1)))" | bc)
+		FREE_SSD=$(echo "scale=1;sqrt($FREE_SSD * (1 / ($REPS - 1)))" | bc)
+		ACCESS_SSD=$(echo "scale=1;sqrt($ACCESS_SSD * (1 / ($REPS - 1)))" | bc)
+		MEMCONS_SSD=$(echo "scale=1;sqrt($MEMCONS_SSD * (1 / ($REPS - 1)))" | bc)
+		
 		ALLOC_OUTPUT="$ALLOC_OUTPUT\t$ALLOC_AVG\t$ALLOC_SSD"
 		FREE_OUTPUT="$FREE_OUTPUT\t$FREE_AVG\t$FREE_SSD"
 		ACCESS_OUTPUT="$ACCESS_OUTPUT\t$ACCESS_AVG\t$ACCESS_SSD"
 		MEMCONS_OUTPUT="$MEMCONS_OUTPUT\t$MEMCONS_AVG\t$MEMCONS_SSD"
-	done	
-
-	echo -e $ALLOC_OUTPUT >> $OUTPUT_DIR/alloc.dat
-	echo -e $FREE_OUTPUT >> $OUTPUT_DIR/free.dat
-	echo -e $ACCESS_OUTPUT >> $OUTPUT_DIR/access.dat
-	echo -e $MEMCONS_OUTPUT >> $OUTPUT_DIR/memcons.dat
-
-done
+	done #XVALUE
+	echo -e $ALLOC_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-alloc.dat
+	echo -e $FREE_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-free.dat
+	echo -e $ACCESS_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-access.dat
+	echo -e $MEMCONS_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-memcons.dat
+done #ALLOCATORS
 
 CWD=`pwd`
-#cp gnuplot_templates/*.p $OUTPUT_DIR/
+cp gnuplot_templates/plot_alloc_contention_objsz.p $OUTPUT_DIR/plot_alloc.p
+cp gnuplot_templates/plot_free_contention_objsz.p $OUTPUT_DIR/plot_free.p
+cp gnuplot_templates/plot_access_contention_objsz.p $OUTPUT_DIR/plot_access.p
+cp gnuplot_templates/plot_memcons_contention_objsz.p $OUTPUT_DIR/plot_memcons.p
 cd $OUTPUT_DIR
+rm -rf *.pdf *.eps
 gnuplot plot_alloc.p && epstopdf alloc.eps
 gnuplot plot_free.p && epstopdf free.eps
 gnuplot plot_access.p && epstopdf access.eps
