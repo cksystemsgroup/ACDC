@@ -43,6 +43,7 @@ ln -s tbb41_20130116oss/lib/intel64/cc4.1.0_libc2.4_kernel2.6.16.21/libtbbmalloc
 
 # tcmalloc
 sudo apt-get install libgoogle-perftools-dev
+ln -s /usr/lib/libtcmalloc_minimal.so libtcmalloc.so
 
 #streamflow
 sudo apt-get install libnuma-dev
@@ -61,4 +62,25 @@ cd ../../
 ln -s Hoard/src/libhoard.so libhoard.so
 
 #scalloc
-cp -P ../../scalloc/.libs/libscalloc.so* .
+git clone git@github.com:cksystemsgroup/scalloc.git
+cd scalloc/
+git checkout release
+tools/make_deps.sh
+
+build/gyp/gyp --depth=. -Deager_madvise_threshold=32768 scalloc.gyp
+BUILDTYPE=Release V=1 make
+cp out/Release/libscalloc.so out/Release/libscalloc-eager.so
+
+./build/gyp/gyp --depth=. scalloc.gyp
+BUILDTYPE=Release make
+cd ..
+rm libscalloc*
+ln -s scalloc/out/Release/libscalloc.so libscalloc.so
+ln -s scalloc/out/Release/libscalloc.so libscalloc.so.0
+ln -s scalloc/out/Release/libscalloc-eager.so libscalloc-eager.so
+ln -s scalloc/out/Release/libscalloc-eager.so libscalloc-eager.so.0
+
+
+
+#done
+cd ..
