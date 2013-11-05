@@ -6,6 +6,7 @@ set output 'alloc.eps'
 set xlabel "x value"
 set ylabel "per-thread total allocation time seconds\n(lower is better)"
 
+set logscale y
 set multiplot
 
 set key outside center bottom horizontal
@@ -20,5 +21,5 @@ plot "jemalloc-alloc.dat" using 1:($2/2000000000):($3/2000000000):xticlabel(1) w
 "streamflow-alloc.dat"    using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines lt 10 lw 3 title 'streamflow', \
 "hoard-alloc.dat"         using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines lt 11 lw 3 title 'hoard', \
 "scalloc-alloc.dat"       using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines lt 12 lw 3 title 'scalloc', \
-"scalloc-eager-alloc.dat" using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines lt 5  lw 3 title 'scalloc-e'
+"scalloc-eager-alloc.dat" using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines lt 5 lw 3 title 'scalloc-e'
 

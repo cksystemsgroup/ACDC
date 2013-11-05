@@ -6,6 +6,7 @@ set output 'free.eps'
 set xlabel "x value"
 set ylabel "per-thread total deallocation time seconds\n(lower is better)"
 
+set logscale y
 set multiplot
 
 set key outside center bottom horizontal
