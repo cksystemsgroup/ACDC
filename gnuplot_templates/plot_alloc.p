@@ -5,8 +5,8 @@ unset title
 set terminal postscript eps color
 set output 'alloc.eps'
 
-set xlabel "x value"
-set ylabel "per-thread total allocation time seconds\n(lower is better)"
+set xlabel "number of threads"
+set ylabel "per-thread total allocation time seconds\n(lower is better)" offset 2,0
 
 set multiplot
 set yrange [0:]
