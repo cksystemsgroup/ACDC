@@ -1,77 +1,71 @@
 #/bin/bash
 
 OUTPUT_DIR=data/locality-lists-vs-trees
+ALLOCATOR_DIR=`pwd`/allocators
+#name the allocators accordingly to their .so file
+ALLOCATORS="jemalloc llalloc ptmalloc2 tbbmalloc_proxy tcmalloc streamflow hoard scalloc scalloc-eager static"
+#ALLOCATORS="static"
 OPTIONS="-a -t 500000 -d 50 -l 1 -L 10 -s 4 -S 5 -i 1 -w 0 -A -N 10000 -C 10000 -H 4000"
 FACTOR1="-q"
-#FACTOR2="-b"
-#REPS=5
+FACTOR1_VALUES="0 10 20 30 40 50 60 70 80 90 100"
+FACTOR2=""
+FACTOR2_VALUES=""
 REPS=5
+#if RELATIVE is set to 1, the the respoinse will be divided by the value for x
 RELATIVE=0
+
+if [ ! -d $ALLOCATOR_DIR ]; then
+	echo "Cannot find directory containing the allocators"
+	echo "try ./install_allocators.sh and run scripts from ACDC root dir"
+	exit
+fi
+
+export LD_LIBRARY_PATH=$ALLOCATOR_DIR
 
 HEADLINE="#Created at: `date` on `hostname`"
 HEADLINE="$HEADLINE\n#Average on $REPS runs. ACDC Options: $OPTIONS"
-HEADLINE="$HEADLINE\n#x($FACTOR1)\tjemalloc\tstddev\tllalloc\tstddev\toptimal\tstddev\tptmalloc2\tstddev\tptmalloc3\tstddev\ttbb\tstddev\ttcmalloc\tstddev\tstreamflow\tstddev\thoard\tstddev\tscalloc\tstddev"
-	
-rm -rf $OUTPUT_DIR
+HEADLINE="$HEADLINE\n#x($FACTOR1)\taverage\tstddev"
+
+#rm -rf $OUTPUT_DIR
 mkdir -p $OUTPUT_DIR
 
-echo -e $HEADLINE > $OUTPUT_DIR/alloc.dat
-echo -e $HEADLINE > $OUTPUT_DIR/free.dat
-echo -e $HEADLINE > $OUTPUT_DIR/access.dat
-echo -e $HEADLINE > $OUTPUT_DIR/memcons.dat
-
-for XVALUE in {0..100..20}
+for ALLOCATOR in $ALLOCATORS
 do
-	ALLOC_OUTPUT="$XVALUE"
-	FREE_OUTPUT="$XVALUE"
-	ACCESS_OUTPUT="$XVALUE"
-	MEMCONS_OUTPUT="$XVALUE"
-	for CONF in jemalloc llalloc optimal ptmalloc2 ptmalloc3 tbb tcmalloc streamflow hoard scalloc
-	do
+	echo "running ACDC config for $ALLOCATOR"
 
+	echo -e $HEADLINE > $OUTPUT_DIR/$ALLOCATOR-alloc.dat
+	echo -e $HEADLINE > $OUTPUT_DIR/$ALLOCATOR-free.dat
+	echo -e $HEADLINE > $OUTPUT_DIR/$ALLOCATOR-access.dat
+	echo -e $HEADLINE > $OUTPUT_DIR/$ALLOCATOR-memcons.dat
+	ALLOC_OUTPUT=""
+	FREE_OUTPUT=""
+	ACCESS_OUTPUT=""
+	MEMCONS_OUTPUT=""
+
+	for XVALUE in $FACTOR1_VALUES
+	do	
+		ALLOC_OUTPUT="$ALLOC_OUTPUT\n$XVALUE"
+		FREE_OUTPUT="$FREE_OUTPUT\n$XVALUE"
+		ACCESS_OUTPUT="$ACCESS_OUTPUT\n$XVALUE"
+		MEMCONS_OUTPUT="$MEMCONS_OUTPUT\n$XVALUE"
 		ALLOC_SUM=0
 		FREE_SUM=0
 		ACCESS_SUM=0
 		MEMCONS_SUM=0
-		
-		if [ $CONF == "dummy" \
-			-o $CONF == "jemalloc" \
-			-o $CONF == "optimal" \
-			-o $CONF == "llalloc" \
-			-o $CONF == "ptmalloc2" \
-			-o $CONF == "tbb" \
-			-o $CONF == "tcmalloc" \
-			-o $CONF == "streamflow" \
-			-o $CONF == "hoard" \
-			-o $CONF == "ptmalloc3" ]
-		then
-			echo "skipping $CONF..."
-			RUNTIME_OUTPUT="$RUNTIME_OUTPUT\t0\t0"p		
-			ALLOC_OUTPUT="$ALLOC_OUTPUT\t0\t0"
-			FREE_OUTPUT="$FREE_OUTPUT\t0\t0"
-			ACCESS_OUTPUT="$ACCESS_OUTPUT\t0\t0"
-			MEMCONS_OUTPUT="$MEMCONS_OUTPUT\t0\t0"
-			continue
-		fi
-
-		if [ $CONF == "hoard" ]
-		then
-			export LD_PRELOAD=/home/maigner/workspace/acdc/allocators/libhoard.so
-		elif [ $CONF == "streamflow" ]
-		then
-			export LD_PRELOAD=/home/maigner/workspace/acdc/allocators/libstreamflow.so
-		else
-			unset LD_PRELOAD
-		fi
 
 		for (( REP=1; REP<=$REPS; REP++ ))
 		do
 			#maybe derive 2nd factor from first factor?
-			#let "XVALUE2=100 - $XVALUE"
-			#echo "./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2"
-			echo "./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE"
-			#OUTPUT=$(./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
-			OUTPUT=$(./build/acdc-$CONF $OPTIONS -r $REP $FACTOR1 $XVALUE)
+			XVALUE2=""
+			#TODO: get rid of static builds
+			echo "./build/acdc-$ALLOCATOR $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2"
+			#ptmalloc2 requires no LD_PRELOAD. everything else does
+			unset LD_PRELOAD
+			if [ $ALLOCATOR != "ptmalloc2" -a $ALLOCATOR != "static" ]; then
+				export LD_PRELOAD=$ALLOCATOR_DIR/lib$ALLOCATOR.so
+			fi
+			OUTPUT=$(./build/acdc-$ALLOCATOR $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
+			unset LD_PRELOAD
 
 			RUNTIME=$(echo "$OUTPUT" | grep RUNTIME)
 			MEMSTAT=$(echo "$OUTPUT" | grep MEMORY)
@@ -99,7 +93,7 @@ do
 			FREE_SUM=$(echo "$FREE_SUM + ${FREE_VALUE[$REP]}" | bc)
 			ACCESS_SUM=$(echo "$ACCESS_SUM + ${ACCESS_VALUE[$REP]}" | bc)
 			MEMCONS_SUM=$(echo "$MEMCONS_SUM + ${MEMCONS_VALUE[$REP]}" | bc)
-		done
+		done #REPS
 		ALLOC_AVG=$(echo "scale=1;$ALLOC_SUM / $REPS" | bc)
 		FREE_AVG=$(echo "scale=1;$FREE_SUM / $REPS" | bc)
 		ACCESS_AVG=$(echo "scale=1;$ACCESS_SUM / $REPS" | bc)
@@ -125,20 +119,17 @@ do
 		FREE_OUTPUT="$FREE_OUTPUT\t$FREE_AVG\t$FREE_SSD"
 		ACCESS_OUTPUT="$ACCESS_OUTPUT\t$ACCESS_AVG\t$ACCESS_SSD"
 		MEMCONS_OUTPUT="$MEMCONS_OUTPUT\t$MEMCONS_AVG\t$MEMCONS_SSD"
-	done	
-
-	echo -e $ALLOC_OUTPUT >> $OUTPUT_DIR/alloc.dat
-	echo -e $FREE_OUTPUT >> $OUTPUT_DIR/free.dat
-	echo -e $ACCESS_OUTPUT >> $OUTPUT_DIR/access.dat
-	echo -e $MEMCONS_OUTPUT >> $OUTPUT_DIR/memcons.dat
-
-done
+	done #XVALUE
+	echo -e $ALLOC_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-alloc.dat
+	echo -e $FREE_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-free.dat
+	echo -e $ACCESS_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-access.dat
+	echo -e $MEMCONS_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-memcons.dat
+done #ALLOCATORS
 
 CWD=`pwd`
-cp gnuplot_templates/*.p $OUTPUT_DIR/
+cp -f gnuplot_templates/*.p $OUTPUT_DIR/
+cp -f gnuplot_templates/common.inc.p $OUTPUT_DIR
+cp -f gnuplot_templates/Makefile $OUTPUT_DIR
 cd $OUTPUT_DIR
-gnuplot plot_alloc.p && epstopdf alloc.eps
-gnuplot plot_free.p && epstopdf free.eps
-gnuplot plot_access.p && epstopdf access.eps
-gnuplot plot_memcons.p && epstopdf memcons.eps
+make
 cd $CWD

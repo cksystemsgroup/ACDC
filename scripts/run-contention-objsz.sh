@@ -3,7 +3,7 @@
 OUTPUT_DIR=data/contention-objsz
 ALLOCATOR_DIR=`pwd`/allocators
 #name the allocators accordingly to their .so file
-ALLOCATORS="jemalloc llalloc ptmalloc2 tbbmalloc_proxy tcmalloc streamflow hoard scalloc scalloc-eager"
+ALLOCATORS="jemalloc llalloc ptmalloc2 tbbmalloc_proxy tcmalloc streamflow hoard scalloc scalloc-eager static"
 OPTIONS="-a -d 5 -l 1 -L 1 -n 40 -N 100000 -C 100000 -H 1000000 -A"
 FACTOR1="-s"
 FACTOR1_VALUES="4 6 8 10 12 14 16 18 20"
@@ -25,7 +25,7 @@ HEADLINE="#Created at: `date` on `hostname`"
 HEADLINE="$HEADLINE\n#Average on $REPS runs. ACDC Options: $OPTIONS"
 HEADLINE="$HEADLINE\n#x($FACTOR1)\taverage\tstddev"
 
-rm -rf $OUTPUT_DIR
+#rm -rf $OUTPUT_DIR
 mkdir -p $OUTPUT_DIR
 
 for ALLOCATOR in $ALLOCATORS
@@ -126,14 +126,12 @@ do
 done #ALLOCATORS
 
 CWD=`pwd`
-cp gnuplot_templates/plot_alloc_contention_objsz.p $OUTPUT_DIR/plot_alloc.p
-cp gnuplot_templates/plot_free_contention_objsz.p $OUTPUT_DIR/plot_free.p
-cp gnuplot_templates/plot_access_contention_objsz.p $OUTPUT_DIR/plot_access.p
-cp gnuplot_templates/plot_memcons_contention_objsz.p $OUTPUT_DIR/plot_memcons.p
+cp -f gnuplot_templates/plot_alloc_contention_objsz.p $OUTPUT_DIR/plot_alloc.p
+cp -f gnuplot_templates/plot_free_contention_objsz.p $OUTPUT_DIR/plot_free.p
+cp -f gnuplot_templates/plot_access_contention_objsz.p $OUTPUT_DIR/plot_access.p
+cp -f gnuplot_templates/plot_memcons_contention_objsz.p $OUTPUT_DIR/plot_memcons.p
+cp -f gnuplot_templates/common.inc.p $OUTPUT_DIR
+cp -f gnuplot_templates/Makefile $OUTPUT_DIR
 cd $OUTPUT_DIR
-rm -rf *.pdf *.eps
-gnuplot plot_alloc.p && epstopdf alloc.eps
-gnuplot plot_free.p && epstopdf free.eps
-gnuplot plot_access.p && epstopdf access.eps
-gnuplot plot_memcons.p && epstopdf memcons.eps
+make
 cd $CWD
