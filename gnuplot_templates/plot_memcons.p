@@ -7,6 +7,7 @@ set xlabel "x value"
 set ylabel "per-thread average memory consumption in kB\n(lower is better)"
 
 set multiplot
+set yrange [0:]
 
 set key outside center bottom horizontal
 

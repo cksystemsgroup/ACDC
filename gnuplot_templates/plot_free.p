@@ -7,6 +7,7 @@ set xlabel "x value"
 set ylabel "per-thread total deallocation time seconds\n(lower is better)"
 
 set multiplot
+set yrange [0:]
 
 set key outside center bottom horizontal
 
