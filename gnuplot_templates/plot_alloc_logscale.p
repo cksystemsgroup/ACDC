@@ -10,7 +10,6 @@ set ylabel "per-thread total allocation time seconds\n(logscale, lower is better
 
 set logscale y
 set multiplot
-set yrange [0:]
 
 #set key outside center bottom horizontal
 set key off
