@@ -4,9 +4,10 @@ OUTPUT_DIR=data/contention-threads-noaccess-mediumsize
 ALLOCATOR_DIR=`pwd`/allocators
 #name the allocators accordingly to their .so file
 ALLOCATORS="jemalloc llalloc ptmalloc2 tbbmalloc_proxy tcmalloc streamflow hoard scalloc scalloc-eager"
+#ALLOCATORS="scalloc scalloc-eager"
 OPTIONS="-a -s 4 -S 20 -d 20 -l 1 -L 5 -t 10000000 -N 40000 -C 40000 -H 500000"
 FACTOR1="-n"
-FACTOR1_VALUES="1 4 8 10 20 40 60 80"
+FACTOR1_VALUES="1 2 4 8 10 20 40 60 80"
 FACTOR2=""
 FACTOR2_VALUES=""
 REPS=5
@@ -126,9 +127,11 @@ do
 done #ALLOCATORS
 
 CWD=`pwd`
-cp -f gnuplot_templates/*.p $OUTPUT_DIR/
-cp -f gnuplot_templates/Makefile $OUTPUT_DIR
+cp -f gnuplot_templates/plot_alloc_logscale.p $OUTPUT_DIR/plot_alloc.p
+cp -f gnuplot_templates/plot_free_logscale.p $OUTPUT_DIR/plot_free.p
+cp -f gnuplot_templates/plot_memcons.p $OUTPUT_DIR
 cp -f gnuplot_templates/common.inc.p $OUTPUT_DIR
+cp -f gnuplot_templates/Makefile $OUTPUT_DIR
 cd $OUTPUT_DIR
 make
 cd $CWD

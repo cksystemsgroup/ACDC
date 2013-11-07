@@ -3,7 +3,8 @@
 OUTPUT_DIR=data/contention-objsz
 ALLOCATOR_DIR=`pwd`/allocators
 #name the allocators accordingly to their .so file
-ALLOCATORS="jemalloc llalloc ptmalloc2 tbbmalloc_proxy tcmalloc streamflow hoard scalloc scalloc-eager static"
+#ALLOCATORS="jemalloc llalloc ptmalloc2 tbbmalloc_proxy tcmalloc streamflow hoard scalloc scalloc-eager static"
+ALLOCATORS="hoard"
 OPTIONS="-a -d 5 -l 1 -L 1 -n 40 -N 100000 -C 100000 -H 1000000 -A"
 FACTOR1="-s"
 FACTOR1_VALUES="4 6 8 10 12 14 16 18 20"

@@ -127,7 +127,7 @@ do
 done #ALLOCATORS
 
 CWD=`pwd`
-cp -f gnuplot_templates/*.p $OUTPUT_DIR/
+cp -f gnuplot_templates/plot_access_locality.p $OUTPUT_DIR/plot_access.p
 cp -f gnuplot_templates/common.inc.p $OUTPUT_DIR
 cp -f gnuplot_templates/Makefile $OUTPUT_DIR
 cd $OUTPUT_DIR
