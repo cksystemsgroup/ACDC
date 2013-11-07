@@ -77,8 +77,11 @@ function install_allocator {
 	if [[ $ALLOCATOR == "hoard" ]]; then
 		#hoard
 		rm -rf Hoard
+		rm -rf libhoard*
 		git clone --recursive https://github.com/emeryberger/Hoard
-		cd Hoard/src
+		cd Hoard
+		git checkout 3.10
+		cd src
 		make linux-gcc-x86-64
 		cd ../../
 		ln -s Hoard/src/libhoard.so libhoard.so
