@@ -3,8 +3,8 @@
 OUTPUT_DIR=data/contention-threads-noaccess-mediumsize
 ALLOCATOR_DIR=`pwd`/allocators
 #name the allocators accordingly to their .so file
-ALLOCATORS="jemalloc llalloc ptmalloc2 tbbmalloc_proxy tcmalloc streamflow hoard scalloc scalloc-eager"
-#ALLOCATORS="scalloc scalloc-eager"
+#ALLOCATORS="jemalloc llalloc ptmalloc2 tbbmalloc_proxy tcmalloc streamflow hoard scalloc scalloc-eager"
+ALLOCATORS="tbbmalloc_proxy"
 OPTIONS="-a -s 4 -S 20 -d 20 -l 1 -L 5 -t 10000000 -N 40000 -C 40000 -H 500000"
 FACTOR1="-n"
 FACTOR1_VALUES="1 2 4 8 10 20 40 60 80"
