@@ -90,6 +90,7 @@ struct global_options {
 
   //misc options
   int verbosity; //-v
+  char *allocator_name;
   pid_t pid;
 };
 

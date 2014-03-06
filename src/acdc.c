@@ -21,11 +21,6 @@
 #include "proc_status.h"
 #include "caches.h"
 
-#define QUOTE(name) #name
-#define STR(macro) QUOTE(macro)
-#define ALLOCATOR_NAME STR(ALLOCATOR)
-
-
 //distribution pool consisting of one heap class per thread
 //and a lock for each heap class
 static LClass **shared_heap_classes;
@@ -257,7 +252,7 @@ static void get_and_print_memstats(MContext *mc) {
 	if (mc->gopts->verbosity == 0) return;
 
 	printf("MEMSTATS\t%s\t%3u\t%4u\t%12lu\n",
-			ALLOCATOR_NAME,
+			mc->gopts->allocator_name,
 			mc->thread_id,
 			mc->time,
 			mc->stat->current_rss - mc->gopts->metadata_heap_sz
@@ -272,7 +267,7 @@ static void print_runtime_stats(MContext *mc) {
 	if (mc->gopts->verbosity == 0) return;
 
 	printf("STATS\t%s\t%3u\t%4u\t%12lu\t%12lu\t%12lu\t%12lu\n",
-			ALLOCATOR_NAME,
+			mc->gopts->allocator_name,
 			mc->thread_id,
 			mc->time,
 			mc->stat->bytes_allocated,
@@ -723,7 +718,7 @@ void run_acdc(GOptions *gopts) {
 	printf("\nTime is given in CPU cycles\n\n");
 	printf("RESULTS\tallocator\tnum_threads\trunning_time\trunning_time_in_percent\tallocation_time\tallocation_time_in_percent\tdeallocation_time\tdeallocation_time_in_percent\taccess_time\taccess_time_in_percent\n");
 	printf("RUNTIME\t%s\t%d\t%llu\t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%%\n\n", 
-			ALLOCATOR_NAME,
+			gopts->allocator_name,
 			gopts->num_threads,
 			thread_results[0]->stat->running_time, 
 			100.0,
@@ -746,7 +741,7 @@ void run_acdc(GOptions *gopts) {
 	//update_proc_status(gopts->pid);
 	printf("MEM-RESULTS\tallocator\tnum_threads\tVM_PEAK\tRSS_HWM\tRSS_AVG (after warmup)\n");
 	printf("MEMORY\t%s\t%d\t%ld\t%ld\t%ld\n\n",
-			ALLOCATOR_NAME,
+			gopts->allocator_name,
 			gopts->num_threads,
 			thread_results[thread_0_index]->stat->vm_peak, 
 			thread_results[thread_0_index]->stat->rss_hwm, 

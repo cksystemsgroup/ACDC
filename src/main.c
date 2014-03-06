@@ -41,6 +41,7 @@ static void print_usage() {
 			"-H: meta data heap size in kB\n"
 			"-N: node buffer size\n"
 			"-C: class buffer size\n"
+			"-P: allocator name (P)rinted at the summary\n"
 			);
 	exit(EXIT_FAILURE);
 }
@@ -70,6 +71,7 @@ static void set_default_params(GOptions *gopts) {
 	gopts->write_access_ratio = 10; // 10 percent of all traversed objects are accessed too
 	gopts->access_live_objects = 0;
 	gopts->verbosity = 0;
+	gopts->allocator_name = "UNDEFINED";
 }
 
 /* 
@@ -220,6 +222,7 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->shared_objects = %d\n", gopts->shared_objects);
 	printf("gopts->shared_objects_ratio = %d\n", gopts->shared_objects_ratio);
 	printf("gopts->receiving_threads_ratio = %d\n", gopts->receiving_threads_ratio);
+	printf("gopts->allocator_name = %s\n", gopts->allocator_name);
 	printf("gopts->verbosity = %d\n", gopts->verbosity);
 }
 
@@ -234,7 +237,7 @@ int main(int argc, char **argv) {
 	gopts->pid = getpid();
 
 	set_default_params(gopts);
-	const char *optString = "afn:t:d:r:H:l:L:D:g:s:S:F:N:C:OR:T:q:i:w:Avh";
+	const char *optString = "afn:t:d:r:H:l:L:D:g:s:S:F:N:C:OR:T:q:i:w:AP:vh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
@@ -307,6 +310,9 @@ int main(int argc, char **argv) {
 				break;
 			case 'A':
 				gopts->access_live_objects = 1;
+				break;
+			case 'P':
+				gopts->allocator_name = optarg;
 				break;
 			case 'v':
 				gopts->verbosity++;
