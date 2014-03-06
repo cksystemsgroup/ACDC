@@ -1,5 +1,11 @@
 {
     'target_defaults': {
+	'configurations': {
+		'Debug': {
+			'cflags': ['-pthread'],
+			'ldflags': ['-pthread'],
+		},
+	},
     },
     'targets': [
         {
