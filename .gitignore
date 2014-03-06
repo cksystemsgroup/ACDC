@@ -14,3 +14,4 @@ runall.sh
 third-party-benchmarks/build
 out
 *Makefile
+*.mk
