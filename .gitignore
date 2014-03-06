@@ -12,3 +12,5 @@ results.txt
 log.txt
 runall.sh
 third-party-benchmarks/build
+out
+*Makefile
