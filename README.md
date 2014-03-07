@@ -16,12 +16,12 @@ reveals interesting performance differences between the allocators.
 
 ## Compiling ACDC
 * Use a recent version of gcc. ACDC is known to work with gcc 4.6.3 on Linux x86-64
-* You need the SCons software construction tool (www.scons.org)
+* Run ./install-deps.sh to install Gyp
 * You need to put the allocator libraries in the allocators sub directory of acdc. Check and run the install\_allocators.sh scripts for some default allocators
-* Check src/SConscript to select the allocators you are interested in
-* run scons in the ACDC base directory
-* add the allocators directory to your library path, e.g., export LIBRARY\_PATH=./allocators
-* run e.g. ./build/acdc-ptmalloc2 -h for usage information
+* To create the Makefiles run: ./build/gyp/gyp --depth=. acdc.gyp
+* Build acdc with: BUILDTYPE=Release make
+* add the allocators directory to your library path, e.g., export LD\_LIBRARY\_PATH=./allocators
+* run e.g. LD\_PRELPOAD=./allocators/some-allocator-lib.so ./out/Release/acdc -h for usage information
 
 ## Running ACDC
 
