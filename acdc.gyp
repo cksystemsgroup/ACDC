@@ -1,8 +1,21 @@
 {
+	'variables': {
+		'default_cflags': [
+			'-pthread',
+			'-Wall',
+			'-Werror',
+			'-m64',
+			'-mcx16',
+		],
+	},
     'target_defaults': {
 	'configurations': {
 		'Debug': {
-			'cflags': ['-pthread'],
+			'cflags': ['<@(default_cflags)', '-g', '-O0'],
+			'ldflags': ['-pthread'],
+		},
+		'Release': {
+			'cflags': ['<@(default_cflags)', '-O3'],
 			'ldflags': ['-pthread'],
 		},
 	},
