@@ -1,17 +1,18 @@
 #/bin/bash
 
-OUTPUT_DIR=data/contention-shared-threads-noaccess-mediumsize
+
+if [ ! -f $1 ]; then
+	echo "Experiment definition '$1' not found."
+	echo "  Usage: ./scripts/run-acdc.sh your_experiment.sh"
+	exit
+fi
+echo "Running Experiment $1"
+
+source $1
+
+
 ALLOCATOR_DIR=`pwd`/allocators
-#name the allocators accordingly to their .so file
-ALLOCATORS="jemalloc llalloc ptmalloc2 tbbmalloc_proxy tcmalloc streamflow hoard scalloc scalloc-eager"
-OPTIONS="-a -s 4 -S 20 -d 20 -l 1 -L 5 -t 10000000 -N 40000 -C 40000 -O -T 100 -R 100 -H 500000"
-FACTOR1="-n"
-FACTOR1_VALUES="1 2 4 8 10 20 40 60 80"
-FACTOR2=""
-FACTOR2_VALUES=""
-REPS=5
-#if RELATIVE is set to 1, the the respoinse will be divided by the value for x
-RELATIVE=1
+ACDC=`pwd`/out/Release/acdc
 
 if [ ! -d $ALLOCATOR_DIR ]; then
 	echo "Cannot find directory containing the allocators"
@@ -30,7 +31,7 @@ mkdir -p $OUTPUT_DIR
 
 for ALLOCATOR in $ALLOCATORS
 do
-	echo "running ACDC config for $ALLOCATOR"
+	#echo "running ACDC config for $ALLOCATOR"
 
 	echo -e $HEADLINE > $OUTPUT_DIR/$ALLOCATOR-alloc.dat
 	echo -e $HEADLINE > $OUTPUT_DIR/$ALLOCATOR-free.dat
@@ -54,16 +55,37 @@ do
 
 		for (( REP=1; REP<=$REPS; REP++ ))
 		do
+			COMMAND="$ACDC -P $ALLOCATOR $OPTIONS -r $REP $FACTOR1 $XVALUE"
+			
 			#maybe derive 2nd factor from first factor?
-			XVALUE2=""
-			#TODO: get rid of static builds
-			echo "./build/acdc-$ALLOCATOR $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2"
+			if [ -n $FACTOR2 ]; then
+				#echo "Processing expression for factor 2: $FACTOR2_EXPRESSION"
+				EXP1=${FACTOR2_EXPRESSION/X/$XVALUE}
+				#echo $EXP1
+				XVALUE2=$(echo "$EXP1" | bc);
+				#echo $XVALUE2
+				COMMAND="$COMMAND $FACTOR2 $XVALUE2"
+			fi
+
+			#maybe derive 3rd factor from first factor?
+			if [ -n $FACTOR3 ]; then
+				#echo "Processing expression for factor 3: $FACTOR3_EXPRESSION"
+				EXP2=${FACTOR3_EXPRESSION/X/$XVALUE}
+				#echo "$EXP2"
+				XVALUE3=$(echo "$EXP2" | bc);
+				#echo $XVALUE3
+				COMMAND="$COMMAND $FACTOR3 $XVALUE3"
+			fi
+
+			echo "Running: $COMMAND"
+			
 			#ptmalloc2 requires no LD_PRELOAD. everything else does
 			unset LD_PRELOAD
 			if [ $ALLOCATOR != "ptmalloc2" -a $ALLOCATOR != "static" ]; then
 				export LD_PRELOAD=$ALLOCATOR_DIR/lib$ALLOCATOR.so
 			fi
-			OUTPUT=$(./build/acdc-$ALLOCATOR $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
+			#OUTPUT=$($ACDC -P $ALLOCATOR $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
+			OUTPUT=$($COMMAND)
 			unset LD_PRELOAD
 
 			RUNTIME=$(echo "$OUTPUT" | grep RUNTIME)
@@ -125,10 +147,38 @@ do
 	echo -e $MEMCONS_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-memcons.dat
 done #ALLOCATORS
 
+if [ ! -n "$ALLOC_TEMPLATE" ]; then
+	ALLOC_TEMPLATE="plot_alloc.p"
+	if [ $YLOGSCALE_ALLOC -eq 1 ]; then
+		ALLOC_TEMPLATE="plot_alloc_logscale.p"
+	fi
+fi
+
+if [ ! -n "$ACCESS_TEMPLATE" ]; then
+	ACCESS_TEMPLATE="plot_access.p"
+	if [ $YLOGSCALE_ACCESS -eq 1 ]; then
+		ACCESS_TEMPLATE="plot_access_logscale.p"
+	fi
+fi
+
+if [ ! -n "$FREE_TEMPLATE" ]; then
+	FREE_TEMPLATE="plot_free.p"
+	if [ $YLOGSCALE_FREE -eq 1 ]; then
+		FREE_TEMPLATE="plot_free_logscale.p"
+	fi
+fi
+
+if [ ! -n "$MEMCONS_TEMPLATE" ]; then
+	MEMCONS_TEMPLATE="plot_memcons.p"
+	if [ $YLOGSCALE_MEMCONS -eq 1 ]; then
+		MEMCONS_TEMPLATE="plot_memcons_logscale.p"
+	fi
+fi
+
 CWD=`pwd`
-cp -f gnuplot_templates/plot_alloc_logscale.p $OUTPUT_DIR/plot_alloc.p
-cp -f gnuplot_templates/plot_free_logscale.p $OUTPUT_DIR/plot_free.p
-cp -f gnuplot_templates/plot_memcons.p $OUTPUT_DIR
+cp -f gnuplot_templates/$ALLOC_TEMPLATE $OUTPUT_DIR/plot_alloc.p
+cp -f gnuplot_templates/$FREE_TEMPLATE $OUTPUT_DIR/plot_free.p
+cp -f gnuplot_templates/$MEMCONS_TEMPLATE $OUTPUT_DIR/plot_memcons.p
 cp -f gnuplot_templates/common.inc.p $OUTPUT_DIR
 cp -f gnuplot_templates/Makefile $OUTPUT_DIR
 cd $OUTPUT_DIR
