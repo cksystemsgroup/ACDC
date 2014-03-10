@@ -13,9 +13,9 @@ function install_allocator {
 	if [[ $ALLOCATOR == "jemalloc" ]]; then
 		# jemalloc
 		rm -rf jemalloc*
-		wget http://ftp.de.debian.org/debian/pool/main/j/jemalloc/jemalloc_3.4.0.orig.tar.bz2
-		tar -xvjf jemalloc_3.4.0.orig.tar.bz2
-		mv jemalloc-3.4.0 jemalloc
+		wget http://ftp.de.debian.org/debian/pool/main/j/jemalloc/jemalloc_3.5.0.orig.tar.bz2
+		tar -xvjf jemalloc_3.5.0.orig.tar.bz2
+		mv jemalloc-3.5.0 jemalloc
 		cd jemalloc
 		./autogen.sh
 		make -j 2
@@ -102,7 +102,7 @@ function install_allocator {
 		./build/gyp/gyp --depth=. scalloc.gyp
 		BUILDTYPE=Release make
 		cd ..
-		rm libscalloc*
+		rm -rf libscalloc*
 		ln -s scalloc/out/Release/libscalloc.so libscalloc.so
 		ln -s scalloc/out/Release/libscalloc.so libscalloc.so.0
 		ln -s scalloc/out/Release/libscalloc-eager.so libscalloc-eager.so
