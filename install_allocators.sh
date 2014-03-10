@@ -13,9 +13,9 @@ function install_allocator {
 	if [[ $ALLOCATOR == "jemalloc" ]]; then
 		# jemalloc
 		rm -rf jemalloc*
-		wget http://ftp.de.debian.org/debian/pool/main/j/jemalloc/jemalloc_3.5.0.orig.tar.bz2
-		tar -xvjf jemalloc_3.5.0.orig.tar.bz2
-		mv jemalloc-3.5.0 jemalloc
+		wget http://ftp.de.debian.org/debian/pool/main/j/jemalloc/jemalloc_3.5.1.orig.tar.bz2
+		tar -xvjf jemalloc_3.5.1.orig.tar.bz2
+		mv jemalloc-3.5.1 jemalloc
 		cd jemalloc
 		./autogen.sh
 		make -j 2
@@ -80,7 +80,7 @@ function install_allocator {
 		rm -rf libhoard*
 		git clone --recursive https://github.com/emeryberger/Hoard
 		cd Hoard
-		git checkout 3.10
+		#git checkout 3.10
 		cd src
 		make linux-gcc-x86-64
 		cd ../../
