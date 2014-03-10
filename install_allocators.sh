@@ -59,7 +59,7 @@ function install_allocator {
 	if [[ $ALLOCATOR == "tcmalloc" ]]; then
 		# tcmalloc
 		sudo apt-get install libgoogle-perftools-dev
-		ln -s /usr/lib/libtcmalloc_minimal.so libtcmalloc.so
+		ln -s /usr/lib/libtcmalloc_minimal.so.0 libtcmalloc.so
 	fi
 	
 	if [[ $ALLOCATOR == "streamflow" ]]; then
