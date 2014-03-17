@@ -38,6 +38,7 @@
                 'src/distribution.c',
                 'src/main.c',
                 'src/proc_status.c',
+                'src/reference_map.c',
             ],
 
         }

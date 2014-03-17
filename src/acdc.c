@@ -47,6 +47,7 @@ void _debug(MContext *mc, char *filename, int linenum, const char *format, ...) 
 	pthread_mutex_unlock(&debug_lock);
 }
 
+/*
 static inline void set_bit(reference_map_t *word, int bitpos) {
 	*word |= (BIT_ZERO << bitpos);
 }
@@ -54,6 +55,7 @@ static inline void set_bit(reference_map_t *word, int bitpos) {
 static inline void unset_bit(reference_map_t *word, int bitpos) {
 	*word &= ~(BIT_ZERO << bitpos);
 }
+*/
 
 /*
  * returns an unused LSCNode either from a thread-local node cache
@@ -284,10 +286,21 @@ static void print_runtime_stats(MContext *mc) {
  */
 static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 
+
+        if (deleteReference(&c->reference_map, mc->thread_id) == 0) {
+                deallocate_LSClass(mc, c);
+	        debug(mc, "deleted %p", c);
+        } else {
+                assert(get_bit(c->reference_map.thread_map, mc->thread_id) == 0);
+		//someone else will deallocate
+		debug(mc, "%p can be deleted by %d others", c, c->reference_map.reference_count);
+        }
+
+/*
 	//unset reference bit and check if we can deallocate the class
 	while (1) {
 		//I got a reference
-		assert((c->reference_map & (BIT_ZERO << mc->thread_id )) != 0 );
+                assert(get_bit(c->reference_map.thread_map, mc->thread_id));
 
 		//atomically unset my bit
 		reference_map_t old_rm = c->reference_map;
@@ -313,6 +326,7 @@ static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 			//some other thread changed the reference mask. retry
 		}
 	}
+*/
 }
 
 /*
@@ -352,11 +366,12 @@ static void unlock_shared_heap_class(int thread_id) {
  */
 static void share_LSClass(MContext *mc, LSClass *c) {
 
-	assert(map_bits(c->reference_map) <= mc->gopts->num_threads);
+	//assert(map_bits(c->reference_map) <= mc->gopts->num_threads);
 
 	int i;
 	for (i = 0; i < mc->gopts->num_threads; ++i) {
-		if (c->reference_map & (BIT_ZERO << i)) {
+                if (get_bit(c->reference_map.thread_map, mc->thread_id) == 1) {
+		//if (c->reference_map & (BIT_ZERO << i)) {
 			//thread i will share this LSCLass
 			//it needs to get a reference
 			LClass *heap_class = shared_heap_classes[i];
@@ -430,10 +445,10 @@ static void *false_sharing_thread(void *ptr) {
 		unsigned int lt;
 		unsigned int num_objects;
 		lifetime_size_class_type tp;
-		reference_map_t reference_map;
+		ReferenceMap reference_map;
 	
 		//one thread allocates and tells the others how much it allocated
-		//sho allocates?
+		//who allocates?
 		if (mc->thread_id == 0) {
 			fs_allocation_thread = get_random_thread(mc);
 		}
@@ -456,9 +471,9 @@ static void *false_sharing_thread(void *ptr) {
 		
 			allocation_start = rdtsc();
 			fs_collection = 
-				allocate_LSClass(mc, tp, sz, num_objects, reference_map);
+				allocate_LSClass(mc, tp, sz, num_objects, &reference_map);
 
-			fs_collection->reference_map = reference_map;
+			//fs_collection->reference_map = reference_map;
 
 			allocation_end = rdtsc();
 			mc->stat->allocation_time += allocation_end - allocation_start;
@@ -485,8 +500,9 @@ static void *false_sharing_thread(void *ptr) {
 		spin_barrier_wait(&false_sharing_barrier);
 
 		if (mc->thread_id == fs_deallocation_thread) {
-			LSClass *old_c = (LSClass*)fs_collection;
-			old_c->reference_map = 0;
+                        //TODO(martin): check if next 2 lines are necessary
+			//LSClass *old_c = (LSClass*)fs_collection;
+			//old_c->reference_map = 0;
 			deallocation_start = rdtsc();
 			deallocate_LSClass(mc, (LSClass*)fs_collection);
 			deallocation_end = rdtsc();
@@ -529,16 +545,17 @@ static void *acdc_thread(void *ptr) {
 		unsigned int liveness;
 		unsigned int num_objects;
 		lifetime_size_class_type tp;
-		reference_map_t reference_map;
+		ReferenceMap reference_map;
 
 		get_random_object_props(mc, &sz, &liveness, &num_objects, &tp, &reference_map);
 
 		if (mc->gopts->fixed_number_of_objects > 0) {
 			//override random properties
 			num_objects = mc->gopts->fixed_number_of_objects;
-			sz = BIT_ZERO << mc->gopts->min_object_sc;
+			sz = 1UL << mc->gopts->min_object_sc;
 			liveness = mc->gopts->min_liveness;
-			reference_map = BIT_ZERO << mc->thread_id;
+			//reference_map = BIT_ZERO << mc->thread_id;
+                        addReference(&reference_map, mc->thread_id);
 		}
 
 		//check if collections can be built with sz
@@ -559,7 +576,7 @@ static void *acdc_thread(void *ptr) {
 					
 		allocation_start = rdtsc();
 		LSClass *c = 
-			allocate_LSClass(mc, tp, sz, num_objects, reference_map);
+			allocate_LSClass(mc, tp, sz, num_objects, &reference_map);
 
 		c->lifetime = liveness + mc->gopts->deallocation_delay;
 

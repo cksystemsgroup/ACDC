@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include <pthread.h>
 #include <assert.h>
 #include <alloca.h>
@@ -40,29 +41,50 @@ static LSClass *get_LSClass(MContext *mc) {
 		printf("class buffer overflow. increase -C option\n");
 		exit(EXIT_FAILURE);
 	}
-	node = (LSCNode*)(((uint64_t)mc->class_buffer_memory) + 
-		(mc->class_buffer_counter * L1_LINE_SZ));
-
+	
+        //node = (LSCNode*)(((uint64_t)mc->class_buffer_memory) + 
+	//	(mc->class_buffer_counter * L1_LINE_SZ));
+        //TODO(martin) L1_LINE_SZ is not big enough!!
+        //increase by sizeof(LSClass) rounded up to L1_Line_SZ multiple
+        uint32_t size = sizeof(LSClass) + (sizeof(LSClass) % L1_LINE_SZ);
+        printf("size: %d\n", size);
+        node = (LSCNode*)(((uint64_t)mc->class_buffer_memory) + 
+		(mc->class_buffer_counter * size));
+        
 	mc->class_buffer_counter++;
+        
+        //init node
 	node->next = NULL;
 	node->prev = NULL;
-	return (LSClass*)node;
+
+        LSClass* c = (LSClass*)node;
+        return c;
 }
 
 static void recycle_LSClass(MContext *mc, LSClass *class) {
-	assert(class->reference_map == 0);
+	assert(class->reference_map.reference_count == 0);
+
+        int r = pthread_spin_destroy(&(class->reference_map.lock));
+        if (r != 0) {
+                printf("pthread_spin_destroy: %d\n", r);
+                exit(r);
+        }
+
 	//treat Classes as Nodes. They are big enough. Just cast
 	LSCNode *n = (LSCNode*)class;
 	lclass_insert_beginning(&mc->class_cache, n);
 }
 
-static void get_thread_ids(int *thread_ids, reference_map_t reference_map) {
+static void get_thread_ids(int *thread_ids, ReferenceMap *reference_map) {
 	int i, j;
-	for (i = 0, j = 0; i < sizeof(reference_map_t); ++i) {
-		if ( (BIT_ZERO << i) & reference_map ) {
+        pthread_spin_lock(&reference_map->lock);
+        //TODO(martin): iterate only to gopts->maxthreads
+	for (i = 0, j = 0; i < MAX_NUM_THREADS; ++i) {
+		if (get_bit(reference_map->thread_map, i) == 1) {
 			thread_ids[j++] = i;
 		}
 	}
+        pthread_spin_unlock(&reference_map->lock);
 }
 
 /**
@@ -81,22 +103,31 @@ static int write_ith_element(MContext *mc, int i) {
  * allocates memory for a new LSCLass
  */
 static LSClass *new_LSClass(MContext *mc, lifetime_size_class_type t, 
-		size_t sz, unsigned long nelem, reference_map_t reference_map) {
+		size_t sz, unsigned long nelem, ReferenceMap *reference_map) {
 
 	LSClass *c = get_LSClass(mc);
 	c->object_size = sz;
 	c->num_objects = nelem;
 	c->type = t;
-	c->reference_map = reference_map;
+
+        //copy template reference_map
+	c->reference_map.reference_count = reference_map->reference_count;
+        memcpy(c->reference_map.thread_map, reference_map->thread_map, MAX_NUM_THREADS/BITS_PER_LONG);
+        int r = pthread_spin_init(&(c->reference_map.lock), PTHREAD_PROCESS_PRIVATE);
+        if (r != 0) {
+                printf("pthread_spin_init: %d\n", r);
+                exit(r);
+        }
 	return c;
 }
 
 // lifetime-size-class handling for false sharing ---------------------
 static void assign_optimal_fs_pool_objects(MContext *mc, LSClass *c, 
-		reference_map_t reference_map) {
+		ReferenceMap *reference_map) {
 
 	//check which threads should participate
-	int num_threads = map_bits(reference_map);
+	//int num_threads = map_bits(reference_map);
+	int num_threads = reference_map->reference_count;
 	int *thread_ids = alloca(num_threads * sizeof(int));
 	get_thread_ids(thread_ids, reference_map);
 
@@ -105,32 +136,36 @@ static void assign_optimal_fs_pool_objects(MContext *mc, LSClass *c,
 
 	int i;
 	for (i = 0; i < c->num_objects; ++i) {
-		char *next = (char*)c->start + cache_lines_per_element * L1_LINE_SZ * i;
-		SharedObject *o = (SharedObject*)next;
-		o->reference_map = BIT_ZERO << ( thread_ids[i % num_threads] );
+		//TODO(martin): fix false sharing mode after reference_map upgrade
+		//char *next = (char*)c->start + cache_lines_per_element * L1_LINE_SZ * i;
+		//SharedObject *o = (SharedObject*)next;
+                //o->reference_map = BIT_ZERO << ( thread_ids[i % num_threads] );
 	}
 
 	assert(i % num_threads == 0);
 }
 
-static void assign_fs_pool_objects(MContext *mc, LSClass *c, reference_map_t reference_map) {
+static void assign_fs_pool_objects(MContext *mc, LSClass *c, ReferenceMap *reference_map) {
 
 	//check which threads should participate
-	int num_threads = map_bits(reference_map);
+	//int num_threads = map_bits(reference_map);
+	int num_threads = reference_map->reference_count;
 	int *thread_ids = alloca(num_threads * sizeof(int));
 	get_thread_ids(thread_ids, reference_map);
 
 	int i;
 	for (i = 0; i < c->num_objects; ++i) {
-		SharedObject *o = ((SharedObject**)c->start)[i];
-		o->reference_map = BIT_ZERO << ( thread_ids[i % num_threads]  );	
+		//TODO(martin): fix false sharing mode after reference_map upgrade
+		//SharedObject *o = ((SharedObject**)c->start)[i];
+		//o->reference_map = BIT_ZERO << ( thread_ids[i % num_threads]  );	
 	}
 }
 
 static LSClass *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem, 
-		reference_map_t reference_map) {
+		ReferenceMap *reference_map) {
 	
-	int num_threads = map_bits(reference_map);
+	//int num_threads = map_bits(reference_map);
+	int num_threads = reference_map->reference_count;
 	//make sure that nelem is a multiple of num_threads
 	if (nelem % num_threads != 0)
 		nelem += num_threads - (nelem % num_threads);
@@ -150,9 +185,10 @@ static LSClass *allocate_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
 }
 
 static LSClass *allocate_optimal_fs_pool(MContext *mc, size_t sz, unsigned long nelem,
-		reference_map_t reference_map) {
+		ReferenceMap *reference_map) {
 	
-	int num_threads = map_bits(reference_map);
+        //int num_threads = map_bits(reference_map);
+	int num_threads = reference_map->reference_count;
 	//make sure that nelem is a multiple of num_threads
 	if (nelem % num_threads != 0)
 		nelem += num_threads - (nelem % num_threads);
@@ -173,7 +209,8 @@ static LSClass *allocate_optimal_fs_pool(MContext *mc, size_t sz, unsigned long 
 
 static void deallocate_fs_pool(MContext *mc, LSClass *c) {
 
-	assert(c->reference_map == 0);
+	//assert(c->reference_map == 0);
+        assert(c->reference_map.reference_count == 0);
 	assert(c->start != NULL);
 
 	int i;
@@ -198,39 +235,43 @@ static void deallocate_optimal_fs_pool(MContext *mc, LSClass *c) {
 
 static void traverse_fs_pool(MContext *mc, LSClass *c) {
 	//check if thread bit is set in reference_map
-	reference_map_t my_bit = BIT_ZERO << mc->thread_id;
+	//reference_map_t my_bit = BIT_ZERO << mc->thread_id;
 
-	assert(c->reference_map != 0);
+	//assert(c->reference_map != 0);
 	assert(c->start != NULL);
 
 	int i;
 	for (i = 0; i < c->num_objects; ++i) {
 		//check authorization on object
-		SharedObject *so = ((SharedObject**)c->start)[i];
-		if (so->reference_map & my_bit) {
+		//SharedObject *so = ((SharedObject**)c->start)[i];
+		/*
+                if (so->reference_map & my_bit) {
 			int j;
 			assert(c->reference_map != 0);
 			for (j = 0; j < mc->gopts->write_iterations; ++j)
 				write_object(so, c->object_size, sizeof(SharedObject));
 		}
+TODO(martin): fix per-object reference mapping
+                */
 	}
 }
 
 static void traverse_optimal_fs_pool(MContext *mc, LSClass *c) {
 
-	reference_map_t my_bit = BIT_ZERO << mc->thread_id;
+	//reference_map_t my_bit = BIT_ZERO << mc->thread_id;
 
-	assert(c->reference_map != 0);
+	//assert(c->reference_map != 0);
 	assert(c->start != NULL);
 
-	int cache_lines_per_element = (c->object_size / L1_LINE_SZ) + 1;
+	//int cache_lines_per_element = (c->object_size / L1_LINE_SZ) + 1;
 	
 	int i;
 	for (i = 0; i < c->num_objects; ++i) {
-		char *next = (char*)c->start + 
-			cache_lines_per_element * L1_LINE_SZ * i;
-		SharedObject *so = (SharedObject*)next;
-		
+		//char *next = (char*)c->start + 
+			//cache_lines_per_element * L1_LINE_SZ * i;
+		//SharedObject *so = (SharedObject*)next;
+	
+                /*
 		assert(c->reference_map != 0);
 		
 		if (so->reference_map & my_bit) {
@@ -239,6 +280,9 @@ static void traverse_optimal_fs_pool(MContext *mc, LSClass *c) {
 			for (j = 0; j < mc->gopts->write_iterations; ++j)
 				write_object(so, c->object_size, sizeof(SharedObject));
 		}
+TODO(martin): fix per-object reference mapping
+                */
+
 	}
 }
 
@@ -262,7 +306,7 @@ static void traverse_list(MContext *mc, LSClass *c) {
 }
 
 LSClass *allocate_optimal_list_unaligned(MContext *mc, size_t sz, 
-		unsigned long nelem, reference_map_t reference_map) {
+		unsigned long nelem, ReferenceMap *reference_map) {
 
 	LSClass *list = new_LSClass(mc, OPTIMAL_LIST, sz, nelem, reference_map);
 
@@ -286,7 +330,7 @@ static void deallocate_optimal_list_unaligned(MContext *mc, LSClass *c) {
 }
 
 static LSClass *allocate_list(MContext *mc, size_t sz, unsigned long nelem, 
-		reference_map_t reference_map) {
+		ReferenceMap *reference_map) {
 
 	//check if size is sufficient for building a list
 	//i.e., to contain an Object and an pointer to the next Object
@@ -327,7 +371,7 @@ static void deallocate_optimal_btree(MContext *mc, LSClass *c) {
 }
 
 static LSClass *allocate_optimal_btree(MContext *mc, size_t sz, 
-		unsigned long nelem, reference_map_t reference_map) {
+		unsigned long nelem, ReferenceMap *reference_map) {
 
 	if (sz < sizeof(BTObject)) {
 		printf("Unable to allocate btree. Config error. "
@@ -377,7 +421,7 @@ static BTObject *build_tree_recursion(MContext *mc, size_t sz,
 }
 
 static LSClass *allocate_btree(MContext *mc, size_t sz, unsigned long nelem, 
-		reference_map_t reference_map) {
+		ReferenceMap *reference_map) {
 	
 	if (sz < sizeof(BTObject)) {
 		printf("Unable to allocate btree. Config error. "
@@ -438,7 +482,7 @@ static void traverse_btree_preorder(MContext *mc, LSClass *c) {
 
 // public methods
 LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type type, size_t sz, 
-		unsigned long nelem, reference_map_t reference_map) {
+		unsigned long nelem, ReferenceMap *reference_map) {
 
 	assert(sz > 0);
 	assert(sz < (BIT_ZERO << mc->gopts->max_object_sc));
@@ -472,7 +516,8 @@ void deallocate_LSClass(MContext *mc, LSClass *c) {
 
 	unsigned long long start, end;
 
-	assert(c->reference_map == 0);
+	//assert(c->reference_map == 0);
+	assert(c->reference_map.reference_count == 0);
 	assert(c->object_size > 0);
 	assert(c->object_size < (BIT_ZERO << mc->gopts->max_object_sc));
 	assert(c->num_objects > 0);

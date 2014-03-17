@@ -83,13 +83,16 @@ static lifetime_size_class_type get_random_lifetime_size_class_type(MContext *mc
 }
 
 //returns a sharing bitmap based on the "receiving threads ratio" 
-static reference_map_t get_random_thread_selection(MContext *mc) {
+static void get_random_thread_selection(MContext *mc, ReferenceMap *reference_map) {
 
-	reference_map_t my_thread_bit = BIT_ZERO << mc->thread_id;
+	//reference_map_t my_thread_bit = BIT_ZERO << mc->thread_id;
+        // set my bit
+        addReference(reference_map, mc->thread_id);
 
 	if (mc->gopts->shared_objects == 0 || mc->gopts->receiving_threads_ratio == 0) {
 		//only this thread is interested
-		return my_thread_bit;
+		//return my_thread_bit;
+                return;
 	}
 
 	//threads except me, times share ratio
@@ -98,16 +101,19 @@ static reference_map_t get_random_thread_selection(MContext *mc) {
 	//get number_of_other_threads random thread id's (except mine)
 	//and set their bits in tm
 	int i = 0;
-	reference_map_t tm = my_thread_bit;
+	//reference_map_t tm = my_thread_bit;
+        //TODO(martin): refactor to red of bitmap
 	while (i < number_of_other_threads) {
 		int tid = get_random_thread(mc);
 
-		if (!(tm & (BIT_ZERO << tid))) {
+		//if (!(tm & (BIT_ZERO << tid))) {
+		if (get_bit(reference_map->thread_map, tid) == 0) {
 			++i;
-			tm |= BIT_ZERO << tid;
+			//tm |= BIT_ZERO << tid;
+                        addReference(reference_map, tid);
 		}
 	}
-	return tm;
+	//return tm;
 }
 
 //creates random object properties and stores them in call-by-reference arguments
@@ -116,7 +122,7 @@ void get_random_object_props(MContext *mc,
 		unsigned int *liveness, 
 		unsigned int *num_objects,
 		lifetime_size_class_type *type,
-		reference_map_t *reference_map) {
+		ReferenceMap *reference_map) {
 
 	unsigned int lt = get_random_liveness(mc);
 	unsigned int sz = get_random_size(mc);
@@ -138,9 +144,10 @@ void get_random_object_props(MContext *mc,
 
 	*type = get_random_lifetime_size_class_type(mc);
 	if (get_sharing_dist(mc)) {
-		*reference_map = get_random_thread_selection(mc); //shared objects
+		get_random_thread_selection(mc, reference_map); //shared objects
 	} else {
-		*reference_map = BIT_ZERO << mc->thread_id; //unshared
+		//*reference_map = BIT_ZERO << mc->thread_id; //unshared
+                addReference(reference_map, mc->thread_id);
 	}
 }
 

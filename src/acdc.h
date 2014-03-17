@@ -8,17 +8,13 @@
 #ifndef ACDC_H
 #define ACDC_H
 
+#include <assert.h>
 #include <pthread.h>
 #include <stdint.h>
 #include "arch.h"
+#include "reference_map.h"
 
-#ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
-typedef uint128_t reference_map_t;
-#define BIT_ZERO (((reference_map_t)1UL))
-#else
-typedef uint64_t reference_map_t;
 #define BIT_ZERO 1UL
-#endif
 
 // Global options from command line
 typedef struct global_options GOptions;
@@ -116,7 +112,7 @@ struct mutator_stat {
 //memory objects
 //the min. size for an object must be sizeof(Object)
 struct shared_mem_object {
-  reference_map_t reference_map; 
+  //reference_map_t reference_map; 
   //a bit at pos i indicates that thread i may access this object
 };
 struct mem_object_lnode {
@@ -140,7 +136,7 @@ typedef enum {
 //set of objects with common size and lifetime
 struct lifetime_size_class {
   //mark which threads share this LSClass
-  volatile reference_map_t reference_map;
+  ReferenceMap reference_map;
   
   size_t object_size;
   unsigned int lifetime;
@@ -188,7 +184,7 @@ struct mutator_context {
  * type defines the implementation type (e.g. list-based)
  */
 LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type type, size_t sz, 
-		unsigned long nelem, reference_map_t reference_map);
+		unsigned long nelem, ReferenceMap *reference_map);
 void deallocate_LSClass(MContext *mc, LSClass *oc); 
 void traverse_LSClass(MContext *mc, LSClass *oc);
 
@@ -220,7 +216,7 @@ void get_random_object_props(MContext *mc,
 		unsigned int *liveness, 
 		unsigned int *num_objects,
     lifetime_size_class_type *type,
-    reference_map_t *reference_map
+    ReferenceMap *reference_map
     );
 
 unsigned int get_random_thread(MContext *mc);
