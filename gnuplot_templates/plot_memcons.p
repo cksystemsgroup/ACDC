@@ -25,6 +25,7 @@ plot \
 "streamflow-memcons.dat"    using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 6 title 'streamflow', \
 "hoard-memcons.dat"         using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 7 title 'hoard', \
 "scalloc-memcons.dat"       using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 9 title 'scalloc', \
-"scalloc-eager-memcons.dat" using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 10  title 'scalloc-e' \
+"scalloc-eager-memcons.dat" using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 10  title 'scalloc-e', \
+"scalloc-core-local-memcons.dat" using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 11  title 'scalloc-cl' \
 ;
 

@@ -8,3 +8,4 @@ set style line 7 lt 7 pt 7 lw 2               # hoard
 set style line 8 lt 8 pt 8 lw 2               # static
 set style line 9 lt 9 pt 9 lw 5               # scalloc
 set style line 10 lt 3 pt 7 lw 5              # scalloc-e
+set style line 11 lt 1 pt 4 lw 5              # scalloc-cl
