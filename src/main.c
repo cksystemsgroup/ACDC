@@ -109,13 +109,13 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 	double receiving_threads_num = 
 			(double)(gopts->num_threads * gopts->receiving_threads_ratio) 
 			/ 100.0;
-	double shared_objects_multiplier = 
+	double shared_objects_multiplier = 1 + 
 			(double)(gopts->num_threads * gopts->shared_objects_ratio) 
 			/ 100.0;
 
 	// per thread, mind for the overapproximation
 	double expected_lifetime_size_classes = 
-		(expected_lt * (double)gopts->time_quantum) / 
+		2 * (expected_lt * (double)gopts->time_quantum) / 
 		expected_lifetime_size_class_size;
 
 	if (gopts->shared_objects) {
@@ -140,13 +140,21 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 	
 	//1MB per thread for bookkeeping
 	gopts->metadata_heap_sz = gopts->num_threads * (1 << 10);
+
+        printf("size 1: %lu\n", gopts->metadata_heap_sz);
 	
 	//global metadata heap
 	//add the buffers for nodes and classes, add extra space for aligning ect...
 	gopts->metadata_heap_sz += (((
 		gopts->class_buffer_size * L1_LINE_SZ +
 		gopts->node_buffer_size * L1_LINE_SZ) *
-		gopts->num_threads) / 1024) * 16;
+		gopts->num_threads) / 1024);
+        
+        printf("class size 2: %lu\n", gopts->class_buffer_size * L1_LINE_SZ);
+        printf("node size 2: %lu\n", gopts->node_buffer_size * L1_LINE_SZ);
+        printf("class * threads size 2: %lu\n", gopts->class_buffer_size * L1_LINE_SZ * gopts->num_threads);
+        printf("node * threads size 2: %lu\n", gopts->node_buffer_size * L1_LINE_SZ * gopts->num_threads);
+        printf("size 2: %lu\n", gopts->metadata_heap_sz);
 }
 
 static void check_params(GOptions *gopts) {
@@ -169,18 +177,13 @@ static void check_params(GOptions *gopts) {
 		gopts->write_access_ratio = 100;
 	}
 	if (gopts->max_time_gap < 0) gopts->max_time_gap = gopts->max_liveness;
-
-#ifdef __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16
-	int max_threads = 128;
-#else
-	int max_threads = 64;
-#endif
-	if (gopts->num_threads > max_threads) {
-		printf("Parameter error: -n value must be between 0 and %d\n",
-				max_threads);
+/*
+	if (gopts->num_threads > MAX_NUM_THREADS) {
+		printf("Parameter error: -n value must be between 1 and %lu\n",
+				MAX_NUM_THREADS);
 		exit(EXIT_FAILURE);
 	}
-
+*/
 	if (gopts->metadata_heap_sz == 0 ||
 			gopts->node_buffer_size == 0 ||
 			gopts->class_buffer_size == 0) {
@@ -213,8 +216,8 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->min_object_sc = %d\n", gopts->min_object_sc);
 	printf("gopts->max_object_sc = %d\n", gopts->max_object_sc);
 	printf("gopts->fixed_number_of_objects = %d\n", gopts->fixed_number_of_objects);
-	printf("gopts->node_buffer_size = %d\n", gopts->node_buffer_size);
-	printf("gopts->class_buffer_size = %d\n", gopts->class_buffer_size);
+	printf("gopts->node_buffer_size = %lu\n", gopts->node_buffer_size);
+	printf("gopts->class_buffer_size = %lu\n", gopts->class_buffer_size);
 	printf("gopts->list_based_ratio = %d\n", gopts->list_based_ratio);
 	printf("gopts->write_iterations = %d\n", gopts->write_iterations);
 	printf("gopts->write_access_ratio = %d\n", gopts->write_access_ratio);

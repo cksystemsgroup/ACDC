@@ -12,7 +12,6 @@
 #include <pthread.h>
 #include <stdint.h>
 #include "arch.h"
-#include "reference_map.h"
 
 #define BIT_ZERO 1UL
 
@@ -71,8 +70,8 @@ struct global_options {
   int max_object_sc; //-S: max sizeclass
   int list_based_ratio; //-q:
   int btree_based_ratio; //derived from -q
-  int node_buffer_size; //-N: used to recycle nodes for LSClasses
-  int class_buffer_size; //-C: used to recycle nodes for LSClasses
+  size_t node_buffer_size; //-N: used to recycle nodes for LSClasses
+  size_t class_buffer_size; //-C: used to recycle nodes for LSClasses
   
   //options for object access
   int write_iterations; //-i:
@@ -136,7 +135,8 @@ typedef enum {
 //set of objects with common size and lifetime
 struct lifetime_size_class {
   //mark which threads share this LSClass
-  ReferenceMap reference_map;
+  //ReferenceMap reference_map;
+  uint64_t reference_counter;
   
   size_t object_size;
   unsigned int lifetime;
@@ -176,6 +176,7 @@ struct mutator_context {
   LSClass *class_buffer_memory;
   int class_buffer_counter;
   LClass class_cache;
+  int *thread_id_buffer; //to temporarily store a couple of thread id's
 };
 
 /*
@@ -184,7 +185,7 @@ struct mutator_context {
  * type defines the implementation type (e.g. list-based)
  */
 LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type type, size_t sz, 
-		unsigned long nelem, ReferenceMap *reference_map);
+		unsigned long nelem);
 void deallocate_LSClass(MContext *mc, LSClass *oc); 
 void traverse_LSClass(MContext *mc, LSClass *oc);
 
@@ -215,11 +216,9 @@ void get_random_object_props(MContext *mc,
 		size_t *size, 
 		unsigned int *liveness, 
 		unsigned int *num_objects,
-    lifetime_size_class_type *type,
-    ReferenceMap *reference_map
-    );
-
-unsigned int get_random_thread(MContext *mc);
+    lifetime_size_class_type *type);
+unsigned int get_sharing_dist(MContext *mc);
+void get_random_thread_selection(MContext *mc, int *thread_id_array, int *thread_id_array_sz);
 
 /*
  * benchmark invocation

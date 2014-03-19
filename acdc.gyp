@@ -11,7 +11,7 @@
     'target_defaults': {
 	'configurations': {
 		'Debug': {
-			'cflags': ['<@(default_cflags)', '-g', '-O0'],
+			'cflags': ['<@(default_cflags)', '-g', '-O0', '-gdwarf-2'],
 			'ldflags': ['-pthread'],
 		},
 		'Release': {
@@ -38,7 +38,6 @@
                 'src/distribution.c',
                 'src/main.c',
                 'src/proc_status.c',
-                'src/reference_map.c',
             ],
 
         }

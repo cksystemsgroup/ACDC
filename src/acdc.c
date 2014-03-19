@@ -35,7 +35,7 @@ void _debug(MContext *mc, char *filename, int linenum, const char *format, ...) 
 	if (mc->gopts->verbosity < 2) return;
 	va_list args;
 	pthread_mutex_lock(&debug_lock);
-	fprintf(stdout, "[Debug] %s %4d T%2d @ %4d ", 
+        fprintf(stdout, "[Debug] %s %4d T%2d @ %4d ", 
 			filename,
 			linenum,
 			mc->thread_id, 
@@ -73,7 +73,7 @@ static LSCNode *get_LSCNode(MContext *mc) {
 	}
 
 	if (mc->node_buffer_counter >= mc->gopts->node_buffer_size) {
-		printf("node buffer overflow. increase -N option: %d\n", 
+		printf("node buffer overflow. increase -N option: %lu\n", 
 				mc->gopts->node_buffer_size);
 		exit(EXIT_FAILURE);
 	}
@@ -83,6 +83,7 @@ static LSCNode *get_LSCNode(MContext *mc) {
 	debug(mc, "node %p\n", node);
 	node->next = NULL;
 	node->prev = NULL;
+        node->ls_class = NULL;
 	return node;
 }
 
@@ -106,8 +107,8 @@ static void heap_class_insert(MContext *mc, LClass *heap_class,
 	unsigned long liveness = c->lifetime - mc->gopts->deallocation_delay;
 
 	unsigned int insert_index = (mc->time + liveness) % 
-			(mc->gopts->max_liveness + 
-			 mc->gopts->deallocation_delay);
+		(mc->gopts->max_liveness + 
+                mc->gopts->deallocation_delay);
 
 	LClass *target_lifetime_class = &heap_class[insert_index];
 
@@ -181,7 +182,6 @@ static LClass *allocate_heap_class(unsigned int max_lifetime) {
  * setup the space and initial state of the thread-local meta data
  */
 static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id) {
-	
 	MContext *mc = calloc_meta_aligned(1, sizeof(MContext), L1_LINE_SZ);
 	mc->gopts = gopts;
 	mc->time = 0;
@@ -210,7 +210,7 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 		exit(EXIT_FAILURE);
 	}
 
-	mc->node_buffer_memory = calloc_meta_aligned(1,
+	mc->node_buffer_memory = malloc_meta_aligned(
 			L1_LINE_SZ * gopts->node_buffer_size,
 			L1_LINE_SZ);
 	mc->node_buffer_counter = 0;
@@ -218,12 +218,15 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 	mc->node_cache.last = NULL;
        	
 	assert(sizeof(LSClass) <= L1_LINE_SZ);
-	mc->class_buffer_memory = calloc_meta_aligned(1,
+//        uint32_t lsc_size = ((sizeof(LSClass) / L1_LINE_SZ) * (L1_LINE_SZ)) + L1_LINE_SZ;
+	mc->class_buffer_memory = malloc_meta_aligned(
 			L1_LINE_SZ * gopts->class_buffer_size,
-			L1_LINE_SZ);
+                                L1_LINE_SZ);
 	mc->class_buffer_counter = 0;
 	mc->class_cache.first = NULL;
 	mc->class_cache.last = NULL;
+
+        mc->thread_id_buffer = calloc_meta(gopts->num_threads, sizeof(int));
 
 	return mc;
 }
@@ -286,47 +289,13 @@ static void print_runtime_stats(MContext *mc) {
  */
 static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c) {
 
-
-        if (deleteReference(&c->reference_map, mc->thread_id) == 0) {
+        if (atomic_uint64_decrement(&(c->reference_counter)) == 0) {
                 deallocate_LSClass(mc, c);
 	        debug(mc, "deleted %p", c);
         } else {
-                assert(get_bit(c->reference_map.thread_map, mc->thread_id) == 0);
 		//someone else will deallocate
-		debug(mc, "%p can be deleted by %d others", c, c->reference_map.reference_count);
+		debug(mc, "%p can be deleted by %d others", c, c->reference_counter);
         }
-
-/*
-	//unset reference bit and check if we can deallocate the class
-	while (1) {
-		//I got a reference
-                assert(get_bit(c->reference_map.thread_map, mc->thread_id));
-
-		//atomically unset my bit
-		reference_map_t old_rm = c->reference_map;
-		reference_map_t new_rm = old_rm;
-		unset_bit(&new_rm, mc->thread_id);
-		assert(map_bits(new_rm) <= map_bits(old_rm));
-
-		if (__sync_bool_compare_and_swap(&c->reference_map, old_rm, new_rm)) {
-			//worked
-			if (new_rm == 0) {
-				deallocate_LSClass(mc, (LSClass*)c);
-				debug(mc, "deleted %p", c);
-			} else {
-				// my bit is zero
-				assert((c->reference_map & (BIT_ZERO << mc->thread_id)) == 0);
-				//someone else will deallocate
-				debug(mc, "%p can be deleted by %d others", c,
-					map_bits(c->reference_map)
-					);
-			}
-			break;
-		} else {
-			//some other thread changed the reference mask. retry
-		}
-	}
-*/
 }
 
 /*
@@ -366,22 +335,23 @@ static void unlock_shared_heap_class(int thread_id) {
  */
 static void share_LSClass(MContext *mc, LSClass *c) {
 
-	//assert(map_bits(c->reference_map) <= mc->gopts->num_threads);
+        int i, number_of_receiving_threads;
 
-	int i;
-	for (i = 0; i < mc->gopts->num_threads; ++i) {
-                if (get_bit(c->reference_map.thread_map, mc->thread_id) == 1) {
-		//if (c->reference_map & (BIT_ZERO << i)) {
-			//thread i will share this LSCLass
-			//it needs to get a reference
-			LClass *heap_class = shared_heap_classes[i];
-			//lock the shared heap class of this thread
-			lock_shared_heap_class(i);
-			//insert LSClass
-			heap_class_insert(mc, heap_class, c);
-			unlock_shared_heap_class(i);
-		}
-	}
+        get_random_thread_selection(mc, mc->thread_id_buffer, &number_of_receiving_threads);
+
+        for (i = 0; i < number_of_receiving_threads; ++i) {
+                int receiving_thread_id = mc->thread_id_buffer[i];
+
+                //printf("sharing with %d\n", receiving_thread_id);
+
+                LClass *heap_class = shared_heap_classes[receiving_thread_id];
+                //lock the shared heap class of this thread
+                lock_shared_heap_class(receiving_thread_id);
+                //insert LSClass
+                heap_class_insert(mc, heap_class, c);
+                unlock_shared_heap_class(receiving_thread_id);
+        }
+        
 }
 
 
@@ -420,6 +390,7 @@ static void get_shared_LClasses(MContext *mc) {
 /*
  * special case of ACDC to run false-sharing mode
  */
+/*
 static volatile LSClass *fs_collection = NULL;
 static volatile int fs_collection_bytes;
 static volatile int fs_allocation_thread;
@@ -519,7 +490,7 @@ static void *false_sharing_thread(void *ptr) {
 	mc->stat->running_time = rdtsc() - mc->stat->running_time;
 
 	return (void*)mc;
-}
+}*/
 
 /*
  * ACDC main loop
@@ -545,17 +516,14 @@ static void *acdc_thread(void *ptr) {
 		unsigned int liveness;
 		unsigned int num_objects;
 		lifetime_size_class_type tp;
-		ReferenceMap reference_map;
 
-		get_random_object_props(mc, &sz, &liveness, &num_objects, &tp, &reference_map);
+		get_random_object_props(mc, &sz, &liveness, &num_objects, &tp);
 
 		if (mc->gopts->fixed_number_of_objects > 0) {
 			//override random properties
 			num_objects = mc->gopts->fixed_number_of_objects;
 			sz = 1UL << mc->gopts->min_object_sc;
 			liveness = mc->gopts->min_liveness;
-			//reference_map = BIT_ZERO << mc->thread_id;
-                        addReference(&reference_map, mc->thread_id);
 		}
 
 		//check if collections can be built with sz
@@ -576,7 +544,7 @@ static void *acdc_thread(void *ptr) {
 					
 		allocation_start = rdtsc();
 		LSClass *c = 
-			allocate_LSClass(mc, tp, sz, num_objects, &reference_map);
+			allocate_LSClass(mc, tp, sz, num_objects);
 
 		c->lifetime = liveness + mc->gopts->deallocation_delay;
 
@@ -585,11 +553,13 @@ static void *acdc_thread(void *ptr) {
 
 		debug(mc, "created collection %p with liveness %d", c, liveness);
 
-		if (mc->gopts->shared_objects) {
+		if (mc->gopts->shared_objects && get_sharing_dist(mc)) {
+                        //printf("This i will share\n");
 			share_LSClass(mc, c);
 			get_shared_LClasses(mc);
 		} else {
 			//bypass sharing pool
+                        //printf("This i will NOT share\n");
 			heap_class_insert(mc, mc->heap_class, c);
 		}
 
@@ -654,15 +624,19 @@ void run_acdc(GOptions *gopts) {
 	if (gopts->mode == ACDC) {
 		thread_function = acdc_thread;
 	} else if (gopts->mode == FS) {
-		thread_function = false_sharing_thread;
+		//thread_function = false_sharing_thread;
+		printf("Mode not supported right now... we are working on it\n");
+		exit(EXIT_FAILURE);
 	} else {
 		printf("Mode not supported\n");
 		exit(EXIT_FAILURE);
 	}	
 	
 	for (i = 0; i < gopts->num_threads; ++i) {
+                printf("Creating metadata heap for thread %d\n", i);
 		thread_data[i] = create_mutator_context(gopts, i);
 	}
+        printf(" DONE\n");
 
 	gettimeofday(&start, NULL);
 

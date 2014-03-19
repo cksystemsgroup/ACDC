@@ -13,6 +13,12 @@ static void *metadata_heap_start;
 static void *metadata_heap_end;
 static void *metadata_heap_bump_pointer;
 
+//returns a rounded up to multiple of r
+static inline int round_up_to(int a, int r) {
+        if (a < r) return r;
+        return ((a / r) * r) + r;
+}
+
 static void *align_address(void *ptr, size_t alignment) {
 	long addr = ((long)ptr)+ (alignment-1);
 	addr = addr & ~(alignment-1);
@@ -21,7 +27,9 @@ static void *align_address(void *ptr, size_t alignment) {
 
 void init_metadata_heap(size_t heapsize) {
 	
-	metadata_heap_start = sbrk(heapsize * 1024); //parameter is in kB
+        printf("fetching %lu MB of metadata space\n", heapsize/1024);
+	
+        metadata_heap_start = sbrk(heapsize * 1024); //parameter is in kB
 	if (metadata_heap_start == (void*)-1) {
 		printf("unable to allocate metadata heap\n");
 		exit(EXIT_FAILURE);
@@ -29,12 +37,14 @@ void init_metadata_heap(size_t heapsize) {
 	metadata_heap_end = sbrk(0);
 	metadata_heap_bump_pointer = metadata_heap_start;
 
+        printf("warming up %lu MB of metadata space\n", heapsize/1024);
+
 	//make heap hot
-	int i;
-	volatile void *ptr;
-	for (i = 1; i < heapsize * 1024; i = i + 64) {
-		ptr = (void*)((long)metadata_heap_start + i);
-		*(int*)ptr = i;
+	unsigned long i;
+        volatile char *c = (char*)metadata_heap_start;
+	for (i = 0; i < heapsize * 1024; i = i + 4096) {
+                c[i] = c[i-1];
+        //        __asm__ __volatile__("mfence" : : : "memory");
 	}
 }
 
@@ -49,8 +59,8 @@ static void *get_chunk(size_t size) {
 }
 
 void *malloc_meta(size_t size) {
-	//default alignment: 8 bytes
-	return align_address(get_chunk(size + 7), 8);
+	//default alignment: 16 bytes
+	return align_address(get_chunk(size + 15), 16);
 }
 
 void *calloc_meta(size_t nelem, size_t size) {

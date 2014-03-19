@@ -32,7 +32,7 @@ static int get_rand_int_range(MContext *mc, int from, int to) {
 
 //determines if a lifetime-size-class should be shared
 //based on "shared objects" and "shared objects ratio"
-static unsigned int get_sharing_dist(MContext *mc) {
+unsigned int get_sharing_dist(MContext *mc) {
 	if (!mc->gopts->shared_objects) return 0;
 	int r = get_rand_int_range(mc, 0, 100);
 	if (r < mc->gopts->shared_objects_ratio) return 1;
@@ -63,11 +63,6 @@ static unsigned int get_random_size(MContext *mc) {
 	return sz;
 }
 
-unsigned int get_random_thread(MContext *mc) {
-	return get_rand_int_range(mc,
-			0,
-			mc->gopts->num_threads - 1);
-}
 
 static lifetime_size_class_type get_random_lifetime_size_class_type(MContext *mc) {
 
@@ -82,38 +77,43 @@ static lifetime_size_class_type get_random_lifetime_size_class_type(MContext *mc
 	return LIST; //default
 }
 
-//returns a sharing bitmap based on the "receiving threads ratio" 
-static void get_random_thread_selection(MContext *mc, ReferenceMap *reference_map) {
+static inline void swap_int(int *a, int *b) {
+        if (a != b) {
+                *a ^= *b;
+                *b ^= *a;
+                *a ^= *b;
+        }
+}
 
-	//reference_map_t my_thread_bit = BIT_ZERO << mc->thread_id;
-        // set my bit
-        addReference(reference_map, mc->thread_id);
+//initializes thread_id_array with random thread id's based on "receiving threads ratio" 
+void get_random_thread_selection(MContext *mc, int *thread_id_array, int *thread_id_array_sz) {
+        
+	int number_of_sharing_threads = mc->gopts->num_threads / (100 / mc->gopts->receiving_threads_ratio);
 
-	if (mc->gopts->shared_objects == 0 || mc->gopts->receiving_threads_ratio == 0) {
-		//only this thread is interested
-		//return my_thread_bit;
-                return;
-	}
+        //printf("number of sharing threads %d\n", number_of_sharing_threads);
 
-	//threads except me, times share ratio
-	int number_of_other_threads = (mc->gopts->num_threads - 1) / (100 / mc->gopts->receiving_threads_ratio);
+        //get number_of_sharing_threads random thread id's from 0 to gopts->num_threads-1
 
-	//get number_of_other_threads random thread id's (except mine)
-	//and set their bits in tm
-	int i = 0;
-	//reference_map_t tm = my_thread_bit;
-        //TODO(martin): refactor to red of bitmap
-	while (i < number_of_other_threads) {
-		int tid = get_random_thread(mc);
+        //init thread_id_array with all possible thread id's and remove randomly
 
-		//if (!(tm & (BIT_ZERO << tid))) {
-		if (get_bit(reference_map->thread_map, tid) == 0) {
-			++i;
-			//tm |= BIT_ZERO << tid;
-                        addReference(reference_map, tid);
-		}
-	}
-	//return tm;
+
+        *thread_id_array_sz = mc->gopts->num_threads;
+
+        int i;
+        for (i = 0; i < *thread_id_array_sz; ++i) {
+                thread_id_array[i] = i;
+        }
+
+        for (i = 0; i < mc->gopts->num_threads - number_of_sharing_threads; ++i) {
+                //randomly select a still existing thread id
+                int id = get_rand_int_range(mc, 0, *thread_id_array_sz - 1);
+
+                //swap element at position id with last element
+                swap_int(&thread_id_array[id], &thread_id_array[*thread_id_array_sz - 1]);
+
+                //"virtually" remove last element
+                (*thread_id_array_sz)--;
+        }
 }
 
 //creates random object properties and stores them in call-by-reference arguments
@@ -121,8 +121,7 @@ void get_random_object_props(MContext *mc,
 		size_t *size, 
 		unsigned int *liveness, 
 		unsigned int *num_objects,
-		lifetime_size_class_type *type,
-		ReferenceMap *reference_map) {
+		lifetime_size_class_type *type) {
 
 	unsigned int lt = get_random_liveness(mc);
 	unsigned int sz = get_random_size(mc);
@@ -143,11 +142,5 @@ void get_random_object_props(MContext *mc,
 	assert(sz <= (BIT_ZERO << mc->gopts->max_object_sc));
 
 	*type = get_random_lifetime_size_class_type(mc);
-	if (get_sharing_dist(mc)) {
-		get_random_thread_selection(mc, reference_map); //shared objects
-	} else {
-		//*reference_map = BIT_ZERO << mc->thread_id; //unshared
-                addReference(reference_map, mc->thread_id);
-	}
 }
 
