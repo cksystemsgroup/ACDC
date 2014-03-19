@@ -248,20 +248,30 @@ static void get_and_print_memstats(MContext *mc) {
 		mc->stat->rss_hwm = get_high_water_mark();
 	}
 
-	
-	if (mc->stat->current_rss < mc->gopts->metadata_heap_sz) {
-		printf("FAULTY RSS SAMPLE: %ld\n", mc->stat->current_rss);
-		return;
-	}
+	if (mc->gopts->do_metadata_warmup) {
+                if (mc->stat->current_rss < mc->gopts->metadata_heap_sz) {
+                        printf("FAULTY RSS SAMPLE: %ld\n", mc->stat->current_rss);
+                        return;
+                }
+        }
 	
 	if (mc->gopts->verbosity == 0) return;
-
-	printf("MEMSTATS\t%s\t%3u\t%4u\t%12lu\n",
+        
+        if (mc->gopts->do_metadata_warmup) {
+                printf("MEMSTATS\t%s\t%3u\t%4u\t%12lu\n",
+                                mc->gopts->allocator_name,
+                                mc->thread_id,
+                                mc->time,
+                                mc->stat->current_rss - mc->gopts->metadata_heap_sz
+                      );
+        } else {
+	        printf("MEMSTATS\t%s\t%3u\t%4u\t%12lu\n",
 			mc->gopts->allocator_name,
 			mc->thread_id,
 			mc->time,
-			mc->stat->current_rss - mc->gopts->metadata_heap_sz
+			mc->stat->current_rss
 	      );
+        }
 }
 
 /*
@@ -748,15 +758,22 @@ void run_acdc(GOptions *gopts) {
 	printf("WALLCLOCK [ms]\t%lu\n\n", time_in_ms);
 
 	//update_proc_status(gopts->pid);
+        size_t avg_rss = 0;
+        if (gopts->do_metadata_warmup) {
+	        avg_rss = (thread_results[thread_0_index]->stat->resident_set_size_counter / 
+			(gopts->benchmark_duration - 2 * gopts->max_liveness))
+		       	- gopts->metadata_heap_sz;	/* warmup*/
+        } else {
+	        avg_rss = (thread_results[thread_0_index]->stat->resident_set_size_counter / 
+			(gopts->benchmark_duration - 2 * gopts->max_liveness));
+        }
 	printf("MEM-RESULTS\tallocator\tnum_threads\tVM_PEAK\tRSS_HWM\tRSS_AVG (after warmup)\n");
 	printf("MEMORY\t%s\t%d\t%ld\t%ld\t%ld\n\n",
 			gopts->allocator_name,
 			gopts->num_threads,
 			thread_results[thread_0_index]->stat->vm_peak, 
-			thread_results[thread_0_index]->stat->rss_hwm, 
-			(thread_results[thread_0_index]->stat->resident_set_size_counter / 
-			(gopts->benchmark_duration - 2 * gopts->max_liveness))
-		       	- gopts->metadata_heap_sz	/* warmup*/
+			thread_results[thread_0_index]->stat->rss_hwm,
+                        avg_rss
 			);
 
 

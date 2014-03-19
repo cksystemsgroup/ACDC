@@ -42,6 +42,7 @@ static void print_usage() {
 			"-N: node buffer size\n"
 			"-C: class buffer size\n"
 			"-P: allocator name (P)rinted at the summary\n"
+			"-W: warmup metadata space and exclude it from the memory results\n"
 			);
 	exit(EXIT_FAILURE);
 }
@@ -72,6 +73,7 @@ static void set_default_params(GOptions *gopts) {
 	gopts->access_live_objects = 0;
 	gopts->verbosity = 0;
 	gopts->allocator_name = "UNDEFINED";
+        gopts->do_metadata_warmup = 0;
 }
 
 /* 
@@ -141,7 +143,7 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 	//1MB per thread for bookkeeping
 	gopts->metadata_heap_sz = gopts->num_threads * (1 << 10);
 
-        printf("size 1: %lu\n", gopts->metadata_heap_sz);
+        //printf("size 1: %lu\n", gopts->metadata_heap_sz);
 	
 	//global metadata heap
 	//add the buffers for nodes and classes, add extra space for aligning ect...
@@ -150,11 +152,11 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 		gopts->node_buffer_size * L1_LINE_SZ) *
 		gopts->num_threads) / 1024);
         
-        printf("class size 2: %lu\n", gopts->class_buffer_size * L1_LINE_SZ);
-        printf("node size 2: %lu\n", gopts->node_buffer_size * L1_LINE_SZ);
-        printf("class * threads size 2: %lu\n", gopts->class_buffer_size * L1_LINE_SZ * gopts->num_threads);
-        printf("node * threads size 2: %lu\n", gopts->node_buffer_size * L1_LINE_SZ * gopts->num_threads);
-        printf("size 2: %lu\n", gopts->metadata_heap_sz);
+        //printf("class size 2: %lu\n", gopts->class_buffer_size * L1_LINE_SZ);
+        //printf("node size 2: %lu\n", gopts->node_buffer_size * L1_LINE_SZ);
+        //printf("class * threads size 2: %lu\n", gopts->class_buffer_size * L1_LINE_SZ * gopts->num_threads);
+        //printf("node * threads size 2: %lu\n", gopts->node_buffer_size * L1_LINE_SZ * gopts->num_threads);
+        //printf("size 2: %lu\n", gopts->metadata_heap_sz);
 }
 
 static void check_params(GOptions *gopts) {
@@ -226,6 +228,7 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->shared_objects_ratio = %d\n", gopts->shared_objects_ratio);
 	printf("gopts->receiving_threads_ratio = %d\n", gopts->receiving_threads_ratio);
 	printf("gopts->allocator_name = %s\n", gopts->allocator_name);
+	printf("gopts->do_metadata_warmup = %d\n", gopts->do_metadata_warmup);
 	printf("gopts->verbosity = %d\n", gopts->verbosity);
 }
 
@@ -240,7 +243,7 @@ int main(int argc, char **argv) {
 	gopts->pid = getpid();
 
 	set_default_params(gopts);
-	const char *optString = "afn:t:d:r:H:l:L:D:g:s:S:F:N:C:OR:T:q:i:w:AP:vh";
+	const char *optString = "afn:t:d:r:H:l:L:D:g:s:S:F:N:C:OR:T:q:i:w:AP:Wvh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
@@ -314,6 +317,9 @@ int main(int argc, char **argv) {
 			case 'A':
 				gopts->access_live_objects = 1;
 				break;
+			case 'W':
+				gopts->do_metadata_warmup = 1;
+				break;
 			case 'P':
 				gopts->allocator_name = optarg;
 				break;
@@ -334,7 +340,7 @@ int main(int argc, char **argv) {
 
 	print_params(gopts);
 
-	init_metadata_heap(gopts->metadata_heap_sz);
+	init_metadata_heap(gopts->metadata_heap_sz, gopts->do_metadata_warmup);
 
 	run_acdc(gopts);
 

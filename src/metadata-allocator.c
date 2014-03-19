@@ -25,7 +25,7 @@ static void *align_address(void *ptr, size_t alignment) {
 	return (void*)addr;
 }
 
-void init_metadata_heap(size_t heapsize) {
+void init_metadata_heap(size_t heapsize, int do_warmup) {
 	
         printf("fetching %lu MB of metadata space\n", heapsize/1024);
 	
@@ -39,13 +39,15 @@ void init_metadata_heap(size_t heapsize) {
 
         printf("warming up %lu MB of metadata space\n", heapsize/1024);
 
-	//make heap hot
-	unsigned long i;
-        volatile char *c = (char*)metadata_heap_start;
-	for (i = 0; i < heapsize * 1024; i = i + 4096) {
-                c[i] = c[i-1];
-        //        __asm__ __volatile__("mfence" : : : "memory");
-	}
+        if (do_warmup) {
+                //make heap hot
+                unsigned long i;
+                volatile char *c = (char*)metadata_heap_start;
+                for (i = 0; i < heapsize * 1024; i = i + 4096) {
+                        c[i] = c[i-1];
+                //        __asm__ __volatile__("mfence" : : : "memory");
+                }
+        }
 }
 
 static void *get_chunk(size_t size) {
