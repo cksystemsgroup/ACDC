@@ -26,7 +26,7 @@
 static LClass **shared_heap_classes;
 static pthread_mutex_t *shared_heap_classes_locks;
 static volatile spin_barrier_t false_sharing_barrier;
-static volatile spin_barrier_t acdc_barrier;
+static pthread_barrier_t acdc_barrier;
 static pthread_mutex_t debug_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c);
@@ -339,6 +339,9 @@ static void share_LSClass(MContext *mc, LSClass *c) {
 
         get_random_thread_selection(mc, mc->thread_id_buffer, &number_of_receiving_threads);
 
+        //set reference counter
+        c->reference_counter = number_of_receiving_threads;
+
         for (i = 0; i < number_of_receiving_threads; ++i) {
                 int receiving_thread_id = mc->thread_id_buffer[i];
 
@@ -506,7 +509,11 @@ static void *acdc_thread(void *ptr) {
 	printf("running thread %d\n", mc->thread_id);
 
 	//start benchmark together
-	spin_barrier_wait(&acdc_barrier);
+        int r = pthread_barrier_wait(&acdc_barrier);
+        if (!( r == 0 || r == PTHREAD_BARRIER_SERIAL_THREAD )) {
+                printf("pthread_barrier_wait: %d\n", r);
+                exit(r);
+        }
 
 	mc->stat->running_time = rdtsc();
 
@@ -560,6 +567,7 @@ static void *acdc_thread(void *ptr) {
 		} else {
 			//bypass sharing pool
                         //printf("This i will NOT share\n");
+                        c->reference_counter = 1;
 			heap_class_insert(mc, mc->heap_class, c);
 		}
 
@@ -586,8 +594,14 @@ static void *acdc_thread(void *ptr) {
 
 			print_runtime_stats(mc);
 
-			if ((mc->time % mc->gopts->max_time_gap) == 0)
-				spin_barrier_wait(&acdc_barrier);
+                        //take care of time gap
+			if ((mc->time % mc->gopts->max_time_gap) == 0) {
+                                r = pthread_barrier_wait(&acdc_barrier);
+                                if (!( r == 0 || r == PTHREAD_BARRIER_SERIAL_THREAD )) {
+                                        printf("pthread_barrier_wait: %d\n", r);
+                                        exit(r);
+                                }
+                        }
 		}
 	}
 
@@ -617,7 +631,11 @@ void run_acdc(GOptions *gopts) {
 			sizeof(pthread_mutex_t));
 
 	r = spin_barrier_init(&false_sharing_barrier, gopts->num_threads);
-	r = spin_barrier_init(&acdc_barrier, gopts->num_threads);
+        r = pthread_barrier_init(&acdc_barrier, NULL, gopts->num_threads);
+        if (r != 0) {
+                printf("pthread_barrier_init: %d\n", r);
+                exit(r);
+        }
 
 	void *(*thread_function)(void*);
 
