@@ -97,16 +97,24 @@ function install_allocator {
 
 		build/gyp/gyp --depth=. -Deager_madvise_threshold=65536 scalloc.gyp
 		BUILDTYPE=Release V=1 make
-		cp out/Release/libscalloc.so out/Release/libscalloc-eager.so
+		cp out/Release/lib.target/libscalloc.so out/Release/libscalloc-eager.so
+		
+                build/gyp/gyp --depth=. -Dcore_local=1 scalloc.gyp
+		BUILDTYPE=Release V=1 make
+		cp out/Release/lib.target/libscalloc.so out/Release/libscalloc-core-local.so
 
 		./build/gyp/gyp --depth=. scalloc.gyp
 		BUILDTYPE=Release make
-		cd ..
+		cp out/Release/lib.target/libscalloc.so out/Release/libscalloc.so
+		
+                cd ..
 		rm -rf libscalloc*
 		ln -s scalloc/out/Release/libscalloc.so libscalloc.so
 		ln -s scalloc/out/Release/libscalloc.so libscalloc.so.0
 		ln -s scalloc/out/Release/libscalloc-eager.so libscalloc-eager.so
 		ln -s scalloc/out/Release/libscalloc-eager.so libscalloc-eager.so.0
+		ln -s scalloc/out/Release/libscalloc-core-local.so libscalloc-core-local.so
+		ln -s scalloc/out/Release/libscalloc-core-local.so libscalloc-core-local.so.0
 	fi
 }
 
