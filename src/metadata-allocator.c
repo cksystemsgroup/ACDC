@@ -5,9 +5,11 @@
  * can be found in the LICENSE file.
  */
 
-#include "stdlib.h"
-#include "unistd.h"
-#include "stdio.h"
+#include <errno.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/mman.h>
 
 static void *metadata_heap_start;
 static void *metadata_heap_end;
@@ -28,24 +30,24 @@ static void *align_address(void *ptr, size_t alignment) {
 void init_metadata_heap(size_t heapsize, int do_warmup) {
 	
         printf("fetching %lu MB of metadata space\n", heapsize/1024);
-	
-        metadata_heap_start = sbrk(heapsize * 1024); //parameter is in kB
-	if (metadata_heap_start == (void*)-1) {
-		printf("unable to allocate metadata heap\n");
-		exit(EXIT_FAILURE);
-	}
-	metadata_heap_end = sbrk(0);
-	metadata_heap_bump_pointer = metadata_heap_start;
 
-        printf("warming up %lu MB of metadata space\n", heapsize/1024);
+        void *r = mmap(NULL, heapsize * 1024, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+        if (r == MAP_FAILED) {
+                perror("mmap");
+                exit(errno);
+        }
+
+        metadata_heap_start = r;
+        metadata_heap_end = metadata_heap_start + (heapsize * 1024);
+        metadata_heap_bump_pointer = metadata_heap_start;
 
         if (do_warmup) {
+                printf("warming up %lu MB of metadata space\n", heapsize/1024);
                 //make heap hot
                 unsigned long i;
                 volatile char *c = (char*)metadata_heap_start;
                 for (i = 0; i < heapsize * 1024; i = i + 4096) {
                         c[i] = c[i-1];
-                //        __asm__ __volatile__("mfence" : : : "memory");
                 }
         }
 }
