@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 OPTIONS="-a -d 20 -l 1 -L 1 -t 10000000 -n 1 -N 200000 -C 200000 -H 200000"
 FACTOR1="-s"

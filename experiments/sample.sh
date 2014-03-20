@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # This is an example for an ACDC experiment definition
 

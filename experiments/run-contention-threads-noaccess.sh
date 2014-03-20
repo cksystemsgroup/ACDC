@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 ALLOCATOR_DIR=`pwd`/allocators
 #name the allocators accordingly to their .so file

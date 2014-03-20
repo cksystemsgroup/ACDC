@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 #name the allocators accordingly to their .so file
 ALLOCATORS="jemalloc llalloc ptmalloc2 tbbmalloc_proxy tcmalloc streamflow hoard scalloc scalloc-eager"
