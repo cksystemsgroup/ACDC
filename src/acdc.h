@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <pthread.h>
 #include <stdint.h>
+#include <unistd.h>
 #include "arch.h"
 
 #define BIT_ZERO 1UL

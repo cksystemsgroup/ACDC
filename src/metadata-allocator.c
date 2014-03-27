@@ -11,6 +11,11 @@
 #include <stdio.h>
 #include <sys/mman.h>
 
+//mmap osx hack
+#ifndef MAP_ANONYMOUS
+#define MAP_ANONYMOUS MAP_ANON
+#endif // MAP_ANONYMOUS
+
 static void *metadata_heap_start;
 static void *metadata_heap_end;
 static void *metadata_heap_bump_pointer;
