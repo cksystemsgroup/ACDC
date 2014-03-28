@@ -18,7 +18,7 @@
 #include "memory.h"
 #include "metadata-allocator.h"
 #include "barrier.h"
-#include "proc_status.h"
+#include "proc-status.h"
 #include "caches.h"
 
 //distribution pool consisting of one heap class per thread

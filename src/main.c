@@ -13,7 +13,7 @@
 #include "acdc.h"
 #include "caches.h"
 #include "metadata-allocator.h"
-#include "proc_status.h"
+#include "proc-status.h"
 
 static void print_usage() {
 	printf("ACDC Benchmark usage:\n"
