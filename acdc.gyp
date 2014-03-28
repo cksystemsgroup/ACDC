@@ -33,11 +33,12 @@
                 'src/lifetime-class.c',
                 'src/memory.c',
                 'src/barrier.c',
+                'src/osx-barrier.c',
                 'src/lifetime-size-classes.c',
                 'src/metadata-allocator.c',
                 'src/distribution.c',
                 'src/main.c',
-                'src/proc_status.c',
+                'src/proc-status.c',
             ],
 
         }

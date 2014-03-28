@@ -7,30 +7,17 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "proc_status.h"
+#include <unistd.h>
+#include "proc-status.h"
 
 #ifdef __linux__
 
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/types.h>
-#include <unistd.h>
 #include <limits.h>
 #include <string.h>
 
-#ifndef LINE_MAX
-#define LINE_MAX 200
-#endif
-
-struct proc_status {
-	long vm_peak;
-	long vm_size;
-	long vm_hwm;
-	long vm_rss;
-	long vm_data;
-};
-
-volatile struct proc_status stat;
 
 static inline void fgets_nn(char *str, int size, FILE *stream) {
 	char *s = str;
@@ -120,20 +107,56 @@ long get_data_segment_size() {
 	return stat.vm_data;
 }
 
+#endif // __linux__
 
-#else // everyting but linux not supported yet
+#ifdef __APPLE__
+
+#include <sys/sysctl.h>
+#include <mach/mach.h>
+#include <stdint.h>
+
+uint64_t _rss;
+
+void update_proc_status(pid_t pid) {
+
+        struct task_basic_info ti;
+        mach_msg_type_number_t count = TASK_BASIC_INFO_64_COUNT;
+
+        kern_return_t kr = task_info(mach_task_self(), TASK_BASIC_INFO_64,
+                                     (task_info_t) &ti, &count);
+
+        if (kr != KERN_SUCCESS) {
+                printf("task_info failed\n");
+                exit(kr);
+        }
+
+        _rss = ti.resident_size / 1024;
+
+
+}
+
+long get_vm_peak() {
+        return 0;
+}
+
+long get_vm_size() {
+        return 0;
+}
 
 long get_resident_set_size() {
-	printf("WARNING: resource information not supported for this platform\n");
-	return 0;
-}
-long get_high_water_mark() {
-	printf("WARNING: resource information not supported for this platform\n");
-	return 0;
-}
-long get_data_segment_size() {
-	printf("WARNING: resource information not supported for this platform\n");
-	return 0;
+        return _rss;
 }
 
-#endif // __linux__
+long get_high_water_mark() {
+        return 0;
+}
+
+long get_data_segment_size() {
+        return 0;
+}
+
+
+#endif // __APPLE__
+
+
+
