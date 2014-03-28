@@ -18,6 +18,19 @@
 #include <limits.h>
 #include <string.h>
 
+#ifndef LINE_MAX
+#define LINE_MAX 200
+#endif
+
+struct proc_status {
+        long vm_peak;
+        long vm_size;
+        long vm_hwm;
+        long vm_rss;
+        long vm_data;
+};
+
+volatile struct proc_status stat;
 
 static inline void fgets_nn(char *str, int size, FILE *stream) {
 	char *s = str;
