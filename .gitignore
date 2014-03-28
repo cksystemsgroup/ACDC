@@ -15,3 +15,5 @@ third-party-benchmarks/build
 out
 *Makefile
 *.mk
+.localized
+_site/
