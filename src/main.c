@@ -234,97 +234,93 @@ static void print_params(GOptions *gopts) {
 
 int main(int argc, char **argv) {
 
-	GOptions *gopts = sbrk(sizeof(GOptions));
-	if (gopts == (void*)-1) {
-		printf("unable to allocate global options\n");
-		exit(EXIT_FAILURE);
-	}
+        GOptions gopts;
 
-	gopts->pid = getpid();
+	gopts.pid = getpid();
 
-	set_default_params(gopts);
+	set_default_params(&gopts);
 	const char *optString = "afn:t:d:r:H:l:L:D:g:s:S:F:N:C:OR:T:q:i:w:AP:Wvh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
 		switch (opt) {
 			case 'a':
-				gopts->mode = ACDC;
+				gopts.mode = ACDC;
 				break;
 			case 'f':
-				gopts->mode = FS;
+				gopts.mode = FS;
 				break;
 			case 'n':
-				gopts->num_threads = atoi(optarg);
+				gopts.num_threads = atoi(optarg);
 				break;
 			case 't':
-				gopts->time_quantum = atol(optarg);
+				gopts.time_quantum = atol(optarg);
 				break;
 			case 'd':
-				gopts->benchmark_duration = atoi(optarg);
+				gopts.benchmark_duration = atoi(optarg);
 				break;
 			case 'r':
-				gopts->seed = atoi(optarg);
+				gopts.seed = atoi(optarg);
 				break;
 			case 'H':
-				gopts->metadata_heap_sz = atoi(optarg);
+				gopts.metadata_heap_sz = atoi(optarg);
 				break;
 			case 'l':
-				gopts->min_liveness = atoi(optarg);
+				gopts.min_liveness = atoi(optarg);
 				break;
 			case 'L':
-				gopts->max_liveness = atoi(optarg);
+				gopts.max_liveness = atoi(optarg);
 				break;
 			case 'D':
-				gopts->deallocation_delay = atoi(optarg);
+				gopts.deallocation_delay = atoi(optarg);
 				break;
 			case 'g':
-				gopts->max_time_gap = atoi(optarg);
+				gopts.max_time_gap = atoi(optarg);
 				break;
 			case 's':
-				gopts->min_object_sc = atoi(optarg);
+				gopts.min_object_sc = atoi(optarg);
 				break;
 			case 'S':
-				gopts->max_object_sc = atoi(optarg);
+				gopts.max_object_sc = atoi(optarg);
 				break;
 			case 'F':
-				gopts->fixed_number_of_objects = atoi(optarg);
+				gopts.fixed_number_of_objects = atoi(optarg);
 				break;
 			case 'N':
-				gopts->node_buffer_size = atoi(optarg);
+				gopts.node_buffer_size = atoi(optarg);
 				break;
 			case 'C':
-				gopts->class_buffer_size = atoi(optarg);
+				gopts.class_buffer_size = atoi(optarg);
 				break;
 			case 'O':
-				gopts->shared_objects = 1;
+				gopts.shared_objects = 1;
 				break;
 			case 'R':
-				gopts->shared_objects_ratio = atoi(optarg);
+				gopts.shared_objects_ratio = atoi(optarg);
 				break;
 			case 'T':
-				gopts->receiving_threads_ratio = atoi(optarg);
+				gopts.receiving_threads_ratio = atoi(optarg);
 				break;
 			case 'q':
-				gopts->list_based_ratio = atoi(optarg);
+				gopts.list_based_ratio = atoi(optarg);
 				break;
 			case 'i':
-				gopts->write_iterations = atoi(optarg);
+				gopts.write_iterations = atoi(optarg);
 				break;
 			case 'w':
-				gopts->write_access_ratio = atoi(optarg);
+				gopts.write_access_ratio = atoi(optarg);
 				break;
 			case 'A':
-				gopts->access_live_objects = 1;
+				gopts.access_live_objects = 1;
 				break;
 			case 'W':
-				gopts->do_metadata_warmup = 1;
+				gopts.do_metadata_warmup = 1;
 				break;
 			case 'P':
-				gopts->allocator_name = optarg;
+				gopts.allocator_name = optarg;
 				break;
 			case 'v':
-				gopts->verbosity++;
+				gopts.verbosity++;
 				break;
 			case 'h':
 				print_usage(); //and exit
@@ -336,13 +332,13 @@ int main(int argc, char **argv) {
 		opt = getopt(argc, argv, optString);
 	}
 
-	check_params(gopts); //and exit on error
+	check_params(&gopts); //and exit on error
 
-	print_params(gopts);
+	print_params(&gopts);
 
-	init_metadata_heap(gopts->metadata_heap_sz, gopts->do_metadata_warmup);
+	init_metadata_heap(gopts.metadata_heap_sz, gopts.do_metadata_warmup);
 
-	run_acdc(gopts);
+	run_acdc(&gopts);
 
 	return (EXIT_SUCCESS);
 }
