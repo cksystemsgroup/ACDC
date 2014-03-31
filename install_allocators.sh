@@ -89,32 +89,24 @@ function install_allocator {
 
 	if [[ $ALLOCATOR == "scalloc" ]]; then
 		#scalloc
-		rm -rf scalloc
-		git clone git@github.com:cksystemsgroup/scalloc.git
-		cd scalloc/
-		#git checkout release
-		tools/make_deps.sh
+    if [ -f ../install_scalloc.sh ]; then 
+      ../install_scalloc.sh
+    else
+      rm -rf scalloc
+      git clone https://github.com/cksystemsgroup/scalloc.git
+      cd scalloc/
+		  git checkout release
+		  tools/make_deps.sh
 
-		build/gyp/gyp --depth=. -Deager_madvise_threshold=65536 scalloc.gyp
-		BUILDTYPE=Release V=1 make
-		cp out/Release/lib.target/libscalloc.so out/Release/libscalloc-eager.so
-		
-                build/gyp/gyp --depth=. -Dcore_local=1 scalloc.gyp
-		BUILDTYPE=Release V=1 make
-		cp out/Release/lib.target/libscalloc.so out/Release/libscalloc-core-local.so
+		  ./build/gyp/gyp --depth=. scalloc.gyp
+		  BUILDTYPE=Release make
+		  cp out/Release/lib.target/libscalloc.so out/Release/libscalloc.so
+    fi
 
-		./build/gyp/gyp --depth=. scalloc.gyp
-		BUILDTYPE=Release make
-		cp out/Release/lib.target/libscalloc.so out/Release/libscalloc.so
-		
-                cd ..
+    cd ..
 		rm -rf libscalloc*
 		ln -s scalloc/out/Release/libscalloc.so libscalloc.so
 		ln -s scalloc/out/Release/libscalloc.so libscalloc.so.0
-		ln -s scalloc/out/Release/libscalloc-eager.so libscalloc-eager.so
-		ln -s scalloc/out/Release/libscalloc-eager.so libscalloc-eager.so.0
-		ln -s scalloc/out/Release/libscalloc-core-local.so libscalloc-core-local.so
-		ln -s scalloc/out/Release/libscalloc-core-local.so libscalloc-core-local.so.0
 	fi
 }
 
