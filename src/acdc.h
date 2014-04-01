@@ -16,6 +16,14 @@
 
 #define BIT_ZERO 1UL
 
+// function pointers to allocate and deallocate dynamic memory.
+// ACDC uses these functions. By default, they will point to malloc and free,
+// respectively, but one can point them to some custom allocation routines
+// if necessary.
+void* (*acdc_alloc)(size_t);
+void (*acdc_free)(void*);
+
+
 // Global options from command line
 typedef struct global_options GOptions;
 
@@ -37,7 +45,7 @@ typedef struct lifetime_size_class_node LSCNode;
 // Object is a regular object.
 typedef void Object;
 // objects including ownership information
-typedef struct shared_mem_object SharedObject;
+typedef struct shared_mem_object SharedObject; //TODO(martin): refactor away
 // Objects that build up list-based lifetime-size-classes
 typedef struct mem_object_lnode LObject;
 // Objects that build up tree-based lifetime-size-classes
