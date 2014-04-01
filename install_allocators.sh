@@ -101,12 +101,11 @@ function install_allocator {
 		  ./build/gyp/gyp --depth=. scalloc.gyp
 		  BUILDTYPE=Release make
 		  cp out/Release/lib.target/libscalloc.so out/Release/libscalloc.so
+      cd ..
+      rm -rf libscalloc*
+      ln -s scalloc/out/Release/libscalloc.so libscalloc.so
+      ln -s scalloc/out/Release/libscalloc.so libscalloc.so.0
     fi
-
-    cd ..
-		rm -rf libscalloc*
-		ln -s scalloc/out/Release/libscalloc.so libscalloc.so
-		ln -s scalloc/out/Release/libscalloc.so libscalloc.so.0
 	fi
 }
 
