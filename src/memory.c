@@ -12,7 +12,7 @@
 #include <unistd.h>
 
 #include "acdc.h"
-
+#include "alloc/nulloc.h"
 
 Object *allocate(MContext *mc, size_t size) {
 	void *ptr;
@@ -24,7 +24,7 @@ Object *allocate(MContext *mc, size_t size) {
 		exit(EXIT_FAILURE);
 	}
 
-	ptr = malloc(size);
+	ptr = acdc_alloc(size);
 	
 	//set header information
 	Object *o = (Object*)ptr;
@@ -58,7 +58,7 @@ void deallocate(MContext *mc, Object *o, size_t size) {
 	mc->stat->bytes_deallocated += size;
 	mc->stat->objects_deallocated++;
 
-	free(o);
+	acdc_free(o);
 }
 
 

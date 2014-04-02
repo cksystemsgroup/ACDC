@@ -8,12 +8,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "acdc.h"
 #include "caches.h"
 #include "metadata-allocator.h"
 #include "proc-status.h"
+#include "alloc/nulloc.h"
 
 static void print_usage() {
 	printf("ACDC Benchmark usage:\n"
@@ -203,6 +205,17 @@ static void check_params(GOptions *gopts) {
 	}
 }
 
+void set_allocation_pointers(GOptions *gopts) {
+        
+        //default
+        acdc_alloc = malloc;
+        acdc_free = free;
+        
+        if (strncmp(gopts->allocator_name, "nulloc", strlen("nulloc")) == 0) {
+                acdc_alloc = nulloc_alloc;
+                acdc_free = nulloc_free;
+        }
+}
 
 static void print_params(GOptions *gopts) {
 	printf("gopts->mode = %d\n", gopts->mode);
@@ -333,6 +346,8 @@ int main(int argc, char **argv) {
 	}
 
 	check_params(&gopts); //and exit on error
+
+        set_allocation_pointers(&gopts);
 
 	print_params(&gopts);
 

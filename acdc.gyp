@@ -39,6 +39,7 @@
                 'src/distribution.c',
                 'src/main.c',
                 'src/proc-status.c',
+                'src/alloc/nulloc.c',
             ],
 
         }
