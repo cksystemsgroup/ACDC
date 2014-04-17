@@ -36,22 +36,23 @@ void init_metadata_heap(size_t heapsize, int do_warmup) {
 	
         printf("fetching %lu MB of metadata space\n", heapsize/1024);
 
-        void *r = mmap(NULL, heapsize * 1024, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+        void *r = mmap(NULL, heapsize * (1UL<<20), PROT_READ | PROT_WRITE, 
+                       MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
         if (r == MAP_FAILED) {
                 perror("mmap");
                 exit(errno);
         }
 
         metadata_heap_start = r;
-        metadata_heap_end = metadata_heap_start + (heapsize * 1024);
+        metadata_heap_end = metadata_heap_start + (heapsize * (1UL<<20));
         metadata_heap_bump_pointer = metadata_heap_start;
 
         if (do_warmup) {
-                printf("warming up %lu MB of metadata space\n", heapsize/1024);
+                printf("warming up %lu MB of metadata space\n", heapsize);
                 //make heap hot
                 unsigned long i;
                 volatile char *c = (char*)metadata_heap_start;
-                for (i = 0; i < heapsize * 1024; i = i + 4096) {
+                for (i = 0; i < heapsize * (1UL<<20); i = i + 4096) {
                         c[i] = c[i-1];
                 }
         }
@@ -61,7 +62,7 @@ static void *get_chunk(size_t size) {
 	void *ptr = metadata_heap_bump_pointer;
 	metadata_heap_bump_pointer += size;
 	if (metadata_heap_bump_pointer >= metadata_heap_end) {
-		printf("out of metadata space. Increase -H option\n");
+		printf("out of metadata space. Increase with -H option\n");
 		exit(EXIT_FAILURE);
 	}
 	return ptr;

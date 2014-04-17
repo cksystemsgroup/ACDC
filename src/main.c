@@ -40,9 +40,9 @@ static void print_usage() {
 			"-T: receiving threads ratio\n"
 			"-r: seed value\n"
 			"-i: write iterations.\n"
-			"-H: meta data heap size in kB\n"
-			"-N: node buffer size\n"
-			"-C: class buffer size\n"
+			"-H: meta data heap size in MB\n"
+			"-N: node buffer size in number of nodes\n"
+			"-C: class buffer size in number of nodes\n"
 			"-P: allocator name (P)rinted at the summary\n"
 			"-W: warmup metadata space and exclude it from the memory results\n"
 			);
@@ -143,7 +143,7 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 	}
 	
 	//1MB per thread for bookkeeping
-	gopts->metadata_heap_sz = gopts->num_threads * (1 << 10);
+	gopts->metadata_heap_sz = gopts->num_threads;
 
         //printf("size 1: %lu\n", gopts->metadata_heap_sz);
 	
@@ -152,7 +152,7 @@ static void autodetect_metadata_parameters(GOptions *gopts) {
 	gopts->metadata_heap_sz += (((
 		gopts->class_buffer_size * L1_LINE_SZ +
 		gopts->node_buffer_size * L1_LINE_SZ) *
-		gopts->num_threads) / 1024);
+		gopts->num_threads) / (1024*1024));
         
         //printf("class size 2: %lu\n", gopts->class_buffer_size * L1_LINE_SZ);
         //printf("node size 2: %lu\n", gopts->node_buffer_size * L1_LINE_SZ);
@@ -223,7 +223,7 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->time_quantum = %lu\n", gopts->time_quantum);
 	printf("gopts->benchmark_duration = %d\n", gopts->benchmark_duration);
 	printf("gopts->seed = %d\n", gopts->seed);
-	printf("gopts->metadata_heap_sz = %lu\n", gopts->metadata_heap_sz);
+	printf("gopts->metadata_heap_sz = %lu MB\n", gopts->metadata_heap_sz);
 	printf("gopts->min_liveness = %d\n", gopts->min_liveness);
 	printf("gopts->max_liveness = %d\n", gopts->max_liveness);
 	printf("gopts->max_time_gap = %d\n", gopts->max_time_gap);
