@@ -37,12 +37,12 @@ void init_metadata_heap(size_t heapsize, int do_warmup) {
         int mmap_flags = MAP_ANONYMOUS | MAP_PRIVATE | MAP_HUGETLB;
 
         printf("fetching %lu MB of metadata space\n", heapsize);
-        printf("trying to map %lu 2MB pages\n", 1 + heapsize/2);
+        printf("trying to map %lu 2MB pages... ", heapsize/2);
 
         void *r = mmap(NULL, heapsize * (1UL<<20), PROT_READ | PROT_WRITE, 
                        mmap_flags, 0, 0);
         if (r == MAP_FAILED) {
-                printf("mapping huge pages failed. Retrying 4k pages...\n");
+                printf(" failed.\nRetrying 4k pages... ");
 
                 //retry using 4k pages
                 mmap_flags = MAP_ANONYMOUS | MAP_PRIVATE;
@@ -54,6 +54,7 @@ void init_metadata_heap(size_t heapsize, int do_warmup) {
                         exit(errno);
                 }
         }
+        printf("OK\n");
 
         metadata_heap_start = r;
         metadata_heap_end = metadata_heap_start + (heapsize * (1UL<<20));

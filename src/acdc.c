@@ -516,7 +516,7 @@ static void *acdc_thread(void *ptr) {
 	unsigned long long allocation_start, allocation_end;
 	unsigned long long access_start, access_end;
 
-	printf("running thread %d\n", mc->thread_id);
+	//printf("running thread %d\n", mc->thread_id);
 
 	//start benchmark together
         int r = pthread_barrier_wait(&acdc_barrier);
@@ -661,10 +661,10 @@ void run_acdc(GOptions *gopts) {
 	}	
 	
 	for (i = 0; i < gopts->num_threads; ++i) {
-                printf("Creating metadata heap for thread %d\n", i);
+                //printf("Creating metadata heap for thread %d\n", i);
 		thread_data[i] = create_mutator_context(gopts, i);
 	}
-        printf(" DONE\n");
+        //printf(" DONE\n");
 
 	gettimeofday(&start, NULL);
 
