@@ -34,13 +34,25 @@ static void *align_address(void *ptr, size_t alignment) {
 
 void init_metadata_heap(size_t heapsize, int do_warmup) {
 	
-        printf("fetching %lu MB of metadata space\n", heapsize/1024);
+        int mmap_flags = MAP_ANONYMOUS | MAP_PRIVATE | MAP_HUGETLB;
+
+        printf("fetching %lu MB of metadata space\n", heapsize);
+        printf("trying to map %lu 2MB pages\n", 1 + heapsize/2);
 
         void *r = mmap(NULL, heapsize * (1UL<<20), PROT_READ | PROT_WRITE, 
-                       MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
+                       mmap_flags, 0, 0);
         if (r == MAP_FAILED) {
-                perror("mmap");
-                exit(errno);
+                printf("mapping huge pages failed. Retrying 4k pages...\n");
+
+                //retry using 4k pages
+                mmap_flags = MAP_ANONYMOUS | MAP_PRIVATE;
+                
+                r = mmap(NULL, heapsize * (1UL<<20), PROT_READ | PROT_WRITE, 
+                         mmap_flags, 0, 0);
+                if (r == MAP_FAILED) {
+                        perror("mmap");
+                        exit(errno);
+                }
         }
 
         metadata_heap_start = r;
@@ -52,7 +64,7 @@ void init_metadata_heap(size_t heapsize, int do_warmup) {
                 //make heap hot
                 unsigned long i;
                 volatile char *c = (char*)metadata_heap_start;
-                for (i = 0; i < heapsize * (1UL<<20); i = i + 4096) {
+                for (i = 1; i < heapsize * (1UL<<20); i = i + 4096) {
                         c[i] = c[i-1];
                 }
         }
