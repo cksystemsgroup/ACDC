@@ -40,7 +40,11 @@ plot \
 "tcmalloc-memcons.dat"      using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 5  title 'tcmalloc', \
 "streamflow-memcons.dat"    using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 6 title 'streamflow', \
 "hoard-memcons.dat"         using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 7 title 'hoard', \
-"scalloc-memcons.dat"       using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 9 title 'scalloc', \
-"scalloc-eager-memcons.dat" using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 10  title 'scalloc-e' \
+"scalloc-eager-memcons.dat"       using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 10  title 'scalloc-eager-madvice', \
+"scalloc-core-local-memcons.dat"          using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 11  title 'scalloc-core-local', \
+"scalloc-eager-reuse-memcons.dat"         using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 12  title 'scalloc-eager-reuse', \
+"scalloc-static-memcons.dat"       using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 13  title 'scalloc-static-assign', \
+"scalloc-lazy-init-memcons.dat"           using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 14  title 'scalloc-lazy-init', \
+"scalloc-hugepage-memcons.dat"            using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 15  title 'scalloc-hugepage', \
+"scalloc-memcons.dat"       using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 9 title 'scalloc-cl' \
 ;
-
