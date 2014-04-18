@@ -6,7 +6,7 @@ set terminal postscript eps color
 set output 'memcons.eps'
 
 set xlabel "number of threads"
-set ylabel "per-thread average memory consumption in kB\n(lower is better)" offset 1,0
+set ylabel "per-thread average memory consumption in MB\n(lower is better)" offset 1,0
 
 set multiplot
 set yrange [0:]
