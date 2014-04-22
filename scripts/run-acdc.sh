@@ -1,5 +1,7 @@
 #!/bin/bash
 
+SKIP_ALLOCATOR=0
+doalarm () { perl -e 'alarm shift; exec @ARGV' "$@"; }
 
 if [ ! -f $1 ]; then
 	echo "Experiment definition '$1' not found."
@@ -43,9 +45,15 @@ do
 	ACCESS_OUTPUT=""
 	MEMCONS_OUTPUT=""
 	COMBINED_OUTPUT=""
+                
+        SKIP_ALLOCATOR=0
 
 	for XVALUE in $FACTOR1_VALUES
-	do	
+	do
+                if [ $SKIP_ALLOCATOR -eq 1 ]; then
+                        break
+                fi
+
 		ALLOC_OUTPUT="$ALLOC_OUTPUT\n$XVALUE"
 		FREE_OUTPUT="$FREE_OUTPUT\n$XVALUE"
 		ACCESS_OUTPUT="$ACCESS_OUTPUT\n$XVALUE"
@@ -60,7 +68,7 @@ do
 		for (( REP=1; REP<=$REPS; REP++ ))
 		do
 			COMMAND="$ACDC -P $ALLOCATOR $OPTIONS -r $REP $FACTOR1 $XVALUE"
-			
+
 			#maybe derive 2nd factor from first factor?
 			if [ -n $FACTOR2 ]; then
 				#echo "Processing expression for factor 2: $FACTOR2_EXPRESSION"
@@ -89,14 +97,17 @@ do
 				export LD_PRELOAD=$ALLOCATOR_DIR/lib$ALLOCATOR.so
 			fi
 			#OUTPUT=$($ACDC -P $ALLOCATOR $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
-			OUTPUT=$($COMMAND)
+
+                        if [ -z $TIMEOUT ]; then
+                            OUTPUT=$($COMMAND)
+                        else
+                            OUTPUT=$(doalarm $TIMEOUT $COMMAND)
+                        fi
+
 			unset LD_PRELOAD
 
 			RUNTIME=$(echo "$OUTPUT" | grep RUNTIME)
 			MEMSTAT=$(echo "$OUTPUT" | grep MEMORY)
-
-			#echo $RUNTIME
-			#echo $MEMSTAT
 
 			read -a RUNTIME_ARRAY <<<$RUNTIME
 			read -a MEMSTAT_ARRAY <<<$MEMSTAT
@@ -114,6 +125,12 @@ do
 				MEMCONS_VALUE[$REP]=${MEMSTAT_ARRAY[5]}
 			fi
                         COMBINED_VALUE[$REP]=$(echo "${ALLOC_VALUE[$REP]} + ${FREE_VALUE[$REP]}" | bc)
+                        
+                        if [ -z ${COMBINED_VALUE[$REP]} ]; then
+                            echo "$ALLOCATOR failed... skipping remaining runs"
+                            SKIP_ALLOCATOR=1
+                            break
+                        fi
 
 			ALLOC_SUM=$(echo "$ALLOC_SUM + ${ALLOC_VALUE[$REP]}" | bc)
 			FREE_SUM=$(echo "$FREE_SUM + ${FREE_VALUE[$REP]}" | bc)
