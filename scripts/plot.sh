@@ -38,11 +38,11 @@ if [ ! -n "$MEMCONS_TEMPLATE" ]; then
 fi
 
 CWD=`pwd`
-cp -f gnuplot_templates/$ALLOC_TEMPLATE $OUTPUT_DIR/plot_alloc.p
-cp -f gnuplot_templates/$FREE_TEMPLATE $OUTPUT_DIR/plot_free.p
-cp -f gnuplot_templates/$MEMCONS_TEMPLATE $OUTPUT_DIR/plot_memcons.p
-cp -f gnuplot_templates/common.inc.p $OUTPUT_DIR
-cp -f gnuplot_templates/Makefile $OUTPUT_DIR
+cp -n gnuplot_templates/$ALLOC_TEMPLATE $OUTPUT_DIR/plot_alloc.p
+cp -n gnuplot_templates/$FREE_TEMPLATE $OUTPUT_DIR/plot_free.p
+cp -n gnuplot_templates/$MEMCONS_TEMPLATE $OUTPUT_DIR/plot_memcons.p
+cp -n gnuplot_templates/common.inc.p $OUTPUT_DIR
+cp -n gnuplot_templates/Makefile $OUTPUT_DIR
 cd $OUTPUT_DIR
 make
 cd $CWD
