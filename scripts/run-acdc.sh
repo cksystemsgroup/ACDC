@@ -41,6 +41,7 @@ do
 	FREE_OUTPUT=""
 	ACCESS_OUTPUT=""
 	MEMCONS_OUTPUT=""
+	COMBINED_OUTPUT=""
 
 	for XVALUE in $FACTOR1_VALUES
 	do	
@@ -48,10 +49,12 @@ do
 		FREE_OUTPUT="$FREE_OUTPUT\n$XVALUE"
 		ACCESS_OUTPUT="$ACCESS_OUTPUT\n$XVALUE"
 		MEMCONS_OUTPUT="$MEMCONS_OUTPUT\n$XVALUE"
+		COMBINED_OUTPUT="$MEMCONS_OUTPUT\n$XVALUE"
 		ALLOC_SUM=0
 		FREE_SUM=0
 		ACCESS_SUM=0
 		MEMCONS_SUM=0
+                COMBINED_SUM=0
 
 		for (( REP=1; REP<=$REPS; REP++ ))
 		do
@@ -109,42 +112,50 @@ do
 				ACCESS_VALUE[$REP]=${RUNTIME_ARRAY[9]}
 				MEMCONS_VALUE[$REP]=${MEMSTAT_ARRAY[5]}
 			fi
+                        COMBINED_VALUE=$(echo "${ALLOC_VALUE[$REP]} + ${FREE_VALUE[$REP]}" | bc)
 
 			ALLOC_SUM=$(echo "$ALLOC_SUM + ${ALLOC_VALUE[$REP]}" | bc)
 			FREE_SUM=$(echo "$FREE_SUM + ${FREE_VALUE[$REP]}" | bc)
 			ACCESS_SUM=$(echo "$ACCESS_SUM + ${ACCESS_VALUE[$REP]}" | bc)
 			MEMCONS_SUM=$(echo "$MEMCONS_SUM + ${MEMCONS_VALUE[$REP]}" | bc)
+			COMBINED_SUM=$(echo "$COMBINED_SUM + ${COMBINED_VALUE[$REP]}" | bc)
 		done #REPS
 		ALLOC_AVG=$(echo "scale=1;$ALLOC_SUM / $REPS" | bc)
 		FREE_AVG=$(echo "scale=1;$FREE_SUM / $REPS" | bc)
 		ACCESS_AVG=$(echo "scale=1;$ACCESS_SUM / $REPS" | bc)
 		MEMCONS_AVG=$(echo "scale=1;$MEMCONS_SUM / $REPS" | bc)
+		COMBINED_AVG=$(echo "scale=1;$MEMCONS_SUM / $REPS" | bc)
 		
 		ALLOC_SSD=0
 		FREE_SSD=0
 		ACCESS_SSD=0
 		MEMCONS_SSD=0
+		COMBINED_SSD=0
 		for (( REP=1; REP<=$REPS; REP++ ))
 		do
 			ALLOC_SSD=$(echo "$ALLOC_SSD + (${ALLOC_VALUE[$REP]} - $ALLOC_AVG)^2" | bc)
 			FREE_SSD=$(echo "$FREE_SSD + (${FREE_VALUE[$REP]} - $FREE_AVG)^2" | bc)
 			ACCESS_SSD=$(echo "$ACCESS_SSD + (${ACCESS_VALUE[$REP]} - $ACCESS_AVG)^2" | bc)
 			MEMCONS_SSD=$(echo "$MEMCONS_SSD + (${MEMCONS_VALUE[$REP]} - $MEMCONS_AVG)^2" | bc)
+			COMBINED_SSD=$(echo "$COMBINED_SSD + (${COMBINED_VALUE[$REP]} - $COMBINED_AVG)^2" | bc)
 		done
 		ALLOC_SSD=$(echo "scale=1;sqrt($ALLOC_SSD * (1 / ($REPS - 1)))" | bc)
 		FREE_SSD=$(echo "scale=1;sqrt($FREE_SSD * (1 / ($REPS - 1)))" | bc)
 		ACCESS_SSD=$(echo "scale=1;sqrt($ACCESS_SSD * (1 / ($REPS - 1)))" | bc)
 		MEMCONS_SSD=$(echo "scale=1;sqrt($MEMCONS_SSD * (1 / ($REPS - 1)))" | bc)
+		COMBINED_SSD=$(echo "scale=1;sqrt($COMBINED_SSD * (1 / ($REPS - 1)))" | bc)
 		
 		ALLOC_OUTPUT="$ALLOC_OUTPUT\t$ALLOC_AVG\t$ALLOC_SSD"
 		FREE_OUTPUT="$FREE_OUTPUT\t$FREE_AVG\t$FREE_SSD"
 		ACCESS_OUTPUT="$ACCESS_OUTPUT\t$ACCESS_AVG\t$ACCESS_SSD"
 		MEMCONS_OUTPUT="$MEMCONS_OUTPUT\t$MEMCONS_AVG\t$MEMCONS_SSD"
+		COMBINED_OUTPUT="$COMBINED_OUTPUT\t$COMBINED_AVG\t$COMBINED_SSD"
 	done #XVALUE
 	echo -e $ALLOC_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-alloc.dat
 	echo -e $FREE_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-free.dat
 	echo -e $ACCESS_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-access.dat
 	echo -e $MEMCONS_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-memcons.dat
+	echo -e $COMBINED_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-combined.dat
 done #ALLOCATORS
 
 ./scripts/plot.sh $1

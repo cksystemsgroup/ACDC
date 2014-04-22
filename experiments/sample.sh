@@ -47,8 +47,9 @@ OUTPUT_DIR=`pwd`/data/experiment_name_results
 
 # YLOGSCALE_[metric]
 # set to 1 for logscale y axes. Default 0
-YLOGSCALE_ALLOC=1
+YLOGSCALE_ALLOC=0
 YLOGSCALE_FREE=0
+YLOGSCALE_COMBINED=0
 YLOGSCALE_MEMCONS=0
 
 # [metric]_TEMPLATE

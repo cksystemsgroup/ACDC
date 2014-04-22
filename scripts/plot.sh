@@ -37,10 +37,18 @@ if [ ! -n "$MEMCONS_TEMPLATE" ]; then
 	fi
 fi
 
+if [ ! -n "$COMBINED_TEMPLATE" ]; then
+	COMBINED_TEMPLATE="plot_memcons.p"
+	if [ $YLOGSCALE_COMBINED -eq 1 ]; then
+		COMBINED_TEMPLATE="plot_combined_logscale.p"
+	fi
+fi
+
 CWD=`pwd`
 cp -n gnuplot_templates/$ALLOC_TEMPLATE $OUTPUT_DIR/plot_alloc.p
 cp -n gnuplot_templates/$FREE_TEMPLATE $OUTPUT_DIR/plot_free.p
 cp -n gnuplot_templates/$MEMCONS_TEMPLATE $OUTPUT_DIR/plot_memcons.p
+cp -n gnuplot_templates/$COMBINED_TEMPLATE $OUTPUT_DIR/plot_combined.p
 cp -n gnuplot_templates/common.inc.p $OUTPUT_DIR
 cp -n gnuplot_templates/Makefile $OUTPUT_DIR
 cd $OUTPUT_DIR
