@@ -192,7 +192,6 @@ static LSClass *allocate_optimal_fs_pool(MContext *mc, size_t sz, unsigned long 
 
 	return c;
 }
-*/
 
 static void deallocate_fs_pool(MContext *mc, LSClass *c) {
 
@@ -231,7 +230,6 @@ static void traverse_fs_pool(MContext *mc, LSClass *c) {
 	for (i = 0; i < c->num_objects; ++i) {
 		//check authorization on object
 		//SharedObject *so = ((SharedObject**)c->start)[i];
-		/*
                 if (so->reference_map & my_bit) {
 			int j;
 			assert(c->reference_map != 0);
@@ -239,7 +237,6 @@ static void traverse_fs_pool(MContext *mc, LSClass *c) {
 				write_object(so, c->object_size, sizeof(SharedObject));
 		}
 TODO(martin): fix per-object reference mapping
-                */
 	}
 }
 
@@ -258,7 +255,6 @@ static void traverse_optimal_fs_pool(MContext *mc, LSClass *c) {
 			//cache_lines_per_element * L1_LINE_SZ * i;
 		//SharedObject *so = (SharedObject*)next;
 	
-                /*
 		assert(c->reference_map != 0);
 		
 		if (so->reference_map & my_bit) {
@@ -268,10 +264,10 @@ static void traverse_optimal_fs_pool(MContext *mc, LSClass *c) {
 				write_object(so, c->object_size, sizeof(SharedObject));
 		}
 TODO(martin): fix per-object reference mapping
-                */
 
 	}
 }
+*/
 
 // list-based implementation of lifetime-size-classes  ------------
 static void traverse_list(MContext *mc, LSClass *c) {
@@ -473,7 +469,8 @@ LSClass *allocate_LSClass(MContext *mc, lifetime_size_class_type type, size_t sz
 	assert(sz < (BIT_ZERO << mc->gopts->max_object_sc));
 	assert(nelem > 0);
 
-	//LSClass *c;
+  mc->stat->bytes_allocated += sz * nelem;
+  mc->stat->objects_allocated += nelem;
 
 	switch (type) {
 		case LIST:
@@ -506,6 +503,9 @@ void deallocate_LSClass(MContext *mc, LSClass *c) {
 	assert(c->object_size < (BIT_ZERO << mc->gopts->max_object_sc));
 	assert(c->num_objects > 0);
 
+  mc->stat->bytes_deallocated += c->object_size * c->num_objects;
+  mc->stat->objects_deallocated += c->num_objects;
+
 	start = rdtsc();
 
 	switch (c->type) {
@@ -530,12 +530,12 @@ void deallocate_LSClass(MContext *mc, LSClass *c) {
 			mc->stat->deallocation_time += end - start;
 			return;
 		case FALSE_SHARING:
-			deallocate_fs_pool(mc, c);
+			//deallocate_fs_pool(mc, c);
 			end = rdtsc();
 			mc->stat->deallocation_time += end - start;
 			return;
 		case OPTIMAL_FALSE_SHARING:
-			deallocate_optimal_fs_pool(mc, c);
+			//deallocate_optimal_fs_pool(mc, c);
 			end = rdtsc();
 			mc->stat->deallocation_time += end - start;
 			return;
@@ -563,10 +563,10 @@ void traverse_LSClass(MContext *mc, LSClass *c) {
 			traverse_btree_preorder(mc, c);
 			return;
 		case FALSE_SHARING:
-			traverse_fs_pool(mc, c);
+			//traverse_fs_pool(mc, c);
 			return;
 		case OPTIMAL_FALSE_SHARING:
-			traverse_optimal_fs_pool(mc, c);
+			//traverse_optimal_fs_pool(mc, c);
 			return;
 		default:
 			printf("Traverse: Collection Type not supported\n");

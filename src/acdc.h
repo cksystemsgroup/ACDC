@@ -96,6 +96,7 @@ struct global_options {
   int verbosity; //-v
   char *allocator_name;
   int do_metadata_warmup;
+  int do_baseline_rss; //if 1, report acdc's memory baseline instead of RSS from OS
   pid_t pid;
 };
 

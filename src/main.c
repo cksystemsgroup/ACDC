@@ -76,6 +76,7 @@ static void set_default_params(GOptions *gopts) {
 	gopts->verbosity = 0;
 	gopts->allocator_name = "UNDEFINED";
         gopts->do_metadata_warmup = 0;
+        gopts->do_baseline_rss = 0;
 }
 
 /* 
@@ -214,6 +215,7 @@ void set_allocation_pointers(GOptions *gopts) {
         if (strncmp(gopts->allocator_name, "nulloc", strlen("nulloc")) == 0) {
                 acdc_alloc = nulloc_alloc;
                 acdc_free = nulloc_free;
+                gopts->do_baseline_rss = 1;
         }
 }
 

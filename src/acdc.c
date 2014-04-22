@@ -237,7 +237,14 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 static void get_and_print_memstats(MContext *mc) {
 
 	update_proc_status(mc->gopts->pid);
-	mc->stat->current_rss = get_resident_set_size();
+        if (mc->gopts->do_baseline_rss == 1) {
+                //ACDC's memory demand
+                mc->stat->current_rss = (mc->stat->bytes_allocated - 
+                                         mc->stat->bytes_deallocated) / 1024;
+        } else {
+                //allocator's memory demand
+	        mc->stat->current_rss = get_resident_set_size();
+        }
 	
 	//warmup phase: start memory measurements after max-liveness
 	//units of time

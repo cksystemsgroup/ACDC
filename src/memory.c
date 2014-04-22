@@ -29,13 +29,10 @@ Object *allocate(MContext *mc, size_t size) {
 	//set header information
 	Object *o = (Object*)ptr;
 
-	//update mutator stats
-	mc->stat->bytes_allocated += size;
-	mc->stat->objects_allocated++;
-
 	return o;
 }
 
+/*
 Object *allocate_aligned(MContext *mc, size_t size, size_t alignment) {
 
 	Object *o = allocate(mc, size + alignment + sizeof(Object*));
@@ -51,13 +48,9 @@ void deallocate_aligned(MContext *mc, Object *o, size_t size, size_t alignment) 
 
 	deallocate(mc, ((void**)o)[-1], size + alignment + sizeof(Object*));
 }
+*/
 
 void deallocate(MContext *mc, Object *o, size_t size) {
-
-	//update mutator stats
-	mc->stat->bytes_deallocated += size;
-	mc->stat->objects_deallocated++;
-
 	acdc_free(o);
 }
 
