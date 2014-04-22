@@ -112,7 +112,7 @@ do
 				ACCESS_VALUE[$REP]=${RUNTIME_ARRAY[9]}
 				MEMCONS_VALUE[$REP]=${MEMSTAT_ARRAY[5]}
 			fi
-                        COMBINED_VALUE=$(echo "${ALLOC_VALUE[$REP]} + ${FREE_VALUE[$REP]}" | bc)
+                        COMBINED_VALUE[$REP]=$(echo "${ALLOC_VALUE[$REP]} + ${FREE_VALUE[$REP]}" | bc)
 
 			ALLOC_SUM=$(echo "$ALLOC_SUM + ${ALLOC_VALUE[$REP]}" | bc)
 			FREE_SUM=$(echo "$FREE_SUM + ${FREE_VALUE[$REP]}" | bc)
