@@ -13,6 +13,10 @@ ALLOCATORS="jemalloc llalloc ptmalloc2 tbbmalloc_proxy tcmalloc streamflow hoard
 # ACDC options that are fixed for all runs in this experiment definition
 OPTIONS="-a -d 5 -l 1 -L 1 -n 40 -N 100000 -C 100000 -H 1000000 -A"
 
+# TIMEOUT s
+# kills acdc after s seconds. Handy for loooooong-running allocators
+# Default is no timeout
+
 # FACTOR1
 # the changing factor depicted on the x axis
 FACTOR1="-s"
