@@ -21,7 +21,7 @@ plot "jemalloc-access.dat" using 1:($2/2000000000):($3/2000000000):xticlabel(1) 
 "streamflow-access.dat"    using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines lt 10 lw 3 title 'streamflow', \
 "hoard-access.dat"         using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines lt 11 lw 3 title 'hoard', \
 "scalloc-access.dat"       using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 9 lw 3 title 'scalloc', \
-"scalloc-eager-madvice-access.dat"       using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 10  title 'scalloc-eager-madvice', \
+"scalloc-eager-access.dat"       using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 10  title 'scalloc-eager-madvise', \
 "scalloc-core-local-access.dat"          using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 11  title 'scalloc-core-local', \
 "scalloc-eager-reuse-access.dat"         using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 12  title 'scalloc-eager-reuse', \
 "scalloc-static-assign-access.dat"       using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 13  title 'scalloc-static-assign', \

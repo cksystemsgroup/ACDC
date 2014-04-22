@@ -6,7 +6,7 @@
 ALLOCATORS="jemalloc llalloc scalloc-core-local scalloc-eager-reuse scalloc-eager scalloc-lazy-init scalloc-static"
 #ALLOCATORS="scalloc-core-local scalloc-eager-reuse scalloc-eager scalloc-lazy-init scalloc-static"
 #OPTIONS="-a -s 4 -S 20 -d 30 -l 1 -L 5 -t 10000000 -O -T 5 -R 5 -N 5000 -C 500 -H 5000"
-OPTIONS="-a -s 4 -S 14 -d 30 -l 1 -L 5 -t 5000000 -O -T 5 -R 5 -N 12000 -C 500 -H 7000"
+OPTIONS="-a -s 4 -S 14 -d 30 -l 1 -L 5 -t 1000000 -O -T 5 -R 5 -N 12000 -C 500 -H 7000"
 FACTOR1="-n"
 FACTOR1_VALUES="1 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192"
 FACTOR2=""
@@ -22,4 +22,5 @@ YLOGSCALE_ALLOC=1
 YLOGSCALE_ACCESS=1
 YLOGSCALE_FREE=1
 YLOGSCALE_MEMCONS=0
+YLOGSCALE_COMBINED=1
 

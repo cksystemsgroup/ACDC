@@ -38,7 +38,7 @@ if [ ! -n "$MEMCONS_TEMPLATE" ]; then
 fi
 
 if [ ! -n "$COMBINED_TEMPLATE" ]; then
-	COMBINED_TEMPLATE="plot_memcons.p"
+	COMBINED_TEMPLATE="plot_combined.p"
 	if [ $YLOGSCALE_COMBINED -eq 1 ]; then
 		COMBINED_TEMPLATE="plot_combined_logscale.p"
 	fi
