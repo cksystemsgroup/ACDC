@@ -65,13 +65,17 @@ void init_metadata_heap(GOptions *gopts) {
         metadata_heap_end = metadata_heap_start + (heapsize * (1UL<<20));
         metadata_heap_bump_pointer = metadata_heap_start;
 
-        printf("warming up %lu MB of metadata space\n", heapsize);
+        printf("warming up %lu MB of metadata space... ", heapsize);
         //make heap hot
         unsigned long i;
+        unsigned long inc = 4096;
+        if (gopts->use_hugepages) inc = HUGEPAGE_KB * 1024;
+
         volatile char *c = (char*)metadata_heap_start;
-        for (i = 1; i < heapsize * (1UL<<20); i = i + 4096) {
+        for (i = 1; i < heapsize * (1UL<<20); i = i + inc) {
                 c[i] = c[i-1];
         }
+        printf("Done!\n");
 }
 
 static void *get_chunk(size_t size) {

@@ -735,6 +735,7 @@ void run_acdc(GOptions *gopts) {
 	}
 
 	printf("\nTime is given in CPU cycles\n\n");
+	printf("\nSpace is given in KB\n\n");
 	printf("RESULTS\tallocator\tnum_threads\trunning_time\trunning_time_in_percent\tallocation_time\tallocation_time_in_percent\tdeallocation_time\tdeallocation_time_in_percent\taccess_time\taccess_time_in_percent\n");
 	printf("RUNTIME\t%s\t%d\t%llu\t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%% \t%llu \t%3.1f%%\n\n", 
 			gopts->allocator_name,
