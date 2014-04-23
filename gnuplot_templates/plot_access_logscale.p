@@ -1,3 +1,4 @@
+load "common.inc.p"
 unset title
 
 set terminal postscript eps color
