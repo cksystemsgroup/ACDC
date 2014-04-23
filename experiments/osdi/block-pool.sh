@@ -3,17 +3,21 @@
 # EXPERIMENT SETTINGS
 
 #name the allocators accordingly to their .so file in $ALLOCATOR_DIR
-ALLOCATORS="jemalloc llalloc scalloc-core-local scalloc-eager-reuse scalloc-eager scalloc-lazy-init scalloc-static"
-#ALLOCATORS="scalloc-core-local scalloc-eager-reuse scalloc-eager scalloc-lazy-init scalloc-static"
+#ALLOCATORS="jemalloc llalloc scalloc-core-local scalloc-eager-reuse scalloc-eager scalloc-lazy-init scalloc-static"
+ALLOCATORS="scalloc-core-local scalloc-eager-reuse scalloc-eager scalloc-lazy-init scalloc-static jemalloc llalloc hoard tcmalloc ptmalloc2 streamflow tbbmalloc_proxy"
+#ALLOCATORS="scalloc-core-local"
 #OPTIONS="-a -s 4 -S 20 -d 30 -l 1 -L 5 -t 10000000 -O -T 5 -R 5 -N 5000 -C 500 -H 5000"
-OPTIONS="-a -s 4 -S 14 -d 30 -l 1 -L 5 -t 1000000 -O -T 5 -R 5 -N 12000 -C 500 -H 7000"
+OPTIONS="-a -s 4 -S 14 -d 30 -l 1 -L 5 -t 1000000 -O -T 5 -R 5 -N 12000 -C 500 -H 14000"
 FACTOR1="-n"
-FACTOR1_VALUES="1 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192"
+FACTOR1_VALUES="1 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384"
+#FACTOR1_VALUES="16384"
 FACTOR2=""
 FACTOR2_VALUES=""
-REPS=2
+REPS=5
 #if RELATIVE is set to 1, the the response will be divided by the value for x
 RELATIVE=1
+
+TIMEOUT=1000
 
 # OUTPUT SETTINGS
 OUTPUT_DIR=`pwd`/data/block-pool
