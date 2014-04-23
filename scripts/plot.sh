@@ -46,6 +46,7 @@ fi
 
 CWD=`pwd`
 cp -n gnuplot_templates/$ALLOC_TEMPLATE $OUTPUT_DIR/plot_alloc.p
+cp -n gnuplot_templates/$ACCESS_TEMPLATE $OUTPUT_DIR/plot_access.p
 cp -n gnuplot_templates/$FREE_TEMPLATE $OUTPUT_DIR/plot_free.p
 cp -n gnuplot_templates/$MEMCONS_TEMPLATE $OUTPUT_DIR/plot_memcons.p
 cp -n gnuplot_templates/$COMBINED_TEMPLATE $OUTPUT_DIR/plot_combined.p
