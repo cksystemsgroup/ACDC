@@ -16,6 +16,8 @@
 
 #define BIT_ZERO 1UL
 
+#define HUGEPAGE_KB 2048
+
 // function pointers to allocate and deallocate dynamic memory.
 // ACDC uses these functions. By default, they will point to malloc and free,
 // respectively, but one can point them to some custom allocation routines
@@ -95,9 +97,9 @@ struct global_options {
   //misc options
   int verbosity; //-v
   char *allocator_name;
-  int do_metadata_warmup;
   int do_baseline_rss; //if 1, report acdc's memory baseline instead of RSS from OS
   pid_t pid;
+  int use_hugepages;
 };
 
 

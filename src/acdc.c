@@ -236,6 +236,9 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
  */
 static void get_and_print_memstats(MContext *mc) {
 
+        size_t d = get_dirty_hugepages(mc->gopts->pid);
+        d++;
+
 	update_proc_status(mc->gopts->pid);
         if (mc->gopts->do_baseline_rss == 1) {
                 //ACDC's memory demand
@@ -255,30 +258,20 @@ static void get_and_print_memstats(MContext *mc) {
 		mc->stat->rss_hwm = get_high_water_mark();
 	}
 
-	if (mc->gopts->do_metadata_warmup) {
-                if (mc->stat->current_rss < mc->gopts->metadata_heap_sz) {
-                        printf("FAULTY RSS SAMPLE: %ld\n", mc->stat->current_rss);
-                        return;
-                }
+        if (mc->stat->current_rss < mc->gopts->metadata_heap_sz) {
+                printf("FAULTY RSS SAMPLE: %ld\n", mc->stat->current_rss);
+                return;
         }
 	
 	if (mc->gopts->verbosity == 0) return;
         
-        if (mc->gopts->do_metadata_warmup) {
-                printf("MEMSTATS\t%s\t%3u\t%4u\t%12lu\n",
-                                mc->gopts->allocator_name,
-                                mc->thread_id,
-                                mc->time,
-                                mc->stat->current_rss - mc->gopts->metadata_heap_sz
-                      );
-        } else {
-	        printf("MEMSTATS\t%s\t%3u\t%4u\t%12lu\n",
-			mc->gopts->allocator_name,
-			mc->thread_id,
-			mc->time,
-			mc->stat->current_rss
-	      );
-        }
+        printf("MEMSTATS\t%s\t%3u\t%4u\t%12lu\n",
+                        mc->gopts->allocator_name,
+                        mc->thread_id,
+                        mc->time,
+                        mc->stat->current_rss - (mc->gopts->metadata_heap_sz * 1024)
+              );
+
 }
 
 /*
@@ -766,14 +759,9 @@ void run_acdc(GOptions *gopts) {
 
 	//update_proc_status(gopts->pid);
         size_t avg_rss = 0;
-        if (gopts->do_metadata_warmup) {
 	        avg_rss = (thread_results[thread_0_index]->stat->resident_set_size_counter / 
 			(gopts->benchmark_duration - 2 * gopts->max_liveness))
-		       	- gopts->metadata_heap_sz;	/* warmup*/
-        } else {
-	        avg_rss = (thread_results[thread_0_index]->stat->resident_set_size_counter / 
-			(gopts->benchmark_duration - 2 * gopts->max_liveness));
-        }
+		       	- (gopts->metadata_heap_sz * 1024);	/* warmup*/
 	printf("MEM-RESULTS\tallocator\tnum_threads\tVM_PEAK\tRSS_HWM\tRSS_AVG (after warmup)\n");
 	printf("MEMORY\t%s\t%d\t%ld\t%ld\t%ld\n\n",
 			gopts->allocator_name,

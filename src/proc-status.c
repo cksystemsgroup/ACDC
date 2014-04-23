@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "proc-status.h"
+#include "acdc.h"
 
 #ifdef __linux__
 
@@ -59,6 +60,47 @@ static long get_long_from_line(char *str, int index) {
 	return 0;
 }
 
+
+size_t get_dirty_hugepages(pid_t pid) {
+
+	char filename[50]; //more than enough for /proc/[pid]/numa_maps
+	snprintf(filename, 50, "/proc/%d/numa_maps", pid);
+	FILE *stream;
+	char buf[LINE_MAX] = {0};
+	size_t num_dirty = 0;
+
+	stream = fopen(filename, "r");
+	if (!stream) {
+		perror("fopen");
+		exit(EXIT_FAILURE);
+	}
+	
+        while (fgets(buf, LINE_MAX, stream)) {
+                char *r = strstr(buf, "anon_hugepage");
+                if (r != NULL) {
+	                char numbuf[LINE_MAX] = {0};
+                        char *numbufp = numbuf;
+
+                        r = strstr(buf, "dirty");
+                        r+=6;
+
+                        while (*r != ' ') {
+                                *numbufp = *r;
+                                numbufp++;
+                                r++;
+                        }
+                        num_dirty += atol(numbuf);
+                        //printf("And the number is: %lu\n", num_dirty);
+                }
+	}
+
+	if (fclose(stream)) {
+		perror("fclose");
+		exit(EXIT_FAILURE);
+	}
+        return num_dirty;
+}
+
 void update_proc_status(pid_t pid) {
 	
 	char filename[50]; //more than enough for /proc/[pid]/status
@@ -102,6 +144,11 @@ void update_proc_status(pid_t pid) {
 		perror("fclose");
 		exit(EXIT_FAILURE);
 	}
+
+        //take huge pages into account
+        size_t dirty_hugepages = get_dirty_hugepages(pid);
+        //printf("Adding %lu hugepages to RSS\n", dirty_hugepages);
+        stat.vm_rss += dirty_hugepages * HUGEPAGE_KB;
 }
 
 long get_vm_peak() {

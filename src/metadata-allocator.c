@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include <sys/mman.h>
 
+#include "acdc.h"
+
 //mmap osx hack
 #ifndef MAP_ANONYMOUS
 #define MAP_ANONYMOUS MAP_ANON
@@ -32,9 +34,10 @@ static void *align_address(void *ptr, size_t alignment) {
 	return (void*)addr;
 }
 
-void init_metadata_heap(size_t heapsize, int do_warmup) {
+void init_metadata_heap(GOptions *gopts) {
 	
         int mmap_flags = MAP_ANONYMOUS | MAP_PRIVATE | MAP_HUGETLB;
+        size_t heapsize = gopts->metadata_heap_sz;
 
         printf("fetching %lu MB of metadata space\n", heapsize);
         printf("trying to map %lu 2MB pages... ", heapsize/2);
@@ -53,6 +56,8 @@ void init_metadata_heap(size_t heapsize, int do_warmup) {
                         perror("mmap");
                         exit(errno);
                 }
+        } else {
+                gopts->use_hugepages = 1;
         }
         printf("OK\n");
 
@@ -60,14 +65,12 @@ void init_metadata_heap(size_t heapsize, int do_warmup) {
         metadata_heap_end = metadata_heap_start + (heapsize * (1UL<<20));
         metadata_heap_bump_pointer = metadata_heap_start;
 
-        if (do_warmup) {
-                printf("warming up %lu MB of metadata space\n", heapsize);
-                //make heap hot
-                unsigned long i;
-                volatile char *c = (char*)metadata_heap_start;
-                for (i = 1; i < heapsize * (1UL<<20); i = i + 4096) {
-                        c[i] = c[i-1];
-                }
+        printf("warming up %lu MB of metadata space\n", heapsize);
+        //make heap hot
+        unsigned long i;
+        volatile char *c = (char*)metadata_heap_start;
+        for (i = 1; i < heapsize * (1UL<<20); i = i + 4096) {
+                c[i] = c[i-1];
         }
 }
 

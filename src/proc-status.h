@@ -11,6 +11,7 @@
 
 #include <sys/types.h>
 
+size_t get_dirty_hugepages(pid_t pid);
 void update_proc_status(pid_t pid);
 long get_vm_peak();
 long get_vm_size();

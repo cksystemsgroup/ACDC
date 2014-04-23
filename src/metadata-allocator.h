@@ -9,9 +9,10 @@
 #define METADATA_ALLOCATOR_H
 
 #include <stdlib.h>
+#include "acdc.h"
 
 // heapsize is given in MB
-void init_metadata_heap(size_t heapsize, int do_warmup);
+void init_metadata_heap(GOptions *gopts);
 void *malloc_meta(size_t size);
 void *calloc_meta(size_t nelem, size_t size);
 void *malloc_meta_aligned(size_t size, size_t alignment);

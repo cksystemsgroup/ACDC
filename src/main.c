@@ -75,8 +75,8 @@ static void set_default_params(GOptions *gopts) {
 	gopts->access_live_objects = 0;
 	gopts->verbosity = 0;
 	gopts->allocator_name = "UNDEFINED";
-        gopts->do_metadata_warmup = 0;
-        gopts->do_baseline_rss = 0;
+  gopts->do_baseline_rss = 0;
+  gopts->use_hugepages = 0;
 }
 
 /* 
@@ -243,7 +243,6 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->shared_objects_ratio = %d\n", gopts->shared_objects_ratio);
 	printf("gopts->receiving_threads_ratio = %d\n", gopts->receiving_threads_ratio);
 	printf("gopts->allocator_name = %s\n", gopts->allocator_name);
-	printf("gopts->do_metadata_warmup = %d\n", gopts->do_metadata_warmup);
 	printf("gopts->verbosity = %d\n", gopts->verbosity);
 }
 
@@ -254,7 +253,7 @@ int main(int argc, char **argv) {
 	gopts.pid = getpid();
 
 	set_default_params(&gopts);
-	const char *optString = "afn:t:d:r:H:l:L:D:g:s:S:F:N:C:OR:T:q:i:w:AP:Wvh";
+	const char *optString = "afn:t:d:r:H:l:L:D:g:s:S:F:N:C:OR:T:q:i:w:AP:vh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
@@ -328,9 +327,6 @@ int main(int argc, char **argv) {
 			case 'A':
 				gopts.access_live_objects = 1;
 				break;
-			case 'W':
-				gopts.do_metadata_warmup = 1;
-				break;
 			case 'P':
 				gopts.allocator_name = optarg;
 				break;
@@ -353,7 +349,7 @@ int main(int argc, char **argv) {
 
 	print_params(&gopts);
 
-	init_metadata_heap(gopts.metadata_heap_sz, gopts.do_metadata_warmup);
+	init_metadata_heap(&gopts);
 
 	run_acdc(&gopts);
 
