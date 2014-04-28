@@ -769,11 +769,14 @@ void run_acdc(GOptions *gopts) {
 
 	printf("WALLCLOCK [ms]\t%lu\n\n", time_in_ms);
 
-	//update_proc_status(gopts->pid);
         size_t avg_rss = 0;
 	        avg_rss = (thread_results[thread_0_index]->stat->resident_set_size_counter / 
-			(gopts->benchmark_duration - 2 * gopts->max_liveness))
-		       	- (gopts->metadata_heap_sz * 1024);	/* warmup*/
+			(gopts->benchmark_duration - 2 * gopts->max_liveness));
+        if (gopts->do_baseline_rss == 0) {
+                // exclude metadata heap.
+	       	avg_rss -= (gopts->metadata_heap_sz * 1024);
+        }
+
         //TODO: VM_PEAK and RSS_HWM are no longer supported. The output is just set to 0
         // to not change the output format.
 	printf("MEM-RESULTS\tallocator\tnum_threads\tVM_PEAK\tRSS_HWM\tRSS_AVG (after warmup)\n");
