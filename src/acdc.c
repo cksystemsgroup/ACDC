@@ -29,6 +29,8 @@ static volatile spin_barrier_t false_sharing_barrier;
 static pthread_barrier_t acdc_barrier;
 static pthread_mutex_t debug_lock = PTHREAD_MUTEX_INITIALIZER;
 
+MContext **thread_data;
+
 static void unreference_and_deallocate_LSClass(MContext *mc, LSClass *c);
 
 void _debug(MContext *mc, char *filename, int linenum, const char *format, ...) {
@@ -239,13 +241,23 @@ static void get_and_print_memstats(MContext *mc) {
         size_t d = get_dirty_hugepages(mc->gopts->pid);
         d++;
 
-	update_proc_status(mc->gopts->pid);
+        // we sample the memory consumption even during the warmup phase but do
+        // not report it to keep ACDC's behaviour constant
         if (mc->gopts->do_baseline_rss == 1) {
-                //ACDC's memory demand
-                mc->stat->current_rss = (mc->stat->bytes_allocated - 
-                                         mc->stat->bytes_deallocated) / 1024;
+                //ACDC's memory demand. iterate over mc->stat for all threads
+                int i;
+                uint64_t total_bytes_allocated = 0;
+                uint64_t total_bytes_deallocated = 0;
+                for (i = 0; i < mc->gopts->num_threads; ++i) {
+                        MContext *ithContext = thread_data[i];
+                        total_bytes_allocated   += ithContext->stat->bytes_allocated;
+                        total_bytes_deallocated += ithContext->stat->bytes_deallocated;
+                }
+                mc->stat->current_rss = (total_bytes_allocated - 
+                                         total_bytes_deallocated) / 1024;
         } else {
                 //allocator's memory demand
+	        update_proc_status(mc->gopts->pid);
 	        mc->stat->current_rss = get_resident_set_size();
         }
 	
@@ -254,8 +266,6 @@ static void get_and_print_memstats(MContext *mc) {
 	if (mc->time >= 2 * mc->gopts->max_liveness) {
 		mc->stat->resident_set_size_counter +=
 			mc->stat->current_rss;
-		mc->stat->vm_peak = get_vm_peak();
-		mc->stat->rss_hwm = get_high_water_mark();
 	}
 
         if (mc->stat->current_rss < mc->gopts->metadata_heap_sz) {
@@ -628,7 +638,8 @@ void run_acdc(GOptions *gopts) {
 	int i, r;
 	struct timeval start, end, elapsed;
 	pthread_t *threads = malloc_meta(sizeof(pthread_t) * gopts->num_threads);
-	MContext **thread_data = malloc_meta(sizeof(MContext*) * gopts->num_threads);
+	//MContext **thread_data = malloc_meta(sizeof(MContext*) * gopts->num_threads);
+	thread_data = malloc_meta(sizeof(MContext*) * gopts->num_threads);
 	MContext **thread_results = malloc_meta(sizeof(MContext*) * gopts->num_threads);
 	int thread_0_index = 0;
 
@@ -763,17 +774,17 @@ void run_acdc(GOptions *gopts) {
 	        avg_rss = (thread_results[thread_0_index]->stat->resident_set_size_counter / 
 			(gopts->benchmark_duration - 2 * gopts->max_liveness))
 		       	- (gopts->metadata_heap_sz * 1024);	/* warmup*/
+        //TODO: VM_PEAK and RSS_HWM are no longer supported. The output is just set to 0
+        // to not change the output format.
 	printf("MEM-RESULTS\tallocator\tnum_threads\tVM_PEAK\tRSS_HWM\tRSS_AVG (after warmup)\n");
 	printf("MEMORY\t%s\t%d\t%ld\t%ld\t%ld\n\n",
 			gopts->allocator_name,
 			gopts->num_threads,
-			thread_results[thread_0_index]->stat->vm_peak, 
-			thread_results[thread_0_index]->stat->rss_hwm,
+			0, 
+			0,
                         avg_rss
 			);
 
-
-	//TODO: free mutator context. Benchmark terminates anyways
 	for (i = 0; i < gopts->num_threads; ++i) {
 		//destroy_mutator_context(thread_results[i]);
 		pthread_mutex_destroy(&shared_heap_classes_locks[i]);

@@ -115,8 +115,6 @@ struct mutator_stat {
   unsigned long objects_deallocated;
   unsigned long *lt_histogram;
   unsigned long *sz_histogram;
-  long vm_peak;
-  long rss_hwm;
   long current_rss;
   long resident_set_size_counter;
 };

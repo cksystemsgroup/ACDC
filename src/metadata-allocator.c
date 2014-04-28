@@ -16,6 +16,7 @@
 //mmap osx hack
 #ifndef MAP_ANONYMOUS
 #define MAP_ANONYMOUS MAP_ANON
+#define MAP_HUGETLB 0;
 #endif // MAP_ANONYMOUS
 
 static void *metadata_heap_start;

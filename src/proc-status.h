@@ -13,10 +13,8 @@
 
 size_t get_dirty_hugepages(pid_t pid);
 void update_proc_status(pid_t pid);
-long get_vm_peak();
 long get_vm_size();
 long get_resident_set_size();
-long get_high_water_mark();
 long get_data_segment_size();
 
 #endif

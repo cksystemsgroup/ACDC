@@ -24,9 +24,7 @@
 #endif
 
 struct proc_status {
-        long vm_peak;
         long vm_size;
-        long vm_hwm;
         long vm_rss;
         long vm_data;
 };
@@ -123,14 +121,8 @@ void update_proc_status(pid_t pid) {
 	stat.vm_size = 0;
 
 	while (fgets(buf, LINE_MAX, stream)) {
-		if (strncmp(buf, "VmPeak", 6) == 0) {
-			stat.vm_peak = get_long_from_line(buf, 1);
-		}
 		if (strncmp(buf, "VmSize", 6) == 0) {
 			stat.vm_size = get_long_from_line(buf, 1);
-		}
-		if (strncmp(buf, "VmHWM", 5) == 0) {
-			stat.vm_hwm = get_long_from_line(buf, 1);
 		}
 		if (strncmp(buf, "VmRSS", 5) == 0) {
 			stat.vm_rss = get_long_from_line(buf, 1);
@@ -151,17 +143,12 @@ void update_proc_status(pid_t pid) {
         stat.vm_rss += dirty_hugepages * HUGEPAGE_KB;
 }
 
-long get_vm_peak() {
-	return stat.vm_peak;
-}
+
 long get_vm_size() {
 	return stat.vm_size;
 }
 long get_resident_set_size() {
 	return stat.vm_rss;
-}
-long get_high_water_mark() {
-	return stat.vm_hwm;
 }
 long get_data_segment_size() {
 	return stat.vm_data;
@@ -193,6 +180,10 @@ void update_proc_status(pid_t pid) {
         _rss = ti.resident_size / 1024;
 
 
+}
+
+size_t get_dirty_hugepages(pid_t pid) {
+        return 0;
 }
 
 long get_vm_peak() {
