@@ -115,8 +115,6 @@ void update_proc_status(pid_t pid) {
 
 	//reset
 	stat.vm_data = 0;
-	stat.vm_hwm = 0;
-	stat.vm_peak = 0;
 	stat.vm_rss = 0;
 	stat.vm_size = 0;
 

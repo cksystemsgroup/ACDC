@@ -777,11 +777,9 @@ void run_acdc(GOptions *gopts) {
         //TODO: VM_PEAK and RSS_HWM are no longer supported. The output is just set to 0
         // to not change the output format.
 	printf("MEM-RESULTS\tallocator\tnum_threads\tVM_PEAK\tRSS_HWM\tRSS_AVG (after warmup)\n");
-	printf("MEMORY\t%s\t%d\t%ld\t%ld\t%ld\n\n",
+	printf("MEMORY\t%s\t%d\t0\t0\t%ld\n\n",
 			gopts->allocator_name,
 			gopts->num_threads,
-			0, 
-			0,
                         avg_rss
 			);
 
