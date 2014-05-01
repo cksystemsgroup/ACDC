@@ -77,6 +77,7 @@ static void set_default_params(GOptions *gopts) {
 	gopts->allocator_name = "UNDEFINED";
   gopts->do_baseline_rss = 0;
   gopts->use_hugepages = 0;
+  gopts->use_compact_allocation = 0;
 }
 
 /* 
@@ -216,6 +217,9 @@ void set_allocation_pointers(GOptions *gopts) {
                 acdc_alloc = nulloc_alloc;
                 acdc_free = nulloc_free;
                 gopts->do_baseline_rss = 1;
+        }        
+        if (strncmp(gopts->allocator_name, "compact", strlen("compact")) == 0) {
+                gopts->use_compact_allocation = 1;
         }
 }
 

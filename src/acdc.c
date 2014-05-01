@@ -564,10 +564,10 @@ static void *acdc_thread(void *ptr) {
 		mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
 
 
-#ifdef OPTIMAL_MODE
-		if (tp == LIST) tp = OPTIMAL_LIST;
-		if (tp == BTREE) tp = OPTIMAL_BTREE;
-#endif
+                if (mc->gopts->use_compact_allocation) {
+		        if (tp == LIST) tp = OPTIMAL_LIST;
+		        if (tp == BTREE) tp = OPTIMAL_BTREE;
+                }
 					
 		allocation_start = rdtsc();
 		LSClass *c = 

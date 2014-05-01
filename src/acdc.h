@@ -100,6 +100,7 @@ struct global_options {
   int do_baseline_rss; //if 1, report acdc's memory baseline instead of RSS from OS
   pid_t pid;
   int use_hugepages;
+  int use_compact_allocation; // this used to be OPTIMAL_MODE
 };
 
 
