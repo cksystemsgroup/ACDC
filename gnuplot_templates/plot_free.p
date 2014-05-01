@@ -32,4 +32,5 @@ plot \
 "scalloc-lazy-init-free.dat"           using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 14  title 'scalloc-lazy-init', \
 "scalloc-hugepage-free.dat"            using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 15  title 'scalloc-hugepage', \
 "scalloc-free.dat"       using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 9 title 'scalloc-cl' \
+"scalloc-active-threads-free.dat"       using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 16 title 'scalloc-active-threads' \
 ;

@@ -13,4 +13,5 @@ set style line 12 lt 2 pt 4 lw 5              # scalloc-eager-reuse
 set style line 13 lt 4 pt 3 lw 5              # scalloc-static-assign
 set style line 14 lt 5 pt 3 lw 5              # scalloc-lazy-init
 set style line 15 lt 6 pt 5 lw 5              # scalloc-hugepage
+set style line 16 lt 7 pt 5 lw 5              # scalloc-active-threads
 

@@ -31,6 +31,6 @@ plot \
 "scalloc-static-combined.dat"       using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 13  title 'scalloc-static-assign', \
 "scalloc-lazy-init-combined.dat"           using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 14  title 'scalloc-lazy-init', \
 "scalloc-hugepage-combined.dat"            using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 15  title 'scalloc-hugepage', \
-"scalloc-combined.dat"       using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 9 title 'scalloc-cl' \
+"scalloc-active-threads-combined.dat"       using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 16 title 'scalloc-active-threads' \
 ;
 
