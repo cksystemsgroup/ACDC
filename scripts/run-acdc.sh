@@ -93,7 +93,7 @@ do
 			
 			#ptmalloc2 and baseline allocators require no LD_PRELOAD. everything else does
 			unset LD_PRELOAD
-			if [ $ALLOCATOR != "ptmalloc2" -a $ALLOCATOR != "static" -a $ALLOCATOR != "nulloc" ]; then
+			if [ $ALLOCATOR != "ptmalloc2" -a $ALLOCATOR != "compact" -a $ALLOCATOR != "nulloc" ]; then
 				export LD_PRELOAD=$ALLOCATOR_DIR/lib$ALLOCATOR.so
 			fi
 			#OUTPUT=$($ACDC -P $ALLOCATOR $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
