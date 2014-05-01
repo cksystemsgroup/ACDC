@@ -3,8 +3,14 @@
 # EXPERIMENT SETTINGS
 
 #name the allocators accordingly to their .so file
-#ALLOCATORS="jemalloc llalloc ptmalloc2 tbbmalloc_proxy tcmalloc streamflow hoard scalloc scalloc-eager static"
-ALLOCATORS="jemalloc llalloc scalloc-core-local scalloc-eager-reuse scalloc-eager scalloc-lazy-init scalloc-static"
+#SCALLOCS="scalloc-tlab scalloc-core-local-1mb scalloc-eager scalloc-lazy-init scalloc-static scalloc-core-local scalloc-eager-reuse"
+#SCALLOCS="scalloc-hugepage"
+
+#OTHERS="jemalloc llalloc hoard tcmalloc ptmalloc2 streamflow tbbmalloc_proxy static"
+#ALLOCATORS="$SCALLOCS $OTHERS"
+
+ALLOCATORS="scalloc-core-local-1mb"
+
 OPTIONS="-a -d 5 -l 1 -L 1 -n 40 -N 1000 -C 500 -H 100 -A"
 
 FACTOR1="-s"
@@ -17,17 +23,16 @@ FACTOR2_EXPRESSION="X + 2" # X will be replaced by factor1's value
 FACTOR3="-t"
 FACTOR3_EXPRESSION="2^X * 1024" # X will be replaced by factor1's value
 
-
-REPS=2
+REPS=5
 #if RELATIVE is set to 1, the the respoinse will be divided by the value for x
 RELATIVE=0
 
 # OUTPUT SETTINGS
-OUTPUT_DIR=`pwd`/data/virtual-spans
+OUTPUT_DIR=`pwd`/data/virtual-spans-paperready-BI8
 #overriding plot_templates for this experiment only
-ALLOC_TEMPLATE="plot_alloc_contention_objsz.p"
-ACCESS_TEMPLATE="plot_access_contention_objsz.p"
-FREE_TEMPLATE="plot_free_contention_objsz.p"
-MEMCONS_TEMPLATE="plot_memcons_contention_objsz.p"
+#ALLOC_TEMPLATE="plot_alloc_contention_objsz.p"
+#ACCESS_TEMPLATE="plot_access_contention_objsz.p"
+#FREE_TEMPLATE="plot_free_contention_objsz.p"
+#MEMCONS_TEMPLATE="plot_memcons_contention_objsz.p"
 
 
