@@ -6,6 +6,7 @@
 # Feel free to adapt this scipts to your needs
 
 ALL_ALLOCATORS="jemalloc llalloc ptmalloc3 tbb tcmalloc streamflow hoard scalloc"
+WD=`pwd`
 
 function install_allocator {
 	ALLOCATOR=$1
@@ -13,13 +14,13 @@ function install_allocator {
 	if [[ $ALLOCATOR == "jemalloc" ]]; then
 		# jemalloc
 		rm -rf jemalloc*
-		wget http://ftp.de.debian.org/debian/pool/main/j/jemalloc/jemalloc_3.5.1.orig.tar.bz2
-		tar -xvjf jemalloc_3.5.1.orig.tar.bz2
-		mv jemalloc-3.5.1 jemalloc
+		wget http://ftp.de.debian.org/debian/pool/main/j/jemalloc/jemalloc_3.6.0.orig.tar.bz2
+		tar -xvjf jemalloc_3.6.0.orig.tar.bz2
+		mv jemalloc-3.6.0 jemalloc
 		cd jemalloc
 		./autogen.sh
 		make -j 2
-		cd ..
+		cd $WD/allocators
 		ln -s jemalloc/lib/libjemalloc.so.1 libjemalloc.so.1
 		ln -s jemalloc/lib/libjemalloc.so.1 libjemalloc.so
 	fi
@@ -40,7 +41,7 @@ function install_allocator {
 		tar -xzf ptmalloc3-current.tar.gz
 		cd ptmalloc3/
 		make linux-shared OPT_FLAGS='-O2 -pthread'
-		cd ..
+		cd $WD/allocators
 		ln -s ptmalloc3/libptmalloc3.so libptmalloc3.so
 	fi
 	
@@ -70,7 +71,7 @@ function install_allocator {
 		cd streamflow/
 		sed -i '1s/^/#include <unistd.h>\n/' malloc_new.cpp
 		make
-		cd ..
+		cd $WD/allocators
 		ln -s streamflow/libstreamflow.so libstreamflow.so
 	fi
 	
@@ -78,49 +79,52 @@ function install_allocator {
 		#hoard
 		rm -rf Hoard
 		rm -rf libhoard*
-		git clone --recursive https://github.com/emeryberger/Hoard
+		git clone https://github.com/emeryberger/Hoard
 		cd Hoard
-		#git checkout 3.10
+		git checkout 604d959
+                git submodule init
+                git submodule update
 		cd src
 		make linux-gcc-x86-64
-		cd ../../
+		cd $WD/allocators
 		ln -s Hoard/src/libhoard.so libhoard.so
 	fi
 
 	if [[ $ALLOCATOR == "scalloc" ]]; then
 		#scalloc
-    if [ -f ../install_scalloc.sh ]; then 
-      ../install_scalloc.sh
-    else
-      rm -rf scalloc
-      git clone https://github.com/cksystemsgroup/scalloc.git
-      cd scalloc/
-		  git checkout release
-		  tools/make_deps.sh
+                if [ -f ../install_scalloc.sh ]; then 
+                        ../install_scalloc.sh
+                else
+                        rm -rf scalloc
+                        git clone https://github.com/cksystemsgroup/scalloc.git
+                        cd scalloc/
+		        git checkout release
+		        tools/make_deps.sh
 
-		  ./build/gyp/gyp --depth=. scalloc.gyp
-		  BUILDTYPE=Release make
-		  cp out/Release/lib.target/libscalloc.so out/Release/libscalloc.so
-      cd ..
-      rm -rf libscalloc*
-      ln -s scalloc/out/Release/libscalloc.so libscalloc.so
-      ln -s scalloc/out/Release/libscalloc.so libscalloc.so.0
-    fi
-	fi
+		        ./build/gyp/gyp --depth=. scalloc.gyp
+		        BUILDTYPE=Release make
+		        cp out/Release/lib.target/libscalloc.so out/Release/libscalloc.so
+                        cd $WD/allocators
+                        rm -rf libscalloc*
+                        ln -s scalloc/out/Release/libscalloc.so libscalloc.so
+                        ln -s scalloc/out/Release/libscalloc.so libscalloc.so.0
+                fi
+        fi
 }
 
 
-mkdir -p allocators
-cd allocators
+mkdir -p $WD/allocators
+cd $WD/allocators
 
 if [[ $# -ge 1 ]]; then
 	ALL_ALLOCATORS=$@
 fi
 
 for ARG in $ALL_ALLOCATORS; do
+        cd $WD/allocators
 	echo "Installing $ARG..."
 	install_allocator $ARG
 done
 
 #done
-cd ..
+cd $WD
