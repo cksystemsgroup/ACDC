@@ -31,5 +31,7 @@ plot \
 "scalloc-static-free.dat"       using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 13  title 'scalloc-static-assign', \
 "scalloc-lazy-init-free.dat"           using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 14  title 'scalloc-lazy-init', \
 "scalloc-hugepage-free.dat"            using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 15  title 'scalloc-hugepage', \
+"scalloc-tlab-free.dat"            using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 15  title 'scalloc-tlab', \
+"scalloc-hybrid-free.dat"            using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 16  title 'scalloc-hybrid', \
 "scalloc-free.dat"       using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 9 title 'scalloc-cl' \
 ;

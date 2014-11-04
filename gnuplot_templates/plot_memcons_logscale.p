@@ -31,6 +31,8 @@ plot \
 "scalloc-static-memcons.dat"       using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 13  title 'scalloc-static-assign', \
 "scalloc-lazy-init-memcons.dat"           using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 14  title 'scalloc-lazy-init', \
 "scalloc-hugepage-memcons.dat"            using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 15  title 'scalloc-hugepage', \
+"scalloc-tlab-memcons.dat"            using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 15  title 'scalloc-tlab', \
+"scalloc-hybrid-memcons.dat"            using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 16  title 'scalloc-hybrid', \
 "scalloc-memcons.dat"       using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 9 title 'scalloc-cl' \
 ;
 

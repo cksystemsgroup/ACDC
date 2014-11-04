@@ -30,7 +30,10 @@ plot \
 "scalloc-eager-reuse-combined.dat"         using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 12  title 'scalloc-eager-reuse', \
 "scalloc-static-combined.dat"       using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 13  title 'scalloc-static-assign', \
 "scalloc-lazy-init-combined.dat"           using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 14  title 'scalloc-lazy-init', \
+"scalloc-unopt-combined.dat"           using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 14  title 'scalloc-unopt', \
 "scalloc-hugepage-combined.dat"            using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 15  title 'scalloc-hugepage', \
+"scalloc-tlab-combined.dat"            using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 15  title 'scalloc-tlab', \
+"scalloc-hybrid-combined.dat"            using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 16  title 'scalloc-hybrid', \
 "scalloc-combined.dat"       using 1:($2/2000000000):($3/2000000000):xticlabel(1) with errorlines ls 9 title 'scalloc-cl' \
 ;
 
