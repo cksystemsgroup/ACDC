@@ -63,6 +63,20 @@ function install_allocator {
 		sudo apt-get install libtcmalloc-minimal4
 		ln -s /usr/lib/libtcmalloc_minimal.so.4 libtcmalloc.so
 	fi
+
+
+  if [[ $ALLOCATOR == "michael" ]]; then
+    sudo apt-get install libc6-dev-i386 gcc-multilib g++-multilib
+    # Re-implementation of Michael's allocator done by the Streamflow authors.
+    rm -rf michael*
+    rm -rf libmichael*
+    wget http://people.cs.vt.edu/~scschnei/streamflow/michael.tar.gz
+    tar -xzf michael.tar.gz
+    cd michael
+    make
+    cd $WD/allocators
+    ln -s michael/libmichael.so libmichael.so
+  fi
 	
 	if [[ $ALLOCATOR == "streamflow" ]]; then
 		#streamflow
