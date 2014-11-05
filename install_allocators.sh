@@ -49,24 +49,25 @@ function install_allocator {
 		# tbb
 		rm -rf tbb*
 		rm -rf libtbb*
-		wget https://www.threadingbuildingblocks.org/sites/default/files/software_releases/linux/tbb42_20131003oss_lin.tgz
-		tar -xzf tbb42_20131003oss_lin.tgz
-		ln -s tbb42_20131003oss/lib/intel64/gcc4.4/libtbbmalloc.so.2 libtbbmalloc.so.2
-		ln -s tbb42_20131003oss/lib/intel64/gcc4.4/libtbbmalloc.so.2 libtbbmalloc.so
-		ln -s tbb42_20131003oss/lib/intel64/gcc4.4/libtbbmalloc_proxy.so.2 libtbbmalloc_proxy.so.2
-		ln -s tbb42_20131003oss/lib/intel64/gcc4.4/libtbbmalloc_proxy.so.2 libtbbmalloc_proxy.so
+                wget https://www.threadingbuildingblocks.org/sites/default/files/software_releases/linux/tbb43_20140724oss_lin.tgz
+		tar -xzf tbb43_20140724oss_lin.tgz
+		ln -s tbb43_20140724oss/lib/intel64/gcc4.4/libtbbmalloc.so.2 libtbbmalloc.so.2
+		ln -s tbb43_20140724oss/lib/intel64/gcc4.4/libtbbmalloc.so.2 libtbbmalloc.so
+		ln -s tbb43_20140724oss/lib/intel64/gcc4.4/libtbbmalloc_proxy.so.2 libtbbmalloc_proxy.so.2
+		ln -s tbb43_20140724oss/lib/intel64/gcc4.4/libtbbmalloc_proxy.so.2 libtbbmalloc_proxy.so
 	fi
 	
 	if [[ $ALLOCATOR == "tcmalloc" ]]; then
 		# tcmalloc
-		sudo apt-get install libgoogle-perftools-dev
-		ln -s /usr/lib/libtcmalloc_minimal.so.0 libtcmalloc.so
+                rm -rf libtcmalloc*
+		sudo apt-get install libtcmalloc-minimal4
+		ln -s /usr/lib/libtcmalloc_minimal.so.4 libtcmalloc.so
 	fi
 	
 	if [[ $ALLOCATOR == "streamflow" ]]; then
 		#streamflow
 		sudo apt-get install libnuma-dev
-		rm -rf streamflow
+		rm -rf *streamflow*
 		git clone git://github.com/scotts/streamflow.git
 		cd streamflow/
 		sed -i '1s/^/#include <unistd.h>\n/' malloc_new.cpp
@@ -81,7 +82,7 @@ function install_allocator {
 		rm -rf libhoard*
 		git clone https://github.com/emeryberger/Hoard
 		cd Hoard
-		git checkout 604d959
+		#git checkout 604d959
                 git submodule init
                 git submodule update
 		cd src
