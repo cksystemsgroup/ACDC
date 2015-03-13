@@ -49,12 +49,12 @@ function install_allocator {
 		# tbb
 		rm -rf tbb*
 		rm -rf libtbb*
-                wget https://www.threadingbuildingblocks.org/sites/default/files/software_releases/linux/tbb43_20140724oss_lin.tgz
-		tar -xzf tbb43_20140724oss_lin.tgz
-		ln -s tbb43_20140724oss/lib/intel64/gcc4.4/libtbbmalloc.so.2 libtbbmalloc.so.2
-		ln -s tbb43_20140724oss/lib/intel64/gcc4.4/libtbbmalloc.so.2 libtbbmalloc.so
-		ln -s tbb43_20140724oss/lib/intel64/gcc4.4/libtbbmalloc_proxy.so.2 libtbbmalloc_proxy.so.2
-		ln -s tbb43_20140724oss/lib/intel64/gcc4.4/libtbbmalloc_proxy.so.2 libtbbmalloc_proxy.so
+                wget https://www.threadingbuildingblocks.org/sites/default/files/software_releases/linux/tbb43_20150209oss_lin.tgz
+		tar -xzf tbb43_20150209oss_lin.tgz
+		ln -s tbb43_20150209oss/lib/intel64/gcc4.4/libtbbmalloc.so.2 libtbbmalloc.so.2
+		ln -s tbb43_20150209oss/lib/intel64/gcc4.4/libtbbmalloc.so.2 libtbbmalloc.so
+		ln -s tbb43_20150209oss/lib/intel64/gcc4.4/libtbbmalloc_proxy.so.2 libtbbmalloc_proxy.so.2
+		ln -s tbb43_20150209oss/lib/intel64/gcc4.4/libtbbmalloc_proxy.so.2 libtbbmalloc_proxy.so
 	fi
 	
 	if [[ $ALLOCATOR == "tcmalloc" ]]; then
@@ -111,10 +111,11 @@ function install_allocator {
                         ../install_scalloc.sh
                 else
                         rm -rf scalloc
-                        git clone https://github.com/cksystemsgroup/scalloc.git
+                        git clone git@github.com:cksystemsgroup/scalloc-oopsla.git scalloc
+#                        git clone https://github.com/cksystemsgroup/scalloc.git
                         cd scalloc/
-		        git checkout release
-		        tools/make_deps.sh
+#		        git checkout release
+		        contrib/make_deps.sh
 
 		        ./build/gyp/gyp --depth=. scalloc.gyp
 		        BUILDTYPE=Release make
@@ -122,7 +123,9 @@ function install_allocator {
                         cd $WD/allocators
                         rm -rf libscalloc*
                         ln -s scalloc/out/Release/libscalloc.so libscalloc.so
+                        ln -s scalloc/out/Release/libscalloc.so libscalloc-tlab.so
                         ln -s scalloc/out/Release/libscalloc.so libscalloc.so.0
+                        ln -s scalloc/out/Release/libscalloc.so libscalloc-tlab.so.0
                 fi
         fi
 }
