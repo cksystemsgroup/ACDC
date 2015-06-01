@@ -1,3 +1,19 @@
 #!/bin/bash
 
-svn checkout --force http://gyp.googlecode.com/svn/trunk build/gyp --revision 1831
+echo "gyp... "
+echo ""
+
+if [[ -d build/gyp ]]; then
+  cd build/gyp
+  git pull
+else
+  mkdir -p build/gyp
+  git clone https://chromium.googlesource.com/external/gyp build/gyp
+fi
+
+if [ $? -eq 0 ]; then
+  echo ""
+  echo "gyp... done"
+else
+  exit $?
+fi
