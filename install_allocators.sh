@@ -110,22 +110,7 @@ function install_allocator {
                 if [ -f ../install_scalloc.sh ]; then 
                         ../install_scalloc.sh
                 else
-                        rm -rf scalloc
-                        git clone git@github.com:cksystemsgroup/scalloc-oopsla.git scalloc
-#                        git clone https://github.com/cksystemsgroup/scalloc.git
-                        cd scalloc/
-#		        git checkout release
-		        contrib/make_deps.sh
-
-		        ./build/gyp/gyp --depth=. scalloc.gyp
-		        BUILDTYPE=Release make
-		        cp out/Release/lib.target/libscalloc.so out/Release/libscalloc.so
-                        cd $WD/allocators
-                        rm -rf libscalloc*
-                        ln -s scalloc/out/Release/libscalloc.so libscalloc.so
-                        ln -s scalloc/out/Release/libscalloc.so libscalloc-tlab.so
-                        ln -s scalloc/out/Release/libscalloc.so libscalloc.so.0
-                        ln -s scalloc/out/Release/libscalloc.so libscalloc-tlab.so.0
+                        echo "Later..."
                 fi
         fi
 }
