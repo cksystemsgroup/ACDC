@@ -21,7 +21,7 @@ FACTOR1_VALUES="0 10 20 30 40 50 60 70 80 90 100"
 
 FACTOR2=""
 FACTOR2_VALUES=""
-REPS=2
+REPS=10
 #if RELATIVE is set to 1, the the response will be divided by the value for x
 RELATIVE=0
 
