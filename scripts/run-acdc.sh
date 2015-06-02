@@ -180,4 +180,4 @@ do
 	echo -e $COMBINED_OUTPUT >> $OUTPUT_DIR/$ALLOCATOR-combined.dat
 done #ALLOCATORS
 
-./scripts/plot.sh $1
+#./scripts/plot.sh $1
