@@ -12,17 +12,21 @@ echo "Running Experiment $1"
 
 source $1
 
+if [ ! -n "$ALLOCATOR_PATH" ]; then
+        ALLOCATOR_PATH=`pwd`/allocators
+fi
 
-ALLOCATOR_DIR=`pwd`/allocators
-ACDC=`pwd`/out/Release/acdc
+if [ ! -n "$ACDC" ]; then
+        ACDC=`pwd`/out/Release/acdc
+fi
 
-if [ ! -d $ALLOCATOR_DIR ]; then
+if [ ! -d $ALLOCATOR_PATH ]; then
 	echo "Cannot find directory containing the allocators"
 	echo "try ./install_allocators.sh and run scripts from ACDC root dir"
 	exit
 fi
 
-export LD_LIBRARY_PATH=$ALLOCATOR_DIR
+export LD_LIBRARY_PATH=$ALLOCATOR_PATH
 
 HEADLINE="#Created at: `date` on `hostname`"
 HEADLINE="$HEADLINE\n#Average on $REPS runs. ACDC Options: $OPTIONS"
@@ -94,7 +98,7 @@ do
 			#ptmalloc2 and baseline allocators require no LD_PRELOAD. everything else does
 			unset LD_PRELOAD
 			if [ $ALLOCATOR != "ptmalloc2" -a $ALLOCATOR != "compact" -a $ALLOCATOR != "nulloc" ]; then
-				export LD_PRELOAD=$ALLOCATOR_DIR/lib$ALLOCATOR.so
+				export LD_PRELOAD=$ALLOCATOR_PATH/lib$ALLOCATOR.so
 			fi
 			#OUTPUT=$($ACDC -P $ALLOCATOR $OPTIONS -r $REP $FACTOR1 $XVALUE $FACTOR2 $XVALUE2)
 
