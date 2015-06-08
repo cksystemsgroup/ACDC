@@ -25,9 +25,10 @@ plot \
 "streamflow-memcons.dat"    using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 6 title 'streamflow', \
 "hoard-memcons.dat"         using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 7 title 'hoard', \
 "nulloc-memcons.dat"         using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 9 title 'nulloc', \
-"scalloc-hlab-memcons.dat"       using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 10  title 'scalloc-hlab', \
+"scalloc-clab-memcons.dat"       using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 10  title 'scalloc-clab', \
 "scalloc-tlab-memcons.dat"       using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 11  title 'scalloc-tlab', \
 "scalloc-eager-memcons.dat"      using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 12  title 'scalloc-eager', \
-"scalloc-hugepage-memcons.dat"   using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 13  title 'scalloc-hugepage' \
+"scalloc-hugepage-memcons.dat"   using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 13  title 'scalloc-hugepage', \
+"michael-memcons.dat"   using 1:($2/1024):($3/1024):xticlabel(1) with errorlines ls 14  title 'michael' \
 ;
 

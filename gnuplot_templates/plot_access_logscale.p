@@ -1,6 +1,6 @@
+OUTDATED
 load "common.inc.p"
 unset title
-
 set terminal postscript eps color
 set output 'access.eps'
 
