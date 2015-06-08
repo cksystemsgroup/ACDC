@@ -114,6 +114,7 @@ function install_allocator {
                     rm -rf libscalloc.so
                     git clone https://github.com/cksystemsgroup/scalloc.git
                     cd scalloc
+                    git checkout release
                     tools/make_deps.sh
                     build/gyp/gyp --depth=. scalloc.gyp
                     BUILDTYPE=Release make
