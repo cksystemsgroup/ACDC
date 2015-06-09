@@ -107,21 +107,21 @@ function install_allocator {
 
 	if [[ $ALLOCATOR == "scalloc" ]]; then
 		#scalloc
-                if [ -f ../install_scalloc.sh ]; then 
-                        ../install_scalloc.sh
-                else
-                    rm -rf scalloc
-                    rm -rf libscalloc.so
-                    git clone https://github.com/cksystemsgroup/scalloc.git
-                    cd scalloc
-                    git checkout 0.9.0
-                    tools/make_deps.sh
-                    build/gyp/gyp --depth=. scalloc.gyp
-                    BUILDTYPE=Release make
-                    cd $WD/allocators
-                    ln -s scalloc/out/Release/lib.target/libscalloc.so libscalloc.so
-                fi
-        fi
+    if [ -f ../install_scalloc.sh ]; then
+      ../install_scalloc.sh
+    else
+      rm -rf scalloc
+      rm -rf libscalloc.so
+      git clone https://github.com/cksystemsgroup/scalloc.git
+      cd scalloc
+      git checkout 0.9.0
+      tools/make_deps.sh
+      build/gyp/gyp --depth=. scalloc.gyp
+      BUILDTYPE=Release make
+      cd $WD/allocators
+      ln -s scalloc/out/Release/lib.target/libscalloc.so libscalloc.so
+  fi
+fi
 }
 
 
