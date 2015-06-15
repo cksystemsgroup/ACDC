@@ -65,18 +65,18 @@ function install_allocator {
 	fi
 
 
-  if [[ $ALLOCATOR == "michael" ]]; then
-    sudo apt-get install libc6-dev-i386 gcc-multilib g++-multilib
-    # Re-implementation of Michael's allocator done by the Streamflow authors.
-    rm -rf michael*
-    rm -rf libmichael*
-    wget http://people.cs.vt.edu/~scschnei/streamflow/michael.tar.gz
-    tar -xzf michael.tar.gz
-    cd michael
-    make
-    cd $WD/allocators
-    ln -s michael/libmichael.so libmichael.so
-  fi
+        if [[ $ALLOCATOR == "michael" ]]; then
+                sudo apt-get install libc6-dev-i386 gcc-multilib g++-multilib
+                # Re-implementation of Michael's allocator done by the Streamflow authors.
+                rm -rf michael*
+                rm -rf libmichael*
+                wget http://people.cs.vt.edu/~scschnei/streamflow/michael.tar.gz
+                tar -xzf michael.tar.gz
+                cd michael
+                make
+                cd $WD/allocators
+                ln -s michael/libmichael.so libmichael.so
+        fi
 	
 	if [[ $ALLOCATOR == "streamflow" ]]; then
 		#streamflow
@@ -105,23 +105,37 @@ function install_allocator {
 		ln -s Hoard/src/libhoard.so libhoard.so
 	fi
 
+	if [[ $ALLOCATOR == "supermalloc" ]]; then
+		#hoard
+		rm -rf SuperMalloc
+		rm -rf libsupermalloc*
+
+                git clone https://github.com/kuszmaul/SuperMalloc.git
+
+		cd SuperMalloc/release
+                make
+		cd $WD/allocators
+		ln -s SuperMalloc/release/lib/libsupermalloc_pthread.so libsupermalloc.so
+	fi
+
+
 	if [[ $ALLOCATOR == "scalloc" ]]; then
 		#scalloc
-    if [ -f ../install_scalloc.sh ]; then
-      ../install_scalloc.sh
-    else
-      rm -rf scalloc
-      rm -rf libscalloc.so
-      git clone https://github.com/cksystemsgroup/scalloc.git
-      cd scalloc
-      git checkout 0.9.0
-      tools/make_deps.sh
-      build/gyp/gyp --depth=. scalloc.gyp
-      BUILDTYPE=Release make
-      cd $WD/allocators
-      ln -s scalloc/out/Release/lib.target/libscalloc.so libscalloc.so
-  fi
-fi
+            if [ -f ../install_scalloc.sh ]; then
+                    ../install_scalloc.sh
+            else
+                  rm -rf scalloc
+                  rm -rf libscalloc.so
+                  git clone https://github.com/cksystemsgroup/scalloc.git
+                  cd scalloc
+                  git checkout 0.9.0
+                  tools/make_deps.sh
+                  build/gyp/gyp --depth=. scalloc.gyp
+                  BUILDTYPE=Release make
+                  cd $WD/allocators
+                  ln -s scalloc/out/Release/lib.target/libscalloc.so libscalloc.so
+            fi
+        fi
 }
 
 
