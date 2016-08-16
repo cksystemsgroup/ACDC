@@ -228,7 +228,10 @@ static MContext *create_mutator_context(GOptions *gopts, unsigned int thread_id)
 	mc->class_cache.first = NULL;
 	mc->class_cache.last = NULL;
 
-        mc->thread_id_buffer = calloc_meta(gopts->num_threads, sizeof(int));
+  mc->thread_id_buffer = calloc_meta(gopts->num_threads, sizeof(int));
+
+  // Mario-localizer: Allocate localizer context pointer
+  mc->localizer_ctx = malloc_meta(sizeof(LocalizerContext));
 
 	return mc;
 }
@@ -551,6 +554,11 @@ static void *acdc_thread(void *ptr) {
 			num_objects = mc->gopts->fixed_number_of_objects;
 			sz = 1UL << mc->gopts->min_object_sc;
 			liveness = mc->gopts->min_liveness;
+		}
+
+		// Mario-localizer: Initialize localizer context if required
+		if (mc->gopts->localizer) {
+			localizer_init(mc->localizer_ctx, num_objects, (size_t) mc->gopts->max_object_sc);		
 		}
 
 		//check if collections can be built with sz

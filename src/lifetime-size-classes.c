@@ -16,6 +16,7 @@
 #include "acdc.h"
 #include "arch.h"
 #include "caches.h"
+#include "localizer.h"
 
 static inline void write_object(Object *o, size_t size, size_t offset) {
 	int i;
@@ -27,6 +28,31 @@ static inline void write_object(Object *o, size_t size, size_t offset) {
 		payload[i] = payload[i-1] + 1;
 	}
 }
+
+// Mario-localizer: access localizer payload of an object
+static inline void access_payload_localizer(LocalizerContext *lctx, LocalizerVMemRange *range) {
+	int i;
+	for(i = range->start; i < range->end; i++) {
+		localizer_write(lctx, i, 
+			localizer_read(lctx, i) + 1);
+	}
+}
+
+// Mario-localizer: access list object
+static inline void access_list_object(MContext *mc, LObject *lo, size_t size) {
+	if(mc->gopts->localizer) {
+		access_payload_localizer(mc->localizer_ctx, &lo->localizer_range);
+	}
+	write_object((Object*)lo, size, sizeof(LObject));
+}
+
+// // Mario-localizer: access binary tree object
+// static inline void access_btree_object(MContext *mc, BTObject *bto, size_t size) {
+// 	if(mc->gopts->localizer) {
+// 		access_payload_localizer(mc->localizer_ctx, &bto->localizer_range);
+// 	}
+// 	write_object((Object*)bto, size, sizeof(BTObject));
+// }
 
 static LSClass *get_LSClass(MContext *mc) {
 	LSCNode *node = mc->class_cache.first;
@@ -281,9 +307,12 @@ static void traverse_list(MContext *mc, LSClass *c) {
 	while (list != NULL) {
 		int i;
 		if (write_ith_element(mc, access_counter++))
-			for (i = 0; i < mc->gopts->write_iterations; ++i)
-				write_object((Object*)list, 
-						c->object_size, sizeof(LObject));
+			for (i = 0; i < mc->gopts->write_iterations; ++i) {
+				// Mario-localizer: use new method to access objects
+				access_list_object(mc, list, c->object_size);
+				// write_object((Object*)list, 
+				// 		c->object_size, sizeof(LObject));
+			}
 		list = list->next;
 	}
 }
@@ -320,11 +349,17 @@ static LSClass *allocate_list(MContext *mc, size_t sz, unsigned long nelem) {
 		printf("Unable to allocate list. Min. object size too small.\n");
 		exit(EXIT_FAILURE);
 	}
-	
+
 	LSClass *list = new_LSClass(mc, LIST, sz, nelem);
 
 	list->start = allocate(mc, sz);
 	LObject *tmp = (LObject*)list->start;
+  
+  // Mario-localizer: allocate localizer memory
+  printf("allocate list: size=%zu\n", sz);
+  if(mc->gopts->localizer)
+  	localizer_alloc(mc->localizer_ctx, &tmp->localizer_range, sz);
+
 
 	int i;
 	for (i = 1; i < nelem; ++i) {

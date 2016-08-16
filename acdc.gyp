@@ -40,6 +40,7 @@
                 'src/main.c',
                 'src/proc-status.c',
                 'src/alloc/nulloc.c',
+                'src/localizer.c',
             ],
 
         }

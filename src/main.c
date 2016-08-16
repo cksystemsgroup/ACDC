@@ -45,6 +45,7 @@ static void print_usage() {
 			"-C: class buffer size in number of nodes\n"
 			"-P: allocator name (P)rinted at the summary\n"
 			"-W: warmup metadata space and exclude it from the memory results\n"
+			"-M (run ACDC with Localizer)\n"	// Mario-localizer: print localizer flag
 			);
 	exit(EXIT_FAILURE);
 }
@@ -78,6 +79,7 @@ static void set_default_params(GOptions *gopts) {
   gopts->do_baseline_rss = 0;
   gopts->use_hugepages = 0;
   gopts->use_compact_allocation = 0;
+	gopts->localizer = 0;	// Mario-localizer: default disables
 }
 
 /* 
@@ -248,6 +250,7 @@ static void print_params(GOptions *gopts) {
 	printf("gopts->receiving_threads_ratio = %d\n", gopts->receiving_threads_ratio);
 	printf("gopts->allocator_name = %s\n", gopts->allocator_name);
 	printf("gopts->verbosity = %d\n", gopts->verbosity);
+	printf("gopts->localizer = %d\n", gopts->localizer);	// Mario-localizer: print current setting
 }
 
 int main(int argc, char **argv) {
@@ -257,7 +260,7 @@ int main(int argc, char **argv) {
 	gopts.pid = getpid();
 
 	set_default_params(&gopts);
-	const char *optString = "afn:t:d:r:H:l:L:D:g:s:S:F:N:C:OR:T:q:i:w:AP:vh";
+	const char *optString = "afn:t:d:r:H:l:L:D:g:s:S:F:N:C:OR:T:q:i:w:AP:vMh";
 
 	int opt = getopt(argc, argv, optString);
 	while (opt != -1) {
@@ -337,6 +340,10 @@ int main(int argc, char **argv) {
 			case 'v':
 				gopts.verbosity++;
 				break;
+			case 'M':
+				// Mario-localizer: initialize localizer settings
+				gopts.localizer = 1;
+  			break;
 			case 'h':
 				print_usage(); //and exit
 				break;
@@ -348,12 +355,15 @@ int main(int argc, char **argv) {
 	}
 
 	check_params(&gopts); //and exit on error
-
-        set_allocation_pointers(&gopts);
+  
+  set_allocation_pointers(&gopts);
 
 	print_params(&gopts);
 
 	init_metadata_heap(&gopts);
+
+	printf("main: run_acdc\n");
+	
 
 	run_acdc(&gopts);
 

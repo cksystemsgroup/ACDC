@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include "arch.h"
+#include "localizer.h"
 
 #define BIT_ZERO 1UL
 
@@ -101,6 +102,9 @@ struct global_options {
   pid_t pid;
   int use_hugepages;
   int use_compact_allocation; // this used to be OPTIMAL_MODE
+
+  // Mario-localizer: run ADCD with localizer
+  int localizer; 
 };
 
 
@@ -128,6 +132,8 @@ struct shared_mem_object {
 };
 struct mem_object_lnode {
   LObject *next;
+  // Mario-localizer: add metadata for localizer virtual memory
+  LocalizerVMemRange localizer_range;
 };
 struct mem_object_btnode {
   BTObject *left;
@@ -189,6 +195,9 @@ struct mutator_context {
   int class_buffer_counter;
   LClass class_cache;
   int *thread_id_buffer; //to temporarily store a couple of thread id's
+
+  // Mario-localizer: context required to run ACDC with localizer
+  LocalizerContext *localizer_ctx;
 };
 
 /*

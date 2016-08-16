@@ -100,7 +100,7 @@ function install_allocator {
                 git submodule init
                 git submodule update
 		cd src
-		make linux-gcc-x86-64
+		make Linux-gcc-x86_64
 		cd $WD/allocators
 		ln -s Hoard/src/libhoard.so libhoard.so
 	fi
