@@ -532,11 +532,11 @@ static void *acdc_thread(void *ptr) {
 	//printf("running thread %d\n", mc->thread_id);
 
 	//start benchmark together
-        int r = pthread_barrier_wait(&acdc_barrier);
-        if (!( r == 0 || r == PTHREAD_BARRIER_SERIAL_THREAD )) {
-                printf("pthread_barrier_wait: %d\n", r);
-                exit(r);
-        }
+  int r = pthread_barrier_wait(&acdc_barrier);
+  if (!( r == 0 || r == PTHREAD_BARRIER_SERIAL_THREAD )) {
+    printf("pthread_barrier_wait: %d\n", r);
+    exit(r);
+  }
 
 	mc->stat->running_time = rdtsc();
 
@@ -556,13 +556,7 @@ static void *acdc_thread(void *ptr) {
 			liveness = mc->gopts->min_liveness;
 		}
 
-		// Mario-localizer: Initialize localizer context if required
-		if (mc->gopts->localizer) {
-			localizer_init(mc->localizer_ctx, num_objects, (size_t) mc->gopts->max_object_sc);		
-		}
-
 		//check if collections can be built with sz
-		
 		if (sz < (sizeof(BTObject)))
 			sz = sizeof(BTObject);
 		//if (tp == LIST && sz < (sizeof(LObject)))
@@ -572,14 +566,18 @@ static void *acdc_thread(void *ptr) {
 		mc->stat->sz_histogram[get_sizeclass(sz)] += num_objects;
 
 
-                if (mc->gopts->use_compact_allocation) {
-		        if (tp == LIST) tp = OPTIMAL_LIST;
-		        if (tp == BTREE) tp = OPTIMAL_BTREE;
-                }
+		if (mc->gopts->use_compact_allocation) {
+			if (tp == LIST) tp = OPTIMAL_LIST;
+			if (tp == BTREE) tp = OPTIMAL_BTREE;
+		}
+
+		// Mario-localizer: Initialize localizer context if required
+		if (mc->gopts->localizer) {
+			localizer_init(mc->localizer_ctx, num_objects, sz);		
+		}
 					
 		allocation_start = rdtsc();
-		LSClass *c = 
-			allocate_LSClass(mc, tp, sz, num_objects);
+		LSClass *c = allocate_LSClass(mc, tp, sz, num_objects);
 
 		c->lifetime = liveness + mc->gopts->deallocation_delay;
 

@@ -356,14 +356,22 @@ static LSClass *allocate_list(MContext *mc, size_t sz, unsigned long nelem) {
 	LObject *tmp = (LObject*)list->start;
   
   // Mario-localizer: allocate localizer memory
-  printf("allocate list: size=%zu\n", sz);
-  if(mc->gopts->localizer)
+  if(mc->gopts->localizer) {
+	  // printf("allocate list: size=%zu\n", sz);
   	localizer_alloc(mc->localizer_ctx, &tmp->localizer_range, sz);
+  }
 
 
 	int i;
 	for (i = 1; i < nelem; ++i) {
 		tmp->next = (LObject*)allocate(mc, sz);
+
+  	// Mario-localizer: allocate localizer memory
+  	if(mc->gopts->localizer) {
+			// printf("allocate list: size=%zu\n", sz);
+  		localizer_alloc(mc->localizer_ctx, &tmp->next->localizer_range, sz);
+  	}
+
 		tmp = tmp->next;
 	}
 	tmp->next = NULL;

@@ -10,11 +10,35 @@
 #include "localizer.h"
 #include "metadata-allocator.h"
 
+
+void printMem(LocalizerContext *ctx) {
+  int i;
+  for(i= 0; i < ctx->vmem_available; i++) {
+    int pmem_idx = ctx->vmem[i];
+    int pmem_value = ctx->pmem[pmem_idx];
+    printf("vmem[%d] = %d, pmem[vmem[%d]] = %d\n", i, pmem_idx, i, pmem_value);
+  }
+
+  printf("VMEM\n");
+  for(i= 0; i < ctx->vmem_available; i++)
+    printf("vmem[%d] = %d\n", i, ctx->vmem[i]);
+
+  printf("PMEM\n");
+  for(i= 0; i < ctx->pmem_available; i++)
+    printf("pmem[%d] = %d\n", i, ctx->pmem[i]);
+}
+
+
 void 
 localizer_init(LocalizerContext *ctx, unsigned int nr_objs, size_t obj_size) 
 {
-  int factor = obj_size / kLocalizerGranularity;
-  size_t mem_required = nr_objs * factor;
+  int units = (obj_size > kLocalizerGranularity) 
+                ? (obj_size % kLocalizerGranularity) 
+                  ? obj_size / kLocalizerGranularity + 1
+                  : obj_size / kLocalizerGranularity
+                : kLocalizerGranularity;
+
+  size_t mem_required = nr_objs * units;
   printf(" -- localizer_init: nr_objs=%d, obj_size=%zu, mem_required=%zu", nr_objs, obj_size, mem_required);
 
   ctx->vmem_available = mem_required;
@@ -54,10 +78,9 @@ localizer_alloc(LocalizerContext *ctx, LocalizerVMemRange *range, size_t size) {
   int i, k;
   for (i = 0, k = nr_of_vmem_entries - 1; k < ctx->vmem_available; i++, k++) {
     if(ctx->vmem[i] != kAllocated && ctx->vmem[k] != kAllocated){
-      ctx->vmem[i] = kAllocated;
-      ctx->vmem[k] = kAllocated;
       range->start = i;
       range->end = k;
+      for(; i <= k; i++) ctx->vmem[i] = kAllocated;
       break;
     }
   }
@@ -106,13 +129,17 @@ localizer_allocate_pmem(LocalizerContext *ctx, LocalizerVMemAddr vaddr)
   }
 
   int paddr = kEmpty;
-  if(ctx->pmem_free_list_head == kEmpty) {
+  if(ctx->pmem_free_list_head == kEmpty && ctx->pmem_bump_ptr < ctx->pmem_available){
     paddr = ctx->pmem_bump_ptr;
     ctx->pmem_bump_ptr += 1;
-  } else {
+  } else if(ctx->pmem_free_list_head != kEmpty) {
     paddr = ctx->pmem_free_list_head;
     ctx->pmem_free_list_head = ctx->pmem[ctx->pmem_free_list_head];
     ctx->pmem[ctx->pmem_free_list_head] = kEmpty;  // not required.
+  } else {
+    printf("LOCALIZER ERROR (localizer_allocate_pmem): "
+      "failed to allocate physical memory, not enough space.\n");
+    exit(EXIT_FAILURE);
   }
   
   ctx->vmem[vaddr] = paddr;
@@ -132,19 +159,25 @@ localizer_prepare_access(LocalizerContext *ctx, LocalizerVMemAddr vaddr)
     exit(EXIT_FAILURE);
   }
   
-  int paddr = ctx->vmem[vaddr];
-  if(paddr == kAllocated) {
-    paddr = localizer_allocate_pmem(ctx, vaddr);
+  if(ctx->vmem[vaddr] == kAllocated) {
+    printf("asdfasdfsdf\n")
+    ctx->vmem[vaddr] = localizer_allocate_pmem(ctx, vaddr);
   }
 
-  if(paddr < 0 || paddr > ctx->pmem_available)
+  if(ctx->vmem[vaddr] < 0 || ctx->vmem[vaddr] > ctx->pmem_available)
   {
     printf("LOCALIZER ERROR (localizer_prepare_access): "
-      "paddr out of range. (0 <= vaddr < %zu)\n", ctx->pmem_available);
+      "paddr out of range. (0 <= paddr(%d) < %zu, 0 <= vaddr(%d) < %zu)\n", 
+        ctx->vmem[vaddr], ctx->pmem_available, vaddr, ctx->vmem_available);
+
+    printf("localizer_prepare_access\n");
+    printMem(ctx);
+
+
     exit(EXIT_FAILURE);
   }
 
-  return paddr;
+  return ctx->vmem[vaddr];
 }
 
 void

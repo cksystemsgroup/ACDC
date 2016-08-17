@@ -13,7 +13,8 @@ OTHERS="hoard tcmalloc ptmalloc2 streamflow tbbmalloc_proxy llalloc jemalloc"
 ALLOCATORS="llalloc"
 
 # original settings for oopsla paper 
-OPTIONS="-a -d 5 -l 1 -L 1 -n 40 -N 1000 -C 500 -H 100 -A"
+OPTIONS="-a -d 5 -l 1 -L 1 -n 1
+ -N 1000 -C 500 -H 100 -A"
 
 
 FACTOR1="-s"
@@ -33,7 +34,7 @@ REPS=3
 RELATIVE=0
 
 # OUTPUT SETTINGS
-OUTPUT_DIR=`pwd`/data/virtual-spans
+OUTPUT_DIR=`pwd`/data/virtual-spans-single-thread
 #overriding plot_templates for this experiment only
 #ALLOC_TEMPLATE="plot_alloc_contention_objsz.p"
 #ACCESS_TEMPLATE="plot_access_contention_objsz.p"
