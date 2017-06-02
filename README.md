@@ -13,19 +13,17 @@ deficiencies in exploiting spatial locality. We demonstrate ACDC’s capabilitie
 with six state-of-the-art allocators for C/C++ in an empirical study which also
 reveals interesting performance differences between the allocators.
 
-
 ## Compiling ACDC
-* Use a recent version of gcc. ACDC is known to work with gcc 4.6.3 on Linux x86-64
-* You need a recent version of gnuplot and epstopdf to greate the plots
-* Run ./install-deps.sh to install Gyp
-* You need to put the allocator libraries in the allocators sub directory of acdc. Check and run the install-allocators.sh scripts for some default allocators
-* To create the Makefiles run: ./build/gyp/gyp --depth=. acdc.gyp
-* Build acdc with: BUILDTYPE=Release make
-* add the allocators directory to your library path, e.g., export LD\_LIBRARY\_PATH=./allocators
-* run e.g. LD\_PRELPOAD=./allocators/some-allocator-lib.so ./out/Release/acdc -h for usage information
-* copy and edit the experiment definitions in sample.sh in the experiments directory.
-* run an experiment using: ./scripts/run\_acdc.sh experiments/[your-config].sh
-
+* Use a recent version of `gcc`. ACDC is known to work with gcc 4.6.3 on Linux x86-64
+* You need a recent version of `gnuplot` and `epstopdf` to create the plots
+* Run `./install-deps.sh` to install Gyp
+* You need to put the allocator libraries in the allocators sub directory of ACDC. Check and run the `install-allocators.sh` scripts for some default allocators
+* To create the Makefiles run: `./build/gyp/gyp --depth=. acdc.gyp`
+* Build ACDC with: `BUILDTYPE=Release make`
+* Add the allocators directory to your library path, e.g., `export LD_LIBRARY_PATH=./allocators`
+* Run e.g. `LD_PRELPOAD=./allocators/some-allocator-lib.so ./out/Release/acdc -h` for usage information
+* Copy and edit the experiment definitions in `sample.sh` in the experiments directory.
+* Run an experiment using: `./scripts/run_acdc.sh experiments/[your-config].sh`
 
 ## License
 
