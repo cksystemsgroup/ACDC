@@ -1,0 +1,8 @@
+language: c
+compiler:
+- gcc
+install:
+  - ./install_deps.sh
+  - ./build/gyp/gyp --depth=. acdc.gyp
+script:
+  - BUILDTYPE=Release make
