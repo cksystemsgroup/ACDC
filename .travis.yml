@@ -1,5 +1,6 @@
 language: c
 compiler:
+- clang
 - gcc
 install:
   - ./install_deps.sh
