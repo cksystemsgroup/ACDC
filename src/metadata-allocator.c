@@ -24,6 +24,7 @@ static void *metadata_heap_end;
 static void *metadata_heap_bump_pointer;
 
 //returns a rounded up to multiple of r
+__attribute__((unused))
 static inline int round_up_to(int a, int r) {
         if (a < r) return r;
         return ((a / r) * r) + r;

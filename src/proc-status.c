@@ -31,6 +31,7 @@ struct proc_status {
 
 volatile struct proc_status stat;
 
+__attribute__((unused))
 static inline void fgets_nn(char *str, int size, FILE *stream) {
 	char *s = str;
 	int c;
