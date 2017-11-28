@@ -21,7 +21,7 @@ reveals interesting performance differences between the allocators.
 * To create the Makefiles run: `./build/gyp/gyp --depth=. acdc.gyp`
 * Build ACDC with: `BUILDTYPE=Release make`
 * Add the allocators directory to your library path, e.g., `export LD_LIBRARY_PATH=./allocators`
-* Run e.g. `LD_PRELPOAD=./allocators/some-allocator-lib.so ./out/Release/acdc -h` for usage information
+* Run e.g. `LD_PRELOAD=./allocators/some-allocator-lib.so ./out/Release/acdc -h` for usage information
 * Copy and edit the experiment definitions in `sample.sh` in the experiments directory.
 * Run an experiment using: `./scripts/run_acdc.sh experiments/[your-config].sh`
 
